@@ -10,7 +10,7 @@
   <tr>
     <td width="25%" valign="top" style="border: none; background: transparent; padding: 0;"></td>
     <td width="50%" valign="top" align="center" style="border: none; background: transparent; padding: 0;">
-      <img src="src/McpBridge/Resources/MCPBridge.ico" width="80" height="80" alt="MCP Bridge">
+      <img src="src/McpBridge/Resources/Svg/bridge-mark.svg" width="80" height="80" alt="MCP Bridge">
       <h1 style="margin: 10px 0 6px 0; font-size: 36px; border: none; padding: 0;">mcp<b>Bridge</b></h1>
     </td>
     <td width="25%" valign="top" align="right" style="border: none; background: transparent; padding: 4px 0 0 0; white-space: nowrap;">
@@ -120,7 +120,7 @@
 <p style="color: #B8C0C8; font-size: 15px; margin-bottom: 16px;">Откройте вкладку <b>Settings</b> — здесь настраивается доступ к папкам, внешний туннель и находятся готовые ссылки для подключения ИИ:</p>
 
 <div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/Settings.png" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Settings">
+  <img src="docs/images/Settings.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Settings">
 </div>
 
 <table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin-bottom: 16px;">
@@ -187,7 +187,7 @@
   <tr>
     <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 18px;">
       <div style="color: #EAECEF; font-size: 15.5px; font-weight: 700; margin-bottom: 12px;">ШАГ 1 · Welcome to Tailscale</div>
-      <img src="docs/images/Tailscale_Welcome.png" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Welcome">
+      <img src="docs/images/Tailscale_Welcome.svg" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Welcome">
       <div style="color: #969FA8; font-size: 14px; line-height: 1.55;">
         Откроется окно приложения Tailscale. Нажмите кнопку <b style="color: #D6DCE2;">Get Started</b>.
       </div>
@@ -195,7 +195,7 @@
     <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
     <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 18px;">
       <div style="color: #EAECEF; font-size: 15.5px; font-weight: 700; margin-bottom: 12px;">ШАГ 2 · Авторизация и Connect</div>
-      <img src="docs/images/Tailscale_Device_Connect.png" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Device Connect">
+      <img src="docs/images/Tailscale_Device_Connect.svg" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Device Connect">
       <div style="color: #969FA8; font-size: 14px; line-height: 1.55;">
         В браузере откроется форма входа — <b style="color: #D6DCE2;">авторизуйтесь</b>, после чего в окне <i>Connect device</i> нажмите <b style="color: #D6DCE2;">Connect</b>.
       </div>
@@ -203,7 +203,7 @@
     <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
     <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 18px;">
       <div style="color: #EAECEF; font-size: 15.5px; font-weight: 700; margin-bottom: 12px;">ШАГ 3 · Start using Funnel</div>
-      <img src="docs/images/Tailscale_Funnel.png" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Funnel">
+      <img src="docs/images/Tailscale_Funnel.svg" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Funnel">
       <div style="color: #969FA8; font-size: 14px; line-height: 1.55;">
         Откроется страница <b style="color: #D6DCE2;">Start using Funnel</b>. Прокрутите вниз, нажмите <b style="color: #D6DCE2;">Enable Funnel</b> и дождитесь подключения.
       </div>
@@ -239,7 +239,7 @@
 <p style="color: #B8C0C8; font-size: 15px; margin-bottom: 16px;">На вкладке <b>Dashboard</b> отображается сводка по шлюзу и список включённых серверов. Выключенные серверы (<code>DISABLED</code>) в списке <i>MCP Services Status</i> скрыты — они находятся во вкладке <i>MCP Services</i>.</p>
 
 <div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/Main.png" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Dashboard">
+  <img src="docs/images/Main.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Dashboard">
 </div>
 
 <table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none;">
@@ -282,7 +282,7 @@
 </table>
 
 <div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/MSP_Servises.png" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="MCP Services">
+  <img src="docs/images/MSP_Servises.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="MCP Services">
 </div>
 
 <table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; background: #141619; border: 1px solid #262A30; border-radius: 4px; margin-bottom: 16px;">
@@ -338,7 +338,7 @@
 <p style="color: #B8C0C8; font-size: 15px; margin-bottom: 16px;">Нажмите <b>+ Add Server</b> во вкладке <i>MCP Services</i>, чтобы подключить новый локальный или удалённый сервер:</p>
 
 <div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/Add_MCP.png" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Add MCP Server">
+  <img src="docs/images/Add_MCP.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Add MCP Server">
 </div>
 
 <table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none;">
