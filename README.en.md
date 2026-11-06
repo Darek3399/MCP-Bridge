@@ -82,7 +82,7 @@
 
 <p>Open the <b>Settings</b> tab — here you configure folder access, the public tunnel, and copy the connection URLs for your AI client:</p>
 
-<p><img src="docs/images/Settings.png" width="100%" alt="Settings"></p>
+<p><img src="docs/images/Settings.svg" width="100%" alt="Settings"></p>
 
 <table>
   <thead>
