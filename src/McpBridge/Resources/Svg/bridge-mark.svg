@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M8 43H56M14 43V25M50 43V25M14 25C22 7 42 7 50 25M24 43V29M40 43V29" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path d="M5 50H59" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square" opacity=".55"/>
+  <path d="M29 43V35H35V43" fill="none" stroke="#35D9D0" stroke-width="3" stroke-linecap="square"/>
+</svg>

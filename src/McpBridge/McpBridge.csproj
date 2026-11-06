@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>10.0</LangVersion>
+    <AssemblyName>MCPBridge</AssemblyName>
+    <AssemblyTitle>MCP Bridge</AssemblyTitle>
+    <Product>MCP Bridge</Product>
+    <FileDescription>MCP Bridge</FileDescription>
+    <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>McpBridge</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\MCPBridge.ico</ApplicationIcon>
+    <Version>0.9.1</Version>
+    <Authors>MCP Bridge</Authors>
+    <Description>Local MCP infrastructure manager.</Description>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Исключаем глобальные конфликты имён между WPF и WinForms/Drawing -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  <EmbeddedResource Include="..\..\scripts\TailscaleSetup.ps1"><LogicalName>TailscaleSetup.ps1</LogicalName></EmbeddedResource></ItemGroup>
+  <ItemGroup>
+    <!-- Compile-time reference assemblies only; the runtime is part of supported Windows versions. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.ServiceProcess" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\MCPBridge.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Resources\Svg\*.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Adapters\*.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

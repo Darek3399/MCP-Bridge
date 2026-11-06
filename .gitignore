@@ -1,0 +1,39 @@
+# Папки сборки .NET и Visual Studio
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Временные файлы и кэш
+*.tmp
+*.bak
+*.swp
+*~
+Thumbs.db
+Desktop.ini
+
+# Конфиги, состояние туннеля и логи приложения (чтобы не утекла личная инфа и токены)
+Config/
+Logs/
+*.log
+settings.json
+tailscale-state.txt
+installer-language.txt
+router-upstreams.json
+filesystem-gateway.json
+composite-gateway.json
+
+# Сторонние бинарники и установщики в Payload (оставляем только README.md)
+Dependencies/
+node_modules/
+installer/Payload/*
+!installer/Payload/README.md
+
+# Скомпилированные установщики (они загружаются отдельно в GitHub Releases)
+*.msi
+MCPBridge-Setup-*.exe
