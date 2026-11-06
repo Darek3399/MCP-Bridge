@@ -148,15 +148,15 @@
   <tbody>
     <tr>
       <td width="333" valign="top">
-        <img src="docs/images/Tailscale_Welcome.png" width="100%" alt="Tailscale Welcome"><br><br>
+        <img src="docs/images/Tailscale_Welcome.svg" width="100%" alt="Tailscale Welcome"><br><br>
         The Tailscale application window will open. Click <b>Get Started</b>.
       </td>
       <td width="333" valign="top">
-        <img src="docs/images/Tailscale_Device_Connect.png" width="100%" alt="Tailscale Device Connect"><br><br>
+        <img src="docs/images/Tailscale_Device_Connect.svg" width="100%" alt="Tailscale Device Connect"><br><br>
         A login page will open in your browser — <b>sign in to your account</b>, then click <b>Connect</b> on the <i>Connect device</i> screen.
       </td>
       <td width="334" valign="top">
-        <img src="docs/images/Tailscale_Funnel.png" width="100%" alt="Tailscale Funnel"><br><br>
+        <img src="docs/images/Tailscale_Funnel.svg" width="100%" alt="Tailscale Funnel"><br><br>
         The <b>Start using Funnel</b> page will open automatically. Scroll down, click <b>Enable Funnel</b>, and wait for the connection to finish.
       </td>
     </tr>
@@ -176,7 +176,7 @@
 
 <p>The <b>Dashboard</b> tab shows the gateway overview and currently enabled servers. Disabled servers (<code>DISABLED</code>) are hidden from the <i>MCP Services Status</i> table to keep it clean — they are visible in the <i>MCP Services</i> tab.</p>
 
-<p><img src="docs/images/Main.png" width="100%" alt="Dashboard"></p>
+<p><img src="docs/images/Main.svg" width="100%" alt="Dashboard"></p>
 
 <table>
   <thead>
@@ -206,7 +206,7 @@
 <a id="sec-servers"></a>
 <p><a href="#sec-servers"><img src="docs/images/sec-05-en.svg" width="100%" alt="05 Managing MCP Servers & Presets"></a></p>
 
-<p><img src="docs/images/MSP_Servises.png" width="100%" alt="MCP Services"></p>
+<p><img src="docs/images/MSP_Servises.svg" width="100%" alt="MCP Services"></p>
 
 <table>
   <thead>
@@ -257,7 +257,7 @@
 
 <p>Click <b>+ Add Server</b> in the <i>MCP Services</i> tab to add a new local or remote server:</p>
 
-<p><img src="docs/images/Add_MCP.png" width="100%" alt="Add MCP Server"></p>
+<p><img src="docs/images/Add_MCP.svg" width="100%" alt="Add MCP Server"></p>
 
 <table>
   <thead>
