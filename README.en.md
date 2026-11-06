@@ -1,30 +1,17 @@
 <a id="top"></a>
 
-<!-- Floating Back-to-Top button in the bottom-right corner -->
-<div align="right" style="position: fixed; bottom: 24px; right: 28px; z-index: 999;">
-  <a href="#top"><img src="https://img.shields.io/badge/-↑%20Top-181A1D?style=for-the-badge" alt="Top"></a>
+<div align="right">
+  <a href="README.md"><img src="https://img.shields.io/badge/-Русский-22252A?style=for-the-badge" alt="Русский"></a>&nbsp;&nbsp;<a href="README.en.md"><img src="https://img.shields.io/badge/-English-15322F?style=for-the-badge" alt="English"></a>
 </div>
 
-<!-- Header: centered logo and language switcher on the same level -->
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin-top: 8px; margin-bottom: 12px;">
-  <tr>
-    <td width="25%" valign="top" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="50%" valign="top" align="center" style="border: none; background: transparent; padding: 0;">
-      <img src="src/McpBridge/Resources/Svg/bridge-mark.svg" width="80" height="80" alt="MCP Bridge">
-      <h1 style="margin: 10px 0 6px 0; font-size: 36px; border: none; padding: 0;">mcp<b>Bridge</b></h1>
-    </td>
-    <td width="25%" valign="top" align="right" style="border: none; background: transparent; padding: 4px 0 0 0; white-space: nowrap;">
-      <a href="README.md"><img src="https://img.shields.io/badge/-Русский-22252A?style=for-the-badge" alt="Русский"></a>&nbsp;&nbsp;<a href="README.en.md"><img src="https://img.shields.io/badge/-English-15322F?style=for-the-badge" alt="English"></a>
-    </td>
-  </tr>
-</table>
-
-<div align="center" style="margin-bottom: 36px;">
-  <p style="color: #B8C0C8; font-size: 16px; line-height: 1.55; max-width: 640px; margin: 0 auto 22px auto;">
+<div align="center">
+  <img src="src/McpBridge/Resources/MCPBridge.ico" width="80" height="80" alt="MCP Bridge">
+  <h1>mcp<b>Bridge</b></h1>
+  <p>
     <b>Unified Local Hub & MCP Server Manager for Windows</b><br>
     Connect Bridge to your AI client once and control all your servers and tools from a single window.
   </p>
-  <p style="margin-bottom: 26px;">
+  <p>
     <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇-Download%20Installer%20(Windows%20x64)-15322F?style=for-the-badge&labelColor=181A1D" alt="Download Installer"></a>
   </p>
   <p>
@@ -38,400 +25,315 @@
   </p>
 </div>
 
+<br>
+
 <!-- ===================================================================== -->
 <!-- 01. WHY MCP BRIDGE                                                    -->
 <!-- ===================================================================== -->
 
 <a id="sec-why"></a>
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 48px; margin-bottom: 22px;">
+<p><a href="#sec-why"><img src="docs/images/sec-01-en.svg" width="100%" alt="01 Why MCP Bridge"></a></p>
+
+<table>
   <thead>
     <tr>
-      <th align="left" style="background: linear-gradient(90deg, #1B3B38 0%, #162226 100%); border: 1px solid #2CE5D0; border-left: 6px solid #2CE5D0; border-radius: 4px; padding: 18px 24px; font-size: 21px; color: #FFFFFF; letter-spacing: 0.4px;">
-        <span style="color: #2CE5D0;">01 ·</span> WHY MCP BRIDGE
-      </th>
+      <th width="500" align="left">Keep AI Context Clean</th>
+      <th width="500" align="left">One Connection Instead of Dozens</th>
     </tr>
   </thead>
-</table>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin-bottom: 0;">
-  <tr>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 22px 24px;">
-      <div style="color: #EAECEF; font-size: 18px; font-weight: 700; margin-bottom: 10px;">Keep AI Context Clean</div>
-      <div style="color: #969FA8; font-size: 15px; line-height: 1.6;">
-        Connecting a dozen servers (50–100 tools) at once confuses the model and wastes tokens. With Bridge, you enable only the servers you need <b style="color: #D6DCE2;">right in the middle of a conversation</b> — without restarting the chat.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 22px 24px;">
-      <div style="color: #EAECEF; font-size: 18px; font-weight: 700; margin-bottom: 10px;">One Connection Instead of Dozens</div>
-      <div style="color: #969FA8; font-size: 15px; line-height: 1.6;">
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
+        Connecting a dozen servers (50–100 tools) at once confuses the model and wastes tokens. With Bridge, you enable only the servers you need <b>right in the middle of a conversation</b> — without restarting the chat.
+      </td>
+      <td width="500" valign="top">
         Instead of manually editing JSON configs in every separate AI client, you connect the Bridge endpoint once and add, configure, or toggle all your servers inside a single window.
-      </div>
-    </td>
-  </tr>
-  <tr style="height: 16px;">
-    <td colspan="3" style="border: none; background: transparent; padding: 0;"></td>
-  </tr>
-  <tr>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 22px 24px;">
-      <div style="color: #EAECEF; font-size: 18px; font-weight: 700; margin-bottom: 10px;">Local STDIO Servers in Web AI Apps</div>
-      <div style="color: #969FA8; font-size: 15px; line-height: 1.6;">
+      </td>
+    </tr>
+  </tbody>
+  <thead>
+    <tr>
+      <th width="500" align="left">Local STDIO Servers in Web AI Apps</th>
+      <th width="500" align="left">RAM Control & Everything Included</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
         Most MCP servers only run locally via CLI (<code>npx</code>, <code>uvx</code>, <code>python</code>), while web AI services require a public <code>HTTPS</code> URL. Bridge turns any local server into a secure HTTPS link in one click.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 22px 24px;">
-      <div style="color: #EAECEF; font-size: 18px; font-weight: 700; margin-bottom: 10px;">RAM Control & Everything Included</div>
-      <div style="color: #969FA8; font-size: 15px; line-height: 1.6;">
+      </td>
+      <td width="500" valign="top">
         Disabled servers never linger as background processes — Bridge completely terminates them to free RAM. <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> are already bundled in the installer.
-      </div>
-    </td>
-  </tr>
+      </td>
+    </tr>
+  </tbody>
 </table>
 
-<!-- ================= STANDALONE SUPPORT BLOCK ================= -->
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; background: linear-gradient(90deg, #282115 0%, #1C1A17 100%); border: 1px solid #8C6A32; border-left: 5px solid #F5A623; border-radius: 4px; margin: 64px 0;">
-  <tr>
-    <td width="70%" valign="middle" align="left" style="padding: 18px 24px; border: none; color: #EAECEF; font-size: 15px; line-height: 1.45;">
-      This project is developed in spare time. If <b style="color: #F5A623;">MCP Bridge</b> makes your workflow easier — you can buy the author a coffee.
-    </td>
-    <td width="30%" valign="middle" align="right" style="padding: 18px 24px; border: none; line-height: 0;">
-      <a href="https://pay.cloudtips.ru/p/cdb7341e" style="display: inline-block; line-height: 0; vertical-align: middle; text-decoration: none;"><img src="https://img.shields.io/badge/-Buy%20the%20developer%20a%20coffee-332915?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRjVBNjIzIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTE3IDhoMWE0IDQgMCAxIDEgMCA4aC0xIi8+PHBhdGggZD0iTTMgOGgxNHY5YTQgNCAwIDAgMS00IDRIN2E0IDQgMCAwIDEtNC00WiIvPjxsaW5lIHgxPSI2IiB5MT0iMiIgeDI9IjYiIHkyPSI0Ii8+PGxpbmUgeDE9IjEwIiB5MT0iMiIgeDI9IjEwIiB5Mj0iNCIvPjxsaW5lIHgxPSIxNCIgeTE9IjIiIHgyPSIxNCIgeTI9IjQiLz48L3N2Zz4=&logoWidth=18" style="display: block; margin: 0; border: 1px solid #F5A623; border-radius: 3px;" alt="Buy the developer a coffee"></a>
-    </td>
-  </tr>
-</table>
+<br>
+<p><a href="https://pay.cloudtips.ru/p/cdb7341e"><img src="docs/images/coffee-en.svg" width="100%" alt="Buy the developer a coffee"></a></p>
+<br>
 
 <!-- ===================================================================== -->
 <!-- 02. INITIAL SETUP & CONNECTION                                        -->
 <!-- ===================================================================== -->
 
 <a id="sec-settings"></a>
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 64px; margin-bottom: 22px;">
+<p><a href="#sec-settings"><img src="docs/images/sec-02-en.svg" width="100%" alt="02 Initial Setup & Connection"></a></p>
+
+<p>Open the <b>Settings</b> tab — here you configure folder access, the public tunnel, and copy the connection URLs for your AI client:</p>
+
+<p><img src="docs/images/Settings.png" width="100%" alt="Settings"></p>
+
+<table>
   <thead>
     <tr>
-      <th align="left" style="background: linear-gradient(90deg, #1B3B38 0%, #162226 100%); border: 1px solid #2CE5D0; border-left: 6px solid #2CE5D0; border-radius: 4px; padding: 18px 24px; font-size: 21px; color: #FFFFFF; letter-spacing: 0.4px;">
-        <span style="color: #2CE5D0;">02 ·</span> INITIAL SETUP & CONNECTION
-      </th>
+      <th width="333" align="left">1. Allowed Folders</th>
+      <th width="333" align="left">2. Online access</th>
+      <th width="334" align="left">3. Connection URLs</th>
     </tr>
   </thead>
+  <tbody>
+    <tr>
+      <td width="333" valign="top">
+        Directories accessible to the built-in <b>Filesystem MCP</b>. Uncheck any folder to revoke AI access immediately without restarting the gateway.
+      </td>
+      <td width="333" valign="top">
+        Enables the public HTTPS tunnel via <b>Tailscale Funnel</b>. Required only for web-based AI apps. Local desktop clients on your PC work without it.
+      </td>
+      <td width="334" valign="top">
+        Ready-to-use gateway endpoints. Click <b>Copy URL</b> next to the address you need and paste it into your AI client settings.
+      </td>
+    </tr>
+  </tbody>
 </table>
 
-<p style="color: #B8C0C8; font-size: 15px; margin-bottom: 16px;">Open the <b>Settings</b> tab — here you configure folder access, the public tunnel, and copy the connection URLs for your AI client:</p>
-
-<div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/Settings.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Settings">
-</div>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin-bottom: 16px;">
-  <tr>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">1. Allowed Folders</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        Directories accessible to the built-in <b style="color: #D6DCE2;">Filesystem MCP</b>. Uncheck any folder to revoke AI access immediately without restarting the gateway.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">2. Online access</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        Enables the public HTTPS tunnel via <b style="color: #D6DCE2;">Tailscale Funnel</b>. Required only for web-based AI apps. Local desktop clients on your PC work without it.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">3. Connection URLs</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        Ready-to-use gateway endpoints. Click <b style="color: #D6DCE2;">Copy URL</b> next to the address you need and paste it into your AI client settings.
-      </div>
-    </td>
-  </tr>
-</table>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none;">
-  <tr>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 8px;">LOCAL URL &nbsp;<code>http://127.0.0.1:8004/mcp</code></div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
+<table>
+  <thead>
+    <tr>
+      <th width="500" align="left">LOCAL URL — <code>http://127.0.0.1:8004/mcp</code></th>
+      <th width="500" align="left">PUBLIC URL — <code>https://&lt;device&gt;.&lt;tailnet&gt;.ts.net/mcp</code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
         For applications installed on your PC (IDEs, desktop AI clients, local agents). Add a <code>Streamable HTTP</code> connection in your app's MCP settings and paste this URL.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 8px;">PUBLIC URL &nbsp;<code>https://&lt;device&gt;.&lt;tailnet&gt;.ts.net/mcp</code></div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
+      </td>
+      <td width="500" valign="top">
         For web AI applications that support MCP. Depending on the service, this section may be called <i>connectors, plugins, integrations</i>, or connected via third-party extensions — simply paste the copied URL there.
-      </div>
-    </td>
-  </tr>
+      </td>
+    </tr>
+  </tbody>
 </table>
+
+<br>
 
 <!-- ===================================================================== -->
 <!-- 03. TAILSCALE AUTHORIZATION                                           -->
 <!-- ===================================================================== -->
 
 <a id="sec-tailscale"></a>
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 88px; margin-bottom: 22px;">
+<p><a href="#sec-tailscale"><img src="docs/images/sec-03-en.svg" width="100%" alt="03 Tailscale Authorization"></a></p>
+
+<p>When clicking <b>Connect</b> under <i>Online access</i> for the first time, complete these three screens in order:</p>
+
+<table>
   <thead>
     <tr>
-      <th align="left" style="background: linear-gradient(90deg, #1B3B38 0%, #162226 100%); border: 1px solid #2CE5D0; border-left: 6px solid #2CE5D0; border-radius: 4px; padding: 18px 24px; font-size: 21px; color: #FFFFFF; letter-spacing: 0.4px;">
-        <span style="color: #2CE5D0;">03 ·</span> TAILSCALE AUTHORIZATION (FOR WEB APPS)
-      </th>
+      <th width="333" align="left">STEP 1 · Welcome to Tailscale</th>
+      <th width="333" align="left">STEP 2 · Sign In & Connect</th>
+      <th width="334" align="left">STEP 3 · Start using Funnel</th>
     </tr>
   </thead>
+  <tbody>
+    <tr>
+      <td width="333" valign="top">
+        <img src="docs/images/Tailscale_Welcome.png" width="100%" alt="Tailscale Welcome"><br><br>
+        The Tailscale application window will open. Click <b>Get Started</b>.
+      </td>
+      <td width="333" valign="top">
+        <img src="docs/images/Tailscale_Device_Connect.png" width="100%" alt="Tailscale Device Connect"><br><br>
+        A login page will open in your browser — <b>sign in to your account</b>, then click <b>Connect</b> on the <i>Connect device</i> screen.
+      </td>
+      <td width="334" valign="top">
+        <img src="docs/images/Tailscale_Funnel.png" width="100%" alt="Tailscale Funnel"><br><br>
+        The <b>Start using Funnel</b> page will open automatically. Scroll down, click <b>Enable Funnel</b>, and wait for the connection to finish.
+      </td>
+    </tr>
+  </tbody>
 </table>
 
-<p style="color: #B8C0C8; font-size: 15px; margin-bottom: 16px;">When clicking <b>Connect</b> under <i>Online access</i> for the first time, complete these three screens in order:</p>
+<p><img src="docs/images/tailscale-note-en.svg" width="100%" alt="Tailscale authorization note"></p>
 
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none; margin-bottom: 16px;">
-  <tr>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 18px;">
-      <div style="color: #EAECEF; font-size: 15.5px; font-weight: 700; margin-bottom: 12px;">STEP 1 · Welcome to Tailscale</div>
-      <img src="docs/images/Tailscale_Welcome.svg" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Welcome">
-      <div style="color: #969FA8; font-size: 14px; line-height: 1.55;">
-        The Tailscale application window will open. Click <b style="color: #D6DCE2;">Get Started</b>.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 18px;">
-      <div style="color: #EAECEF; font-size: 15.5px; font-weight: 700; margin-bottom: 12px;">STEP 2 · Sign In & Connect</div>
-      <img src="docs/images/Tailscale_Device_Connect.svg" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Device Connect">
-      <div style="color: #969FA8; font-size: 14px; line-height: 1.55;">
-        A login page will open in your browser — <b style="color: #D6DCE2;">sign in to your account</b>, then click <b style="color: #D6DCE2;">Connect</b> on the <i>Connect device</i> screen.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 18px;">
-      <div style="color: #EAECEF; font-size: 15.5px; font-weight: 700; margin-bottom: 12px;">STEP 3 · Start using Funnel</div>
-      <img src="docs/images/Tailscale_Funnel.svg" width="100%" style="display: block; width: 100%; border-radius: 3px; margin-bottom: 14px;" alt="Tailscale Funnel">
-      <div style="color: #969FA8; font-size: 14px; line-height: 1.55;">
-        The <b style="color: #D6DCE2;">Start using Funnel</b> page will open automatically. Scroll down, click <b style="color: #D6DCE2;">Enable Funnel</b>, and wait for the connection to finish.
-      </div>
-    </td>
-  </tr>
-</table>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; background: #141619; border: 1px solid #262A30; border-left: 3px solid #F5A623; border-radius: 4px;">
-  <tr>
-    <td style="padding: 18px 22px; border: none; color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-      <div style="color: #F5A623; font-size: 15.5px; font-weight: 700; margin-bottom: 6px;">If the Connect device page does not open on the first try:</div>
-      You need to complete these exact three screens in order. If you see something else after signing in or the page does not load, return to the Tailscale window and <b style="color: #D6DCE2;">click Get Started again</b>.<br><br>
-      Once the <i>Get Started</i> button in the Tailscale window changes into three buttons (including device details and <b style="color: #D6DCE2;">Close</b>), close that window by clicking <b style="color: #D6DCE2;">Close</b> and wait for the <b style="color: #D6DCE2;">Start using Funnel</b> page to open.
-    </td>
-  </tr>
-</table>
+<br>
 
 <!-- ===================================================================== -->
 <!-- 04. MAIN SCREEN (DASHBOARD)                                           -->
 <!-- ===================================================================== -->
 
 <a id="sec-dashboard"></a>
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 88px; margin-bottom: 22px;">
+<p><a href="#sec-dashboard"><img src="docs/images/sec-04-en.svg" width="100%" alt="04 Main Screen (Dashboard)"></a></p>
+
+<p>The <b>Dashboard</b> tab shows the gateway overview and currently enabled servers. Disabled servers (<code>DISABLED</code>) are hidden from the <i>MCP Services Status</i> table to keep it clean — they are visible in the <i>MCP Services</i> tab.</p>
+
+<p><img src="docs/images/Main.png" width="100%" alt="Dashboard"></p>
+
+<table>
   <thead>
     <tr>
-      <th align="left" style="background: linear-gradient(90deg, #1B3B38 0%, #162226 100%); border: 1px solid #2CE5D0; border-left: 6px solid #2CE5D0; border-radius: 4px; padding: 18px 24px; font-size: 21px; color: #FFFFFF; letter-spacing: 0.4px;">
-        <span style="color: #2CE5D0;">04 ·</span> MAIN SCREEN (DASHBOARD)
-      </th>
+      <th width="250" align="left"><img src="https://img.shields.io/badge/-ACTIVE-15322F?style=flat-square" alt="ACTIVE"></th>
+      <th width="250" align="left"><img src="https://img.shields.io/badge/-WAITING-332915?style=flat-square" alt="WAITING"></th>
+      <th width="250" align="left"><img src="https://img.shields.io/badge/-QUARANTINE-381B20?style=flat-square" alt="QUARANTINE"></th>
+      <th width="250" align="left"><img src="https://img.shields.io/badge/-DISABLED-1D2025?style=flat-square" alt="DISABLED"></th>
     </tr>
   </thead>
+  <tbody>
+    <tr>
+      <td width="250" valign="top">The server is connected, verified, and exposing its tools to the chat.</td>
+      <td width="250" valign="top">Waiting for an external application to start (e.g., Unreal Editor on port <code>:8000</code>).</td>
+      <td width="250" valign="top">Startup or MCP protocol error. The server is isolated so other services keep working.</td>
+      <td width="250" valign="top">Manually disabled by the user (shown only in the <i>MCP Services</i> tab).</td>
+    </tr>
+  </tbody>
 </table>
 
-<p style="color: #B8C0C8; font-size: 15px; margin-bottom: 16px;">The <b>Dashboard</b> tab shows the gateway overview and currently enabled servers. Disabled servers (<code>DISABLED</code>) are hidden from the <i>MCP Services Status</i> table to keep it clean — they are visible in the <i>MCP Services</i> tab.</p>
-
-<div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/Main.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Dashboard">
-</div>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none;">
-  <tr>
-    <td width="23.5%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 16px 18px;">
-      <div style="color: #2CE5D0; font-size: 14px; font-weight: 700; margin-bottom: 8px;">ACTIVE</div>
-      <div style="color: #969FA8; font-size: 13.5px; line-height: 1.5;">The server is connected, verified, and exposing its tools to the chat.</div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="23.5%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 16px 18px;">
-      <div style="color: #F5A623; font-size: 14px; font-weight: 700; margin-bottom: 8px;">WAITING</div>
-      <div style="color: #969FA8; font-size: 13.5px; line-height: 1.5;">Waiting for an external application to start (e.g., Unreal Editor on port <code>:8000</code>).</div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="23.5%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 16px 18px;">
-      <div style="color: #FF6B78; font-size: 14px; font-weight: 700; margin-bottom: 8px;">QUARANTINE</div>
-      <div style="color: #969FA8; font-size: 13.5px; line-height: 1.5;">Startup or MCP protocol error. The server is isolated so other services keep working.</div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="23.5%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 16px 18px;">
-      <div style="color: #7F8790; font-size: 14px; font-weight: 700; margin-bottom: 8px;">DISABLED</div>
-      <div style="color: #7F8790; font-size: 13.5px; line-height: 1.5;">Manually disabled by the user (shown only in the <i>MCP Services</i> tab).</div>
-    </td>
-  </tr>
-</table>
+<br>
 
 <!-- ===================================================================== -->
 <!-- 05. MANAGING MCP SERVERS & PRESETS                                    -->
 <!-- ===================================================================== -->
 
 <a id="sec-servers"></a>
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 88px; margin-bottom: 22px;">
+<p><a href="#sec-servers"><img src="docs/images/sec-05-en.svg" width="100%" alt="05 Managing MCP Servers & Presets"></a></p>
+
+<p><img src="docs/images/MSP_Servises.png" width="100%" alt="MCP Services"></p>
+
+<table>
   <thead>
     <tr>
-      <th align="left" style="background: linear-gradient(90deg, #1B3B38 0%, #162226 100%); border: 1px solid #2CE5D0; border-left: 6px solid #2CE5D0; border-radius: 4px; padding: 18px 24px; font-size: 21px; color: #FFFFFF; letter-spacing: 0.4px;">
-        <span style="color: #2CE5D0;">05 ·</span> MANAGING MCP SERVERS & PRESETS
-      </th>
+      <th width="1000" align="left">How Real-Time Server Switching Works</th>
     </tr>
   </thead>
+  <tbody>
+    <tr>
+      <td width="1000">
+        You can enable or disable any servers right during an active conversation with the AI. At any given moment, <b>only the tools belonging to currently enabled servers</b> are available in the dialogue. You <b>do not need to reload the browser page</b>, restart your local client, or manually refresh the tool list in your AI settings — the gateway updates the available tools automatically.
+      </td>
+    </tr>
+  </tbody>
 </table>
 
-<div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/MSP_Servises.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="MCP Services">
-</div>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; background: #141619; border: 1px solid #262A30; border-radius: 4px; margin-bottom: 16px;">
-  <tr>
-    <td style="padding: 20px 24px; border: none; color: #969FA8; font-size: 15px; line-height: 1.6;">
-      <div style="color: #EAECEF; font-size: 17px; font-weight: 700; margin-bottom: 8px;">How Real-Time Server Switching Works</div>
-      You can enable or disable any servers right during an active conversation with the AI. At any given moment, <b style="color: #D6DCE2;">only the tools belonging to currently enabled servers</b> are available in the dialogue.<br><br>
-      You <b style="color: #D6DCE2;">do not need to reload the browser page</b>, restart your local client, or manually refresh the tool list in your AI settings — the gateway updates the available tools automatically.
-    </td>
-  </tr>
+<table>
+  <thead>
+    <tr>
+      <th width="333" align="left">Server Presets</th>
+      <th width="333" align="left">Enable (ON) & Tools</th>
+      <th width="334" align="left">Edit & Remove</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="333" valign="top">
+        Check the combination of servers you need for a specific task and click <b>+ Save Preset</b>. Switch between saved profiles in 1 click without interrupting your session.
+      </td>
+      <td width="333" valign="top">
+        The <b>ON</b> checkbox attaches a server to the chat on the fly or completely stops its process to free RAM, while <code>Tools: N</code> shows its active tool count.
+      </td>
+      <td width="334" valign="top">
+        The <b>✎</b> button opens the JSON configuration editor for the selected server, and <b>✕</b> removes the server from the list.
+      </td>
+    </tr>
+  </tbody>
 </table>
 
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none;">
-  <tr>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">Server Presets</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        Check the combination of servers you need for a specific task and click <b style="color: #D6DCE2;">+ Save Preset</b>. Switch between saved profiles in 1 click without interrupting your session.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">Enable (ON) & Tools</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        The <b style="color: #D6DCE2;">ON</b> checkbox attaches a server to the chat on the fly or completely stops its process to free RAM, while <code>Tools: N</code> shows its active tool count.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">Edit & Remove</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        The <b style="color: #D6DCE2;">✎</b> button opens the JSON configuration editor for the selected server, and <b style="color: #D6DCE2;">✕</b> removes the server from the list.
-      </div>
-    </td>
-  </tr>
-</table>
+<br>
 
 <!-- ===================================================================== -->
 <!-- 06. ADDING AN MCP SERVER                                              -->
 <!-- ===================================================================== -->
 
 <a id="sec-add"></a>
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 88px; margin-bottom: 22px;">
+<p><a href="#sec-add"><img src="docs/images/sec-06-en.svg" width="100%" alt="06 Adding an MCP Server"></a></p>
+
+<p>Click <b>+ Add Server</b> in the <i>MCP Services</i> tab to add a new local or remote server:</p>
+
+<p><img src="docs/images/Add_MCP.png" width="100%" alt="Add MCP Server"></p>
+
+<table>
   <thead>
     <tr>
-      <th align="left" style="background: linear-gradient(90deg, #1B3B38 0%, #162226 100%); border: 1px solid #2CE5D0; border-left: 6px solid #2CE5D0; border-radius: 4px; padding: 18px 24px; font-size: 21px; color: #FFFFFF; letter-spacing: 0.4px;">
-        <span style="color: #2CE5D0;">06 ·</span> ADDING AN MCP SERVER
-      </th>
+      <th width="333" align="left">1. Paste JSON</th>
+      <th width="333" align="left">2. Verify & Add</th>
+      <th width="334" align="left">3. Save Without Check</th>
     </tr>
   </thead>
+  <tbody>
+    <tr>
+      <td width="333" valign="top">
+        Copy a standard <code>mcpServers</code> block from the server's documentation and click <b>Paste from Clipboard</b> (or edit the JSON manually).
+      </td>
+      <td width="333" valign="top">
+        Click <b>Verify & Add</b> — Bridge will test the startup, discover its tools, and immediately attach the server to the gateway.
+      </td>
+      <td width="334" valign="top">
+        If the server depends on an external app that is currently closed, click <b>Save Without Check</b> — it will be added in <code>WAITING</code> mode.
+      </td>
+    </tr>
+  </tbody>
 </table>
 
-<p style="color: #B8C0C8; font-size: 15px; margin-bottom: 16px;">Click <b>+ Add Server</b> in the <i>MCP Services</i> tab to add a new local or remote server:</p>
-
-<div align="center" style="margin-bottom: 18px;">
-  <img src="docs/images/Add_MCP.svg" width="100%" style="display: block; width: 100%; border: 1px solid #262A30; border-radius: 4px; box-sizing: border-box;" alt="Add MCP Server">
-</div>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none;">
-  <tr>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">1. Paste JSON</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        Copy a standard <code>mcpServers</code> block from the server's documentation and click <b style="color: #D6DCE2;">Paste from Clipboard</b> (or edit the JSON manually).
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">2. Verify & Add</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        Click <b style="color: #D6DCE2;">Verify & Add</b> — Bridge will test the startup, discover its tools, and immediately attach the server to the gateway.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="32%" valign="top" style="background: #141619; border: 1px solid #262A30; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #EAECEF; font-size: 16px; font-weight: 700; margin-bottom: 10px;">3. Save Without Check</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
-        If the server depends on an external app that is currently closed, click <b style="color: #D6DCE2;">Save Without Check</b> — it will be added in <code>WAITING</code> mode.
-      </div>
-    </td>
-  </tr>
-</table>
+<br>
 
 <!-- ===================================================================== -->
 <!-- 07. SECURITY & USER RESPONSIBILITY                                    -->
 <!-- ===================================================================== -->
 
 <a id="sec-security"></a>
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 88px; margin-bottom: 22px;">
+<p><a href="#sec-security"><img src="docs/images/sec-07-en.svg" width="100%" alt="07 Security & User Responsibility"></a></p>
+
+<p><img src="docs/images/disclaimer-en.svg" width="100%" alt="Disclaimer"></p>
+
+<table>
   <thead>
     <tr>
-      <th align="left" style="background: linear-gradient(90deg, #332915 0%, #1F1B16 100%); border: 1px solid #F5A623; border-left: 6px solid #F5A623; border-radius: 4px; padding: 18px 24px; font-size: 21px; color: #FFFFFF; letter-spacing: 0.4px;">
-        <span style="color: #F5A623;">07 ·</span> SECURITY & USER RESPONSIBILITY
-      </th>
+      <th width="500" align="left">1. Full Access to Allowed Folders</th>
+      <th width="500" align="left">2. Running Third-Party STDIO Processes</th>
     </tr>
   </thead>
-</table>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; background: #262015; border: 1px solid #8C6A32; border-left: 5px solid #F5A623; border-radius: 4px; margin-bottom: 18px;">
-  <tr>
-    <td style="padding: 20px 24px; border: none; color: #EAECEF; font-size: 15px; line-height: 1.6;">
-      <div style="color: #F5A623; font-size: 17px; font-weight: 700; margin-bottom: 8px;">Disclaimer (Use at Your Own Risk)</div>
-      <b>MCP Bridge</b> is provided "AS IS", without warranty of any kind. The developer assumes no responsibility or liability for data loss or corruption, deleted files, leaked tokens, system malfunctions, or any actions performed by connected AI models and third-party MCP servers.<br><br>
-      <b>Full responsibility for choosing which servers to run, which folders to expose, and keeping public URLs secure rests entirely with the user.</b>
-    </td>
-  </tr>
-</table>
-
-<table width="100%" style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border: none;">
-  <tr>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #8C6A32; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #F5A623; font-size: 16px; font-weight: 700; margin-bottom: 10px;">1. Full Access to Allowed Folders</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
         The built-in <code>Filesystem MCP</code> grants the AI permission to read, modify, and delete files inside checked directories in <b>Allowed Folders</b>. Never expose entire system drives (<code>C:\</code>) or folders containing passwords, wallets, or SSH keys.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #8C6A32; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #F5A623; font-size: 16px; font-weight: 700; margin-bottom: 10px;">2. Running Third-Party STDIO Processes</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
+      </td>
+      <td width="500" valign="top">
         Any CLI server you add (<code>npx</code>, <code>uvx</code>, <code>python</code>, <code>node</code>, <code>.exe</code>) runs on your PC under your Windows user account. Only add servers and packages from sources you completely trust.
-      </div>
-    </td>
-  </tr>
-  <tr style="height: 16px;">
-    <td colspan="3" style="border: none; background: transparent; padding: 0;"></td>
-  </tr>
-  <tr>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #8C6A32; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #F5A623; font-size: 16px; font-weight: 700; margin-bottom: 10px;">3. Public Tailscale Funnel URL</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
+      </td>
+    </tr>
+  </tbody>
+  <thead>
+    <tr>
+      <th width="500" align="left">3. Public Tailscale Funnel URL</th>
+      <th width="500" align="left">4. Local Storage of Keys & Tokens</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
         When the tunnel is enabled, your <code>PUBLIC URL</code> is reachable from the internet by anyone who knows the address. Never share this URL publicly or expose it in screenshots, and click <b>Disconnect</b> when you no longer need remote access.
-      </div>
-    </td>
-    <td width="2%" style="border: none; background: transparent; padding: 0;"></td>
-    <td width="49%" valign="top" style="background: #141619; border: 1px solid #8C6A32; border-radius: 4px; padding: 20px 22px;">
-      <div style="color: #F5A623; font-size: 16px; font-weight: 700; margin-bottom: 10px;">4. Local Storage of Keys & Tokens</div>
-      <div style="color: #969FA8; font-size: 14.5px; line-height: 1.55;">
+      </td>
+      <td width="500" valign="top">
         Configured environment variables (<code>env</code>) and HTTP authorization headers (<code>Authorization</code> / API keys) are stored locally in plain text inside <code>Config/settings.json</code>. Do not share this file with others.
-      </div>
-    </td>
-  </tr>
+      </td>
+    </tr>
+  </tbody>
 </table>
 
-<hr style="border: none; border-top: 1px solid #262A30; margin: 64px 0 20px 0;">
+<br>
 
 <div align="center">
+  <p><a href="#top"><img src="https://img.shields.io/badge/-↑%20Back%20to%20Top-181A1D?style=for-the-badge" alt="Back to Top"></a></p>
   <sub>
     <b>System Requirements:</b> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
     <a href="docs/ARCHITECTURE.md">Architecture</a> · <a href="SECURITY.md">Security</a> · <a href="THIRD_PARTY_NOTICES.md">Third-Party Notices</a> · <a href="CONTRIBUTING.md">Contributing</a>
   </sub>
-</div>~~~~~~~~
+</div>
