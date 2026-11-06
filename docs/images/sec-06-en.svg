@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 54" width="100%">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1B3B38"/>
+      <stop offset="100%" stop-color="#151F24"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="899" height="53" rx="4" fill="url(#g)" stroke="#2CE5D0" stroke-width="1"/>
+  <rect x="0" y="0" width="6" height="54" rx="2" fill="#2CE5D0"/>
+  <text x="24" y="34" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif" font-size="18.5" font-weight="700" fill="#FFFFFF" letter-spacing="0.4">
+    <tspan fill="#2CE5D0">06 · </tspan>ADDING AN MCP SERVER
+  </text>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 132" width="100%">
+  <rect x="0.5" y="0.5" width="899" height="131" rx="4" fill="#262015" stroke="#8C6A32" stroke-width="1"/>
+  <rect x="0" y="0" width="5" height="132" rx="2" fill="#F5A623"/>
+  <text x="24" y="32" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif" font-size="16" font-weight="700" fill="#F5A623">
+    Отказ от ответственности (Использование на свой страх и риск)
+  </text>
+  <text x="24" y="60" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif" font-size="14" fill="#EAECEF">
+    <tspan x="24" dy="0">Приложение MCP Bridge предоставляется по принципу «как есть» (AS IS). Разработчик не несёт никакой</tspan>
+    <tspan x="24" dy="21">ответственности за потерю или повреждение данных, удаление файлов, утечку токенов, сбои в работе системы,</tspan>
+    <tspan x="24" dy="21">а также за любые действия подключённых нейросетей и сторонних MCP-серверов. Вся ответственность</tspan>
+    <tspan x="24" dy="21" font-weight="700" fill="#FFFFFF">за выбор серверов, открытые папки и безопасность публичных ссылок полностью лежит на пользователе.</tspan>
+  </text>
+</svg>

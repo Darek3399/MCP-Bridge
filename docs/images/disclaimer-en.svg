@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 132" width="100%">
+  <rect x="0.5" y="0.5" width="899" height="131" rx="4" fill="#262015" stroke="#8C6A32" stroke-width="1"/>
+  <rect x="0" y="0" width="5" height="132" rx="2" fill="#F5A623"/>
+  <text x="24" y="32" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif" font-size="16" font-weight="700" fill="#F5A623">
+    Disclaimer (Use at Your Own Risk)
+  </text>
+  <text x="24" y="60" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif" font-size="14" fill="#EAECEF">
+    <tspan x="24" dy="0">MCP Bridge is provided "AS IS", without warranty of any kind. The developer assumes no responsibility or</tspan>
+    <tspan x="24" dy="21">liability for data loss or corruption, deleted files, leaked tokens, system malfunctions, or any actions</tspan>
+    <tspan x="24" dy="21">performed by connected AI models and third-party MCP servers. Full responsibility for choosing which</tspan>
+    <tspan x="24" dy="21" font-weight="700" fill="#FFFFFF">servers to run, which folders to expose, and keeping public URLs secure rests entirely with the user.</tspan>
+  </text>
+</svg>
