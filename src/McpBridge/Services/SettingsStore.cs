@@ -79,8 +79,8 @@ public sealed class SettingsStore
         if (!settings.UnrealMcpEnabled.HasValue) settings.UnrealMcpEnabled = true;
         if (!settings.FilesystemMcpEnabled.HasValue) settings.FilesystemMcpEnabled = true;
 
-        // Older Dev Tunnel JSON members are intentionally ignored. A new Funnel
-        // endpoint always requires a fresh explicit user action after upgrade.
+        // Legacy online-access state is intentionally ignored. A public endpoint
+        // always requires a fresh explicit user action after upgrade.
         if (settings.SchemaVersion < 5)
             settings.TailscaleFunnelEnabled = false;
         settings.SchemaVersion = 6;

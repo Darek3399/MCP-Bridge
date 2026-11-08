@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -34,7 +34,7 @@ internal static class ProcessTreeTerminator
                 if (handle == IntPtr.Zero)
                 {
                     var error = Marshal.GetLastWin32Error();
-                    if (error != ErrorInvalidParameter)
+                    if (error != ErrorInvalidParameter && error != 5)
                         failures.AppendLine("PID " + processId + ": OpenProcess failed, Win32=" + error);
                     continue;
                 }
@@ -44,7 +44,7 @@ internal static class ProcessTreeTerminator
                     if (!TerminateProcess(handle, 1))
                     {
                         var error = Marshal.GetLastWin32Error();
-                        if (error != ErrorInvalidParameter)
+                        if (error != ErrorInvalidParameter && error != 5)
                             failures.AppendLine("PID " + processId + ": TerminateProcess failed, Win32=" + error);
                         continue;
                     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -52,7 +52,6 @@ public partial class MainWindow : Window
     private bool _exitRequested;
     private bool _changingAutoStartControl;
     private bool _fontScaleCommitPending;
-    private bool _dependencyStatusShown;
     private bool _dependencyFooterWarning;
     private DependencyStatusView? _dependencyStatusView;
     private int _onlineServersCount;
@@ -84,6 +83,8 @@ public partial class MainWindow : Window
             _settings = new AppSettings();
         }
 
+        ErrorLog.Enabled = _settings.LoggingEnabled;
+
         _tailscaleManager = new TailscaleConnectionManager(_settings, SaveSettings);
 
         RootsListBox.ItemsSource = _rootItems;
@@ -98,20 +99,23 @@ public partial class MainWindow : Window
         UpdateTailscaleUi();
 
         FontScaleSlider.Value = Math.Max(0.85, Math.Min(1.35, _settings.FontScale <= 0 ? 1.0 : _settings.FontScale));
+        if (LoggingEnabledCheckBox != null)
+            LoggingEnabledCheckBox.IsChecked = _settings.LoggingEnabled;
 
         Loaded += async (_, _) =>
         {
             ApplyLanguage(); CaptureBaseFontSizes(this);
             ApplyFontScale(FontScaleSlider.Value);
+            if (LoggingEnabledCheckBox != null)
+                LoggingEnabledCheckBox.IsChecked = _settings.LoggingEnabled;
             ErrorLog.LogApp(I18n.Tr("MCP Bridge запущен.", "MCP Bridge started.")); ErrorLog.LogUpdated += (_, _) => Dispatcher.BeginInvoke(new Action(() => { if (MainPages.SelectedIndex == 2) RefreshLogs(); }), DispatcherPriority.Background); StartEditorMonitoring();
             UpdateTailscaleUi();
             await SyncMcpInfrastructureAsync(forceRetryQuarantined: true);
             _tailscaleManager.Start(_mcpInfrastructure.IsReady);
             var dependencyReport = McpDependencyResolver.GetCachedReport();
-            if (dependencyReport?.HasUnavailableItems == true && !_dependencyStatusShown)
+            if (dependencyReport != null && !dependencyReport.CoreReady)
             {
-                _dependencyStatusShown = true;
-                OpenDependencyStatusPage();
+                FooterStatusText.Text = I18n.Tr("Нет зависимости: Node.js", "Missing dependency: Node.js");
             }
         };
     }
@@ -455,6 +459,10 @@ public partial class MainWindow : Window
         LogTabAppButton.Content = I18n.Tr("Приложение", "Application");
         LogTabErrorsButton.Content = I18n.Tr("Ошибки (errors.log)", "Errors (errors.log)");
         LogTabVerificationButton.Content = I18n.Tr("Верификация", "Verification");
+        if (LoggingEnabledCheckBox != null)
+            LoggingEnabledCheckBox.Content = I18n.Tr("Запись логов включена", "Log recording enabled");
+        if (LoggingEnabledHintText != null)
+            LoggingEnabledHintText.Text = I18n.Tr("По умолчанию выключено. Включение/выключение действует сразу.", "Off by default. Toggle takes effect immediately.");
         ClearLogsBtn.Content = I18n.Tr("Очистить", "Clear");
         RefreshLogsBtn.Content = I18n.Tr("Обновить", "Refresh");
         OpenLogsFolderBtn.Content = I18n.Tr("Открыть папку Logs", "Open Logs Folder");
@@ -657,11 +665,18 @@ public partial class MainWindow : Window
 
         foreach (var candidate in dialog.ResultServers)
         {
-            var existingIdx = _settings.CustomServers.FindIndex(s => string.Equals(s.Id, candidate.Id, StringComparison.OrdinalIgnoreCase));
-            if (existingIdx >= 0)
-                _settings.CustomServers[existingIdx] = candidate;
-            else
-                _settings.CustomServers.Add(candidate);
+            var baseId = string.IsNullOrWhiteSpace(candidate.Id) ? "custom_mcp" : SettingsStore.SanitizeServerId(candidate.Id);
+            if (string.IsNullOrWhiteSpace(baseId)) baseId = "custom_mcp";
+            var uniqueId = baseId;
+            var suffix = 2;
+            while (string.Equals(uniqueId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(uniqueId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+                   _settings.CustomServers.Any(s => string.Equals(s.Id, uniqueId, StringComparison.OrdinalIgnoreCase)))
+            {
+                uniqueId = baseId + "_" + suffix++;
+            }
+            candidate.Id = uniqueId;
+            _settings.CustomServers.Add(candidate);
         }
 
         if (!SaveSettings()) return;
@@ -1248,28 +1263,8 @@ public partial class MainWindow : Window
 
     private void StartEditorMonitoring()
     {
-        _editorMonitor.ProcessObserved += EditorMonitor_ProcessObserved;
-        _editorMonitor.ProcessNoLongerRunning += EditorMonitor_ProcessNoLongerRunning;
-        _editorMonitor.SessionStarted += EditorMonitor_SessionChanged;
-        _editorMonitor.SessionUpdated += EditorMonitor_SessionChanged;
-        _editorMonitor.SessionEnded += EditorMonitor_SessionEnded;
-        _editorMonitor.DetectionFailed += EditorMonitor_DetectionFailed;
-
-        try
-        {
-            _editorMonitor.Start();
-            FooterStatusText.Text = I18n.Tr("Оркестратор запущен.", "Orchestrator started.");
-            RefreshEditorDisplay();
-        }
-        catch (Exception exception)
-        {
-            ErrorLog.Write("MainWindow.StartEditorMonitoring", exception);
-            RuntimeStatusText.Text = I18n.Tr("Ошибка WinEvent мониторинга", "WinEvent monitoring error");
-            RuntimeStatusText.Foreground = (Brush)FindResource("StatusDisconnectedBrush");
-            RuntimeStatusDot.Fill = (Brush)FindResource("StatusDisconnectedBrush");
-            EditorProcessText.Text = I18n.Tr("Мониторинг не подключён", "Monitoring not connected");
-            EditorProjectText.Text = ErrorLog.Describe(exception);
-        }
+        FooterStatusText.Text = I18n.Tr("Оркестратор запущен.", "Orchestrator started.");
+        RefreshEditorDisplay();
     }
 
     private void EditorMonitor_ProcessObserved(object? sender, EditorProcessEventArgs e)
@@ -1310,7 +1305,9 @@ public partial class MainWindow : Window
             RefreshEditorDisplay();
             if (_observedEditors.Count == 0)
             {
-                FooterStatusText.Text = I18n.Tr("Unreal Editor закрыт (переведён в ОЖИДАНИЕ). Остальные MCP-серверы продолжают работу.", "Unreal Editor closed (switched to WAITING). Other MCP servers remain active.");
+                FooterStatusText.Text = I18n.Tr(
+                    "Unreal Editor закрыт. Доступность MCP определяется независимой проверкой endpoint.",
+                    "Unreal Editor closed. MCP availability is determined by endpoint verification.");
             }
         }), DispatcherPriority.Background);
     }
@@ -1827,7 +1824,9 @@ public partial class MainWindow : Window
         MainPages.SelectedIndex = index;
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            ApplyLanguage(); CaptureBaseFontSizes(this);
+            ApplyLanguage();
+            ApplyFontScale(1.0);
+            CaptureBaseFontSizes(this);
             ApplyFontScale(_settings.FontScale <= 0 ? 1.0 : _settings.FontScale);
         }), DispatcherPriority.Loaded);
 
@@ -1877,6 +1876,19 @@ public partial class MainWindow : Window
     }
 
     private void RefreshLogs_Click(object sender, RoutedEventArgs e) => RefreshLogs();
+
+    private void LoggingEnabled_Click(object sender, RoutedEventArgs e)
+    {
+        var enabled = LoggingEnabledCheckBox.IsChecked == true;
+        _settings.LoggingEnabled = enabled;
+        ErrorLog.Enabled = enabled;
+        SaveSettings();
+        if (enabled)
+            ErrorLog.LogApp(I18n.Tr("Запись логов включена.", "Log recording enabled."));
+        else
+            FooterStatusText.Text = I18n.Tr("Запись логов выключена.", "Log recording disabled.");
+        RefreshLogs();
+    }
 
     private void RefreshLogs()
     {

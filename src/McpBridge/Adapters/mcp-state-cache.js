@@ -179,6 +179,7 @@ class McpServerStateCache extends EventEmitter {
     state.tools = tools;
     state.toolFingerprint = nextFingerprint;
     state.health = 'online';
+    state.pending = false;
     state.isPolling = false;
     state.lastCompletedAt = result.completedAt || new Date().toISOString();
     state.lastSuccessAt = state.lastCompletedAt;
@@ -204,37 +205,24 @@ class McpServerStateCache extends EventEmitter {
 
   setPending(id, message, result = {}) {
     const state = this.states.get(String(id));
-    if (!state || !state.enabled) return false;
-
-    const safeMessage = safeError(message || 'Waiting for a local process dependency.');
-    const nextStale = state.tools.length > 0;
-    const changed = state.health !== 'waiting' ||
-      state.isPolling ||
-      state.consecutiveFailures !== 0 ||
-      state.stale !== nextStale ||
-      state.lastError !== safeMessage;
-    if (!changed) return false;
-
-    state.health = 'waiting';
+    if (!state) return false;
+    state.pending = true;
+    state.health = !state.enabled ? 'disabled' : (state.needsDownload ? 'downloading' : 'waiting');
     state.isPolling = false;
     state.lastCompletedAt = result.completedAt || new Date().toISOString();
     state.responseTimeMs = Number.isFinite(result.responseTimeMs) ? result.responseTimeMs : null;
-    state.consecutiveFailures = 0;
-    state.lastError = safeMessage;
-    state.stale = nextStale;
-
+    state.lastError = null;
+    state.updatedAt = new Date().toISOString();
     this._publish('verification.completed', state.serverId, {
       success: false,
       pending: true,
       configRevision: state.configRevision,
       catalogRevision: state.catalogRevision,
       catalogChanged: false,
-      protocolChanged: false,
       toolsCount: state.tools.length,
+      stale: state.stale,
       completedAt: state.lastCompletedAt,
-      responseTimeMs: state.responseTimeMs,
-      consecutiveFailures: 0,
-      lastError: state.lastError
+      responseTimeMs: state.responseTimeMs
     });
     return true;
   }
@@ -242,29 +230,19 @@ class McpServerStateCache extends EventEmitter {
   setFailure(id, error, result = {}) {
     const state = this.states.get(String(id));
     if (!state) return false;
+
     state.consecutiveFailures += 1;
-    const downloadElapsedMs = Date.now() - (state.firstDownloadStartedAt || Date.now());
-    const isInitialStdioDownload = state.transport === 'stdio' && state.needsDownload === true && !state.lastSuccessAt && !state.temporary && downloadElapsedMs < 90000;
-    const waitingForFirstLocalSuccess = state.scope === 'local' && !state.lastSuccessAt;
-    const failureThreshold = state.scope === 'remote' ? 3 : 2;
-    const keepOnline = !state.temporary && state.lastSuccessAt !== null &&
-      state.tools.length > 0 && state.consecutiveFailures < failureThreshold;
-    state.health = !state.enabled
-      ? 'disabled'
-      : (waitingForFirstLocalSuccess ? 'waiting' : (keepOnline ? 'online' : 'offline'));
+    state.pending = false;
+    state.health = !state.enabled ? 'disabled' : 'offline';
     state.isPolling = false;
     state.lastCompletedAt = result.completedAt || new Date().toISOString();
-    if (!keepOnline) {
-      state.responseTimeMs = Number.isFinite(result.responseTimeMs) ? result.responseTimeMs : null;
-      state.stale = state.tools.length > 0;
-      state.lastError = safeError(error);
-    } else {
-      state.stale = false;
-      state.lastError = null;
-    }
+    state.responseTimeMs = Number.isFinite(result.responseTimeMs) ? result.responseTimeMs : null;
+    state.stale = state.tools.length > 0;
+    state.lastError = safeError(error);
     state.updatedAt = new Date().toISOString();
+
     this._publish('verification.completed', state.serverId, {
-      success: keepOnline,
+      success: false,
       configRevision: state.configRevision,
       catalogRevision: state.catalogRevision,
       catalogChanged: false,
@@ -322,7 +300,7 @@ class McpServerStateCache extends EventEmitter {
         : null,
       serverRevision: previous.serverRevision + 1,
       serverRevisionToken: crypto.randomUUID(),
-      firstDownloadStartedAt: existing && existing.firstDownloadStartedAt ? existing.firstDownloadStartedAt : Date.now(),
+      firstDownloadStartedAt: previous && previous.firstDownloadStartedAt ? previous.firstDownloadStartedAt : Date.now(),
       updatedAt: new Date().toISOString()
     };
 

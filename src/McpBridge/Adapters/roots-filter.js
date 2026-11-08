@@ -4,8 +4,10 @@
 
 const http = require('node:http');
 const https = require('node:https');
+const zlib = require('node:zlib');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const path = require('node:path');
 const { URL } = require('node:url');
 const { McpServerStateCache, safeError } = require('./mcp-state-cache');
 const { McpPollManager } = require('./mcp-poll-manager');
@@ -120,20 +122,98 @@ function parseArgs(argv) {
 }
 
 const options = parseArgs(process.argv);
-let upstreams = []; // [{ id, name, url }]
-const upstreamSessions = new Map(); // upstreamId -> Streamable HTTP session ID
+let upstreams = [];
+const upstreamSessions = new Map();
 const upstreamInitialized = new Set();
-const upstreamModernUnsupported = new Set(); // upstreamId -> negotiated connection is initialized
-const upstreamInitializationPromises = new Map(); // upstreamId -> { sessionEpoch, promise }
+const upstreamModernUnsupported = new Set();
+const upstreamInitializationPromises = new Map();
 let nextLegacySseRpcId = 1000000000;
 let nextUpstreamRpcId = 2000000000;
-const upstreamTransportModes = new Map(); // upstreamId -> streamable-http | legacy-sse
-const legacySseConnections = new Map(); // upstreamId -> persistent legacy SSE connection
-const upstreamRequests = new Map(); // upstreamId -> active HTTP requests owned by that worker
-const upstreamRequestEpochs = new Map(); // upstreamId -> incremented when its configuration is replaced
-const upstreamSessionEpochs = new Map(); // upstreamId -> protects recovered sessions from stale request failures
-const lastUpstreamFailureByServer = new Map(); // serverId -> last logged failure detail
-const toolRouteMap = new Map(); // exposedToolName -> { worker, originalName }
+const upstreamTransportModes = new Map();
+const legacySseConnections = new Map();
+const upstreamRequests = new Map();
+const upstreamRequestEpochs = new Map();
+const upstreamSessionEpochs = new Map();
+const lastUpstreamFailureByServer = new Map();
+const toolRouteMap = new Map();
+
+const stdioToolsCachePath = options.config
+  ? path.join(path.dirname(options.config), 'stdio-tools-cache.json')
+  : null;
+const stdioKnownToolsByServer = new Map();
+if (stdioToolsCachePath && fs.existsSync(stdioToolsCachePath)) {
+  try {
+    const rawCache = JSON.parse(fs.readFileSync(stdioToolsCachePath, 'utf8'));
+    if (rawCache && typeof rawCache === 'object') {
+      for (const [k, v] of Object.entries(rawCache)) {
+        if (Array.isArray(v) && v.length > 0) stdioKnownToolsByServer.set(k, v);
+      }
+    }
+  } catch (_) {}
+}
+
+function saveStdioToolsCache() {
+  if (!stdioToolsCachePath) return;
+  try {
+    const obj = {};
+    for (const [k, v] of stdioKnownToolsByServer.entries()) obj[k] = v;
+    const tmpPath = stdioToolsCachePath + '.tmp';
+    fs.writeFileSync(tmpPath, JSON.stringify(obj), 'utf8');
+    fs.renameSync(tmpPath, stdioToolsCachePath);
+  } catch (_) {}
+}
+
+const stdioRevalidationInFlight = new Set();
+const stdioLastRevalidatedAt = new Map();
+const STDIO_REVALIDATE_INTERVAL_MS = 15 * 60 * 1000;
+
+function revalidateStdioServerInBackground(upstream, isCurrent) {
+  if (!upstream || upstream.transport !== 'stdio') return;
+  const serverId = String(upstream.id);
+  if (serverId.toLowerCase() === 'filesystem') return;
+  if (stdioRevalidationInFlight.has(serverId)) return;
+
+  const lastTime = stdioLastRevalidatedAt.get(serverId) || 0;
+  if (Date.now() - lastTime < STDIO_REVALIDATE_INTERVAL_MS) return;
+
+  stdioRevalidationInFlight.add(serverId);
+  stdioLastRevalidatedAt.set(serverId, Date.now());
+
+  setTimeout(async () => {
+    try {
+      if (typeof isCurrent === 'function' && !isCurrent()) return;
+      const res = await sendUpstreamRpc(
+        upstream,
+        { jsonrpc: '2.0', id: ++nextUpstreamRpcId, method: 'tools/list', params: {} },
+        15000
+      );
+      const freshTools = res && res.data && res.data.result && res.data.result.tools;
+      if (res && res.ok && Array.isArray(freshTools) && freshTools.length > 0) {
+        const prevJson = JSON.stringify(stdioKnownToolsByServer.get(serverId) || []);
+        const nextJson = JSON.stringify(freshTools);
+        stdioKnownToolsByServer.set(serverId, freshTools);
+        saveStdioToolsCache();
+
+        if (prevJson !== nextJson) {
+          const currentState = stateCache.getInternalServer(serverId);
+          if (currentState && currentState.health === 'online') {
+            stateCache.setSuccess(serverId, {
+              tools: freshTools,
+              serverInfo: currentState.serverInfo,
+              completedAt: new Date().toISOString(),
+              responseTimeMs: currentState.responseTimeMs,
+              protocolMode: currentState.protocolMode || 'streamable-http'
+            });
+            rebuildToolRouteMap();
+          }
+        }
+      }
+    } catch (_) {
+    } finally {
+      stdioRevalidationInFlight.delete(serverId);
+    }
+  }, 500);
+}
 
 function isManagerRequestAuthorized(request) {
   if (!MANAGER_API_KEY) return false;
@@ -240,7 +320,7 @@ function createModernRequestPayload(rpcPayload) {
   return { ...rpcPayload, params };
 }
 
-function sendStreamableHttpRpc(upstream, rpcPayload, timeoutMs = 12000, modern = false, extraHeaders = null, legacyProtocolVersion = null) {
+function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, modern = false, extraHeaders = null, legacyProtocolVersion = null) {
   const expectedSessionEpoch = getUpstreamSessionEpoch(upstream.id);
   return new Promise((resolve) => {
     let targetUrl;
@@ -256,6 +336,7 @@ function sendStreamableHttpRpc(upstream, rpcPayload, timeoutMs = 12000, modern =
     const headers = createUpstreamHeaders(upstream, {
       'Content-Type': 'application/json',
       'Accept': 'application/json, text/event-stream',
+      'Accept-Encoding': 'br, gzip, deflate',
       'Connection': 'keep-alive',
       'Content-Length': bodyBuf.length
     });
@@ -281,25 +362,48 @@ function sendStreamableHttpRpc(upstream, rpcPayload, timeoutMs = 12000, modern =
       if (existingSession) headers['Mcp-Session-Id'] = existingSession;
     }
 
-    const req = transport.request({
+    let resolved = false;
+    let stallTimer = null;
+    let req = null;
+
+    const clearWatchdog = () => {
+      if (stallTimer) {
+        clearTimeout(stallTimer);
+        stallTimer = null;
+      }
+    };
+
+    const markActivity = () => {
+      if (resolved) return;
+      clearWatchdog();
+      const silenceLimit = Math.max(4000, Number(stallTimeoutMs) || 15000);
+      stallTimer = setTimeout(() => {
+        if (!resolved && req) {
+          req.destroy(new Error('Upstream socket stalled (no data activity).'));
+        }
+      }, silenceLimit);
+    };
+
+    markActivity();
+
+    req = transport.request({
       hostname: targetUrl.hostname,
       port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
       path: targetUrl.pathname + targetUrl.search,
       method: 'POST',
-      headers,
-      agent: (!proxyEnvironmentConfigured && !upstreamInitialized.has(String(upstream.id))) ? false : undefined,
-      timeout: timeoutMs
+      headers
     }, (res) => {
+      markActivity();
       const newSession = res.headers['mcp-session-id'];
       if (!modern && newSession && isUpstreamSessionEpochCurrent(upstream.id, expectedSessionEpoch))
         upstreamSessions.set(String(upstream.id), String(newSession));
 
       const isSse = String(res.headers['content-type'] || '').toLowerCase().includes('text/event-stream');
       let chunks = '';
-      let resolved = false;
       const finish = (parsed) => {
         if (resolved) return;
         resolved = true;
+        clearWatchdog();
         const status = res.statusCode || 0;
         resolve({
           ok: status >= 200 && status < 300 && (!!parsed || outboundPayload.id === undefined),
@@ -315,19 +419,33 @@ function sendStreamableHttpRpc(upstream, rpcPayload, timeoutMs = 12000, modern =
         return;
       }
 
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => {
+      res.on('data', () => markActivity());
+
+      const contentEncoding = String(res.headers['content-encoding'] || '').toLowerCase().trim();
+      let stream = res;
+      if (contentEncoding === 'br') {
+        stream = res.pipe(zlib.createBrotliDecompress());
+      } else if (contentEncoding === 'gzip' || contentEncoding === 'x-gzip') {
+        stream = res.pipe(zlib.createGunzip());
+      } else if (contentEncoding === 'deflate') {
+        stream = res.pipe(zlib.createInflate());
+      }
+
+      stream.setEncoding('utf8');
+      stream.on('data', (chunk) => {
+        markActivity();
         chunks += chunk;
-        if (isSse) {
+        if (isSse && (chunk.includes('\n\n') || chunk.includes('\r\n\r\n') || chunks.endsWith('\n\n') || chunks.endsWith('\r\n\r\n'))) {
           const parsed = parseSseOrJson(chunks);
           if (parsed && (parsed.result !== undefined || parsed.error !== undefined)) {
             finish(parsed);
-            if (upstream.transport !== 'stdio') req.destroy();
+            res.resume();
           }
         }
       });
-      res.on('end', () => finish(parseSseOrJson(chunks)));
-      res.on('error', (err) => {
+      stream.on('end', () => finish(parseSseOrJson(chunks)));
+      stream.on('error', (err) => {
+        clearWatchdog();
         if (!resolved) {
           resolved = true;
           resolve({ ok: false, status: res.statusCode || 0, error: err.message });
@@ -335,9 +453,21 @@ function sendStreamableHttpRpc(upstream, rpcPayload, timeoutMs = 12000, modern =
       });
     });
 
+    req.on('socket', (sock) => {
+      markActivity();
+      sock.on('lookup', () => markActivity());
+      sock.on('connect', () => markActivity());
+      sock.on('secureConnect', () => markActivity());
+    });
+
     trackUpstreamRequest(upstream.id, req);
-    req.setTimeout(timeoutMs, () => req.destroy(new Error('Upstream request timed out.')));
-    req.on('error', (err) => resolve({ ok: false, status: 0, error: err.message }));
+    req.on('error', (err) => {
+      clearWatchdog();
+      if (!resolved) {
+        resolved = true;
+        resolve({ ok: false, status: 0, error: err.message });
+      }
+    });
     req.end(bodyBuf);
   });
 }
@@ -604,8 +734,6 @@ function sendLegacySseRpc(
         }, timeoutMs);
         connection.pending.set(key, { resolve, reject, timer, originalId });
       });
-      // The connection may be invalidated before the POST promise settles;
-      // attach a rejection handler while preserving the original await result.
       pendingPromise.catch(() => {});
     }
 
@@ -825,6 +953,8 @@ function formatUpstreamRpcFailure(stage, response, upstream) {
 }
 
 function logUpstreamFailure(stage, upstream, response, detailOverride = null) {
+  const rawErr = String((response && response.error) || detailOverride || '');
+  if (/ECONNREFUSED|ECONNRESET|ETIMEDOUT|Upstream request timed out|Upstream socket stalled|socket hang up/i.test(rawErr)) return;
   const rawId = String(upstream && upstream.id ? upstream.id : 'unknown');
   const safeId = rawId.replace(/[^A-Za-z0-9_.:-]/g, '_')
     .replace(/github_pat_[A-Za-z0-9_]+/gi, '[REDACTED]')
@@ -857,8 +987,6 @@ function invalidateUpstreamSession(
   upstreamSessionEpochs.set(key, getUpstreamSessionEpoch(key) + 1);
 
   upstreamInitialized.delete(key);
-  // The old initialization entry remains tagged with its old epoch. New
-  // requests cannot join it and will share one fresh recovery handshake.
   upstreamSessions.delete(key);
   upstreamTransportModes.delete(key);
 
@@ -868,46 +996,6 @@ function invalidateUpstreamSession(
   if (sessionId && mode === 'streamable-http' && upstream.transport !== 'stdio')
     void deleteStreamableHttpSession(upstream, sessionId);
   return true;
-}
-
-async function tryModernUpstreamDiscovery(
-  upstream,
-  isCurrent = () => true,
-  expectedSessionEpoch = getUpstreamSessionEpoch(upstream.id)
-) {
-  const key = String(upstream.id);
-  if (upstreamModernUnsupported.has(key))
-    return { ok: false, fallbackAllowed: true, status: 0, error: 'MCP 2026 discovery not supported by upstream.' };
-  if (!isCurrent()) return { ok: false, error: 'MCP verification was superseded by a configuration change.' };
-  if (!isUpstreamSessionEpochCurrent(upstream.id, expectedSessionEpoch))
-    return { ok: false, error: 'MCP discovery was superseded by a session recovery.' };
-  const request = { jsonrpc: '2.0', id: 1, method: 'server/discover', params: {} };
-  const response = await sendStreamableHttpRpc(upstream, request, 8000, true);
-  if (!isCurrent()) return { ok: false, error: 'MCP verification was superseded by a configuration change.' };
-  if (!isUpstreamSessionEpochCurrent(upstream.id, expectedSessionEpoch))
-    return { ok: false, error: 'MCP discovery was superseded by a session recovery.' };
-  if (!response.ok || !response.data || response.data.error || !response.data.result) {
-    upstreamModernUnsupported.add(key);
-    return {
-      ok: false,
-      fallbackAllowed: true,
-      status: Number(response.status) || 0,
-      error: formatUpstreamRpcFailure('server/discover (MCP 2026)', response, upstream)
-    };
-  }
-  const supported = tryGetModernSupportedVersions(response.data.result);
-  if (!supported.includes(MODERN_PROTOCOL_VERSION)) {
-    upstreamModernUnsupported.add(key);
-    return {
-      ok: false,
-      fallbackAllowed: true,
-      status: Number(response.status) || 200,
-      error: 'server/discover (MCP 2026): the upstream did not advertise protocol ' + MODERN_PROTOCOL_VERSION + '.'
-    };
-  }
-  upstreamTransportModes.set(key, 'streamable-http-modern');
-  upstreamSessions.delete(key);
-  return { ok: true };
 }
 
 async function ensureUpstreamInitialized(upstream, isCurrent = () => true) {
@@ -936,7 +1024,7 @@ async function ensureUpstreamInitialized(upstream, isCurrent = () => true) {
         clientInfo: { name: 'MCP Bridge Router', version: '0.9.1' }
       }
     };
-    const initTimeoutMs = upstream.scope === 'local' ? 3500 : 12000;
+    const initTimeoutMs = upstream.scope === 'local' ? 3500 : 20000;
     const res = await sendUpstreamRpc(upstream, initReq, initTimeoutMs);
     if (!isCurrent()) return { ok: false, error: 'MCP verification was superseded by a configuration change.' };
     if (!isUpstreamSessionEpochCurrent(key, expectedSessionEpoch))
@@ -944,6 +1032,7 @@ async function ensureUpstreamInitialized(upstream, isCurrent = () => true) {
     if (!res.ok || !res.data || res.data.error || !res.data.result) {
       return {
         ok: false,
+        status: Number(res.status) || 0,
         error: 'Upstream MCP initialize failed. ' +
           formatUpstreamRpcFailure('initialize (MCP ' + PROTOCOL_VERSION + ')', res, upstream)
       };
@@ -1119,12 +1208,11 @@ async function verifyUpstreamForWorker(upstream) {
   if (!initialized.ok) {
     const failure = initialized.error || 'MCP initialize failed.';
     if (/superseded by a configuration change/i.test(failure)) throw new Error(failure);
-    const cachedState = stateCache.getInternalServer(upstream.id);
-    const threshold = upstream.scope === 'remote' ? 3 : 2;
-    if (!cachedState || cachedState.temporary || !cachedState.lastSuccessAt ||
-        cachedState.tools.length === 0 || (cachedState.consecutiveFailures + 1) >= threshold) {
-      logUpstreamFailure('initialize', upstream, { ok: false, status: 0, error: failure }, failure);
-    }
+    logUpstreamFailure('initialize', upstream, {
+      ok: false,
+      status: Number(initialized.status) || 0,
+      error: failure
+    }, failure);
     throw new Error(failure);
   }
 
@@ -1133,56 +1221,116 @@ async function verifyUpstreamForWorker(upstream) {
   let cursor = null;
   let serverInfo = null;
   let pageCount = 0;
-  const pollTimeoutMs = upstream.transport === 'stdio' ? 15000 : (upstream.scope === 'local' ? 3500 : 15000);
+  const pollTimeoutMs = upstream.transport === 'stdio' ? 30000 : (upstream.scope === 'local' ? 3500 : 30000);
   let measuredRpcMs = 0;
 
-  do {
-    if (!isCurrent()) throw new Error('MCP verification was superseded by a configuration change.');
-    if (++pageCount > 100)
-      throw new Error('MCP tools/list exceeded the 100-page safety limit.');
+  const cachedStdioTools = (upstream.transport === 'stdio' && String(upstream.id).toLowerCase() !== 'filesystem')
+    ? stdioKnownToolsByServer.get(String(upstream.id))
+    : null;
 
-    const params = cursor ? { cursor } : {};
-    const callStarted = Date.now();
-    const response = await callUpstreamWithAutoInit(
-      upstream,
-      { jsonrpc: '2.0', id: ++nextUpstreamRpcId, method: 'tools/list', params },
-      pollTimeoutMs,
-      null,
-      isCurrent
-    );
-    measuredRpcMs += (Date.now() - callStarted);
-    if (!isCurrent()) throw new Error('MCP verification was superseded by a configuration change.');
-    const result = response && response.data && response.data.result;
-    if (!response.ok || !result || !Array.isArray(result.tools)) {
-      const errText = formatUpstreamRpcFailure('tools/list', response, upstream);
-      if (/superseded by a configuration change/i.test(errText)) throw new Error(errText);
-      const cachedState = stateCache.getInternalServer(upstream.id);
-      const threshold = upstream.scope === 'remote' ? 3 : 2;
-      if (!cachedState || cachedState.temporary || !cachedState.lastSuccessAt ||
-          cachedState.tools.length === 0 || (cachedState.consecutiveFailures + 1) >= threshold) {
+  if (Array.isArray(cachedStdioTools) && cachedStdioTools.length > 0) {
+    tools.push(...cachedStdioTools);
+  } else {
+    do {
+      if (!isCurrent()) throw new Error('MCP verification was superseded by a configuration change.');
+      if (++pageCount > 100)
+        throw new Error('MCP tools/list exceeded the 100-page safety limit.');
+
+      const params = cursor ? { cursor } : {};
+      const callStarted = Date.now();
+      const response = await callUpstreamWithAutoInit(
+        upstream,
+        { jsonrpc: '2.0', id: ++nextUpstreamRpcId, method: 'tools/list', params },
+        pollTimeoutMs,
+        null,
+        isCurrent
+      );
+      measuredRpcMs += (Date.now() - callStarted);
+      if (!isCurrent()) throw new Error('MCP verification was superseded by a configuration change.');
+      const result = response && response.data && response.data.result;
+      if (!response.ok || !result || !Array.isArray(result.tools)) {
+        const errText = formatUpstreamRpcFailure('tools/list', response, upstream);
+        if (/superseded by a configuration change/i.test(errText)) throw new Error(errText);
         logUpstreamFailure('tools/list', upstream, response);
+        throw new Error(errText);
       }
-      throw new Error(errText);
+
+      if (response.retriedLatencyMs && Number.isFinite(response.retriedLatencyMs)) {
+        measuredRpcMs = response.retriedLatencyMs;
+      }
+
+      tools.push(...result.tools);
+      serverInfo = result.serverInfo ||
+        (result._meta && result._meta['io.modelcontextprotocol/serverInfo']) ||
+        serverInfo;
+
+      const nextCursor = typeof result.nextCursor === 'string' && result.nextCursor
+        ? result.nextCursor
+        : null;
+      if (nextCursor && seenCursors.has(nextCursor))
+        throw new Error('MCP tools/list returned a repeated pagination cursor.');
+      if (nextCursor) seenCursors.add(nextCursor);
+      cursor = nextCursor;
+    } while (cursor);
+
+    if (upstream.transport === 'stdio' && tools.length > 0) {
+      stdioKnownToolsByServer.set(String(upstream.id), tools);
+      saveStdioToolsCache();
     }
+  }
 
-    if (response.retriedLatencyMs && Number.isFinite(response.retriedLatencyMs)) {
-      measuredRpcMs = response.retriedLatencyMs;
+  if (upstream.transport === 'stdio' && String(upstream.id).toLowerCase() !== 'filesystem' && tools.length > 0) {
+    const candidates = tools.filter(t => {
+      if (!t || typeof t.name !== 'string') return false;
+      if (/(?:screenshot|image|render|thumbnail|viewport|save|export|import|delete|remove|clear|reset|write|create|update|set|exec|run|eval|kill|stop|close|quit|exit|install|download|jump_to)/i.test(t.name)) {
+        return false;
+      }
+      const schema = t.inputSchema && typeof t.inputSchema === 'object' ? t.inputSchema : {};
+      const req = Array.isArray(schema.required) ? schema.required : [];
+      if (req.length > 0) return false;
+      return /^(?:get_|list_|read_|check_|status|ping|health|info|version)/i.test(t.name);
+    });
+
+    candidates.sort((a, b) => {
+      const score = (name) => /^(?:status|ping|health|check_|get_.*(?:status|info|summary|version|state|scene))/i.test(name) ? 0 : 1;
+      return score(a.name) - score(b.name);
+    });
+
+    const probeTool = candidates[0] || null;
+    if (probeTool) {
+      const probeStart = Date.now();
+      const probeRes = await sendUpstreamRpc(
+        upstream,
+        {
+          jsonrpc: '2.0',
+          id: ++nextUpstreamRpcId,
+          method: 'tools/call',
+          params: { name: probeTool.name, arguments: {} }
+        },
+        25000
+      );
+      measuredRpcMs += (Date.now() - probeStart);
+
+      const rpcErr = probeRes && probeRes.data && probeRes.data.error;
+      const callResult = probeRes && probeRes.data && probeRes.data.result;
+      const isToolError = Boolean(callResult && callResult.isError === true);
+      const structStatus = callResult && callResult.structuredContent && callResult.structuredContent.status;
+      const firstText = (callResult && Array.isArray(callResult.content) && callResult.content[0] && callResult.content[0].text)
+        ? String(callResult.content[0].text).trim()
+        : '';
+      const hasErrorPayload = structStatus === 'error' ||
+        /^\s*\{\s*"status"\s*:\s*"error"/i.test(firstText) ||
+        /^\s*(?:error\b[^a-z0-9]*|(?:could not|failed to|unable to|cannot)\s+connect\b|connection\s+refused\b|econnrefused\b)/i.test(firstText);
+
+      if (!probeRes.ok || rpcErr || isToolError || hasErrorPayload) {
+        throw new Error('ECONNREFUSED: target application did not complete probe operation ' + probeTool.name);
+      }
     }
+  }
 
-    tools.push(...result.tools);
-    serverInfo = result.serverInfo ||
-      (result._meta && result._meta['io.modelcontextprotocol/serverInfo']) ||
-      serverInfo;
-
-    const nextCursor = typeof result.nextCursor === 'string' && result.nextCursor
-      ? result.nextCursor
-      : null;
-    if (nextCursor && seenCursors.has(nextCursor))
-      throw new Error('MCP tools/list returned a repeated pagination cursor.');
-    if (nextCursor) seenCursors.add(nextCursor);
-    cursor = nextCursor;
-  } while (cursor);
-
+  if (Array.isArray(cachedStdioTools) && cachedStdioTools.length > 0) {
+    revalidateStdioServerInBackground(upstream, isCurrent);
+  }
   clearUpstreamFailure(upstream.id);
   return {
     tools,
@@ -1194,8 +1342,13 @@ async function verifyUpstreamForWorker(upstream) {
 
 async function invokeWorkerTool(upstream, toolName, args, extraHeaders) {
   const key = String(upstream.id);
+  const requestEpoch = getUpstreamRequestEpoch(key);
+  const isCurrent = () => isUpstreamRequestEpochCurrent(key, requestEpoch);
   if (!upstreamInitialized.has(key)) {
-    throw new Error('The MCP worker has not established an active session for this server yet.');
+    const initialized = await ensureUpstreamInitialized(upstream, isCurrent);
+    if (!initialized.ok) {
+      throw new Error(initialized.error || 'The MCP worker could not establish an active session for this server.');
+    }
   }
 
   const requestSessionEpoch = getUpstreamSessionEpoch(key);
@@ -1219,8 +1372,6 @@ async function invokeWorkerTool(upstream, toolName, args, extraHeaders) {
 
   if (!response.ok || !response.data || response.data.error) {
     if ([0, 400, 401, 404, 410, 502, 503, 504].includes(Number(response.status))) {
-      // A tools/call may have side effects. Invalidate the bad session but
-      // never replay the user's operation automatically.
       invalidateUpstreamSession(
         upstream,
         'MCP tool call failed and the previous session was invalidated.',
@@ -1301,9 +1452,6 @@ function promoteUpstreamConnectionState(previous, current) {
   const newId = String(current.id);
   if (oldId === newId) return;
 
-  // The previous permanent worker has already been removed and its transport
-  // aborted. Keep both epochs monotonic so a late response from that worker
-  // cannot mutate the newly promoted session.
   const promotedRequestEpoch = Math.max(
     getUpstreamRequestEpoch(oldId),
     getUpstreamRequestEpoch(newId)
@@ -1319,7 +1467,8 @@ function promoteUpstreamConnectionState(previous, current) {
     upstreamSessions,
     upstreamTransportModes,
     lastUpstreamFailureByServer,
-    legacySseConnections
+    legacySseConnections,
+    stdioKnownToolsByServer
   ]) {
     if (!source.has(oldId)) continue;
     const value = source.get(oldId);
@@ -1330,6 +1479,7 @@ function promoteUpstreamConnectionState(previous, current) {
       value.sessionEpoch = promotedSessionEpoch;
     }
   }
+  saveStdioToolsCache();
 
   const temporaryRequests = upstreamRequests.get(oldId);
   if (temporaryRequests) {
@@ -1342,8 +1492,6 @@ function promoteUpstreamConnectionState(previous, current) {
     upstreamRequests.set(newId, permanentRequests);
   }
 
-  // Verification has completed before promotion, so no initialize promise is
-  // expected to be in flight. Do not transplant an old-key closure/promise.
   upstreamInitializationPromises.delete(oldId);
   upstreamInitializationPromises.delete(newId);
 
@@ -1368,6 +1516,7 @@ function resetUpstreamConnectionState(previous, reason) {
   upstreamSessions.delete(key);
   upstreamTransportModes.delete(key);
   clearUpstreamFailure(key);
+  if (stdioKnownToolsByServer.delete(key)) saveStdioToolsCache();
   for (const [name, route] of toolRouteMap) {
     if (route && route.upstream && String(route.upstream.id) === key)
       toolRouteMap.delete(name);
@@ -1434,8 +1583,6 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && reqUrl.pathname === '/__manager/state') {
-      // C# dashboard consumes status only. Tool schemas belong to the separate
-      // catalog endpoint so a large tools catalog cannot delay status updates.
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify({
         servers: stateCache.getAllServers()
@@ -1677,7 +1824,7 @@ const server = http.createServer(async (req, res) => {
         'Cache-Control': 'no-cache, no-store',
         'Connection': 'keep-alive'
       });
-      res.write(': verification subscribed to existing worker\\n\\n');
+      res.write(': verification subscribed to existing worker\n\n');
       try {
         const event = await pollManager.subscribeToVerification(serverId, cancellation.signal);
         if (!res.destroyed) {

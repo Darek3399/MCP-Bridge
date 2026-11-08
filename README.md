@@ -70,7 +70,7 @@
 </table>
 
 <br>
-<p><a href="https://pay.cloudtips.ru/p/cdb7341e"><img src="docs/images/coffee-ru.svg" width="100%" alt="На кофе разработчику"></a></p>
+<p><a href="docs/donate.md"><img src="docs/images/coffee-ru.svg" width="100%" alt="На кофе разработчику"></a></p>
 <br>
 
 <!-- ===================================================================== -->
@@ -82,7 +82,7 @@
 
 <p>Откройте вкладку <b>Settings</b> — здесь настраивается доступ к папкам, внешний туннель и находятся готовые ссылки для подключения ИИ:</p>
 
-<p><img src="docs/images/Settings.svg" width="100%" alt="Settings"></p>
+<p><img src="docs/images/Settings.png" width="100%" alt="Settings"></p>
 
 <table>
   <thead>
@@ -148,15 +148,15 @@
   <tbody>
     <tr>
       <td width="333" valign="top">
-        <img src="docs/images/Tailscale_Welcome.svg" width="100%" alt="Tailscale Welcome"><br><br>
+        <img src="docs/images/Tailscale_Welcome.png" width="100%" alt="Tailscale Welcome"><br><br>
         Откроется окно приложения Tailscale. Нажмите кнопку <b>Get Started</b>.
       </td>
       <td width="333" valign="top">
-        <img src="docs/images/Tailscale_Device_Connect.svg" width="100%" alt="Tailscale Device Connect"><br><br>
+        <img src="docs/images/Tailscale_Device_Connect.png" width="100%" alt="Tailscale Device Connect"><br><br>
         В браузере откроется форма входа — <b>авторизуйтесь</b>, после чего в окне <i>Connect device</i> нажмите <b>Connect</b>.
       </td>
       <td width="334" valign="top">
-        <img src="docs/images/Tailscale_Funnel.svg" width="100%" alt="Tailscale Funnel"><br><br>
+        <img src="docs/images/Tailscale_Funnel.png" width="100%" alt="Tailscale Funnel"><br><br>
         Откроется страница <b>Start using Funnel</b>. Прокрутите вниз, нажмите <b>Enable Funnel</b> и дождитесь подключения.
       </td>
     </tr>
@@ -176,7 +176,7 @@
 
 <p>На вкладке <b>Dashboard</b> отображается сводка по шлюзу и список включённых серверов. Выключенные серверы (<code>DISABLED</code>) в списке <i>MCP Services Status</i> скрыты — они находятся во вкладке <i>MCP Services</i>.</p>
 
-<p><img src="docs/images/Main.svg" width="100%" alt="Dashboard"></p>
+<p><img src="docs/images/Main.png" width="100%" alt="Dashboard"></p>
 
 <table>
   <thead>
@@ -206,7 +206,7 @@
 <a id="sec-servers"></a>
 <p><a href="#sec-servers"><img src="docs/images/sec-05-ru.svg" width="100%" alt="05 Управление MCP-серверами и пресетами"></a></p>
 
-<p><img src="docs/images/MSP_Servises.svg" width="100%" alt="MCP Services"></p>
+<p><img src="docs/images/MSP_Servises.png" width="100%" alt="MCP Services"></p>
 
 <table>
   <thead>
@@ -257,7 +257,7 @@
 
 <p>Нажмите <b>+ Add Server</b> во вкладке <i>MCP Services</i>, чтобы подключить новый локальный или удалённый сервер:</p>
 
-<p><img src="docs/images/Add_MCP.svg" width="100%" alt="Add MCP Server"></p>
+<p><img src="docs/images/Add_MCP.png" width="100%" alt="Add MCP Server"></p>
 
 <table>
   <thead>

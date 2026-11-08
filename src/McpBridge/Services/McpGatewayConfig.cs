@@ -96,3 +96,4 @@ internal sealed class RouterUpstreamItem
     [DataMember(Name = "configurationFingerprint", Order = 9, EmitDefaultValue = false)]
     public string? ConfigurationFingerprint { get; set; }
 }
+

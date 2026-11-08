@@ -98,7 +98,7 @@ public static class McpServerConfigJson
     {
         var parsed = McpServerConfigParser.ParseJsonConfiguration(json);
         if (parsed.Count > 1)
-            throw new FormatException("В редакторе можно изменять один MCP-сервер за раз. Для импорта нескольких серверов используйте кнопку вставки из буфера обмена.");
+            throw new FormatException(I18n.Tr("Добавление возможно только по одному MCP-серверу за раз.", "Only one MCP server can be added at a time."));
 
         var entry = parsed[0];
         if (!string.IsNullOrWhiteSpace(stableId))
@@ -419,9 +419,23 @@ public static class McpServerConfigJson
 
     private static void SkipJsonWhitespace(string json, ref int index)
     {
-        while (index < json.Length &&
-               (json[index] == ' ' || json[index] == '\t' || json[index] == '\r' || json[index] == '\n'))
-            index++;
+        while (index < json.Length)
+        {
+            if (json[index] == ' ' || json[index] == '\t' || json[index] == '\r' || json[index] == '\n')
+            {
+                index++;
+            }
+            else if (json[index] == '/' && index + 1 < json.Length && json[index + 1] == '/')
+            {
+                index += 2;
+                while (index < json.Length && json[index] != '\n')
+                    index++;
+            }
+            else
+            {
+                break;
+            }
+        }
     }
 
     private static FormatException JsonError(string message, int index)

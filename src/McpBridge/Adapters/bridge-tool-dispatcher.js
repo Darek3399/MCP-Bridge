@@ -18,8 +18,12 @@ class BridgeToolDispatcher {
   }
 
   async call({ toolId, catalogRevision, arguments: toolArguments }) {
-    // Use the last catalog published by all_tools. Do not refresh the global catalog here.
-    const descriptor = this.catalogManager.getCachedDescriptor(toolId);
+    // Use the last catalog published by all_tools; warm once from Router cache if empty/missing.
+    let descriptor = this.catalogManager.getCachedDescriptor(toolId);
+    if (!descriptor) {
+      try { await this.catalogManager.getCatalog(); } catch (_) {}
+      descriptor = this.catalogManager.getCachedDescriptor(toolId);
+    }
     if (!descriptor) {
       return toolError(
         'TOOL_NOT_FOUND',

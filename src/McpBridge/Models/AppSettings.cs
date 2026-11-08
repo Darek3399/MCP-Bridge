@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.Serialization;
@@ -68,6 +68,10 @@ public sealed class AppSettings
     /// <summary>Whether Tailscale Funnel should be hosted whenever the local MCP gateway is ready.</summary>
     [DataMember(Order = 19, EmitDefaultValue = false)]
     public bool TailscaleFunnelEnabled { get; set; }
+
+    /// <summary>Whether application log files are written. Default is off; toggled from the Logs page in real time.</summary>
+    [DataMember(Order = 20, EmitDefaultValue = false)]
+    public bool LoggingEnabled { get; set; }
 }
 
 [DataContract]
@@ -266,7 +270,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
         McpServerHealthState.Online => McpBridge.Services.I18n.IsEnglish ? "ACTIVE" : "АКТИВЕН",
         McpServerHealthState.Downloading => McpBridge.Services.I18n.IsEnglish ? "DOWNLOADING" : "ЗАГРУЗКА",
         McpServerHealthState.Waiting => McpBridge.Services.I18n.IsEnglish ? "WAITING" : "ОЖИДАНИЕ",
-        McpServerHealthState.Offline => McpBridge.Services.I18n.IsEnglish ? "OFFLINE" : "НЕДОСТУПЕН",
+        McpServerHealthState.Offline => McpBridge.Services.I18n.IsEnglish ? "OFFLINE" : "ОФЛАЙН",
         McpServerHealthState.Quarantine => McpBridge.Services.I18n.IsEnglish ? "QUARANTINE" : "КАРАНТИН",
         _ => McpBridge.Services.I18n.IsEnglish ? "DISABLED" : "ВЫКЛЮЧЕН"
     };
@@ -276,7 +280,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
         McpServerHealthState.Online => "#15322F",
         McpServerHealthState.Downloading => "#162938",
         McpServerHealthState.Waiting => "#332915",
-        McpServerHealthState.Offline => "#381B20",
+        McpServerHealthState.Offline => "#1E242B",
         McpServerHealthState.Quarantine => "#381B20",
         _ => "#1D2025"
     };
@@ -286,7 +290,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
         McpServerHealthState.Online => "#2CE5D0",
         McpServerHealthState.Downloading => "#38AEFF",
         McpServerHealthState.Waiting => "#F5A623",
-        McpServerHealthState.Offline => "#FF5A67",
+        McpServerHealthState.Offline => "#435060",
         McpServerHealthState.Quarantine => "#FF5A67",
         _ => "#3A4049"
     };
@@ -296,7 +300,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
         McpServerHealthState.Online => "#2CE5D0",
         McpServerHealthState.Downloading => "#52B8FF",
         McpServerHealthState.Waiting => "#F5A623",
-        McpServerHealthState.Offline => "#FF6B78",
+        McpServerHealthState.Offline => "#94A3B8",
         McpServerHealthState.Quarantine => "#FF6B78",
         _ => "#7F8790"
     };

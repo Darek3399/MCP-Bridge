@@ -133,6 +133,8 @@ class McpServerWorker extends EventEmitter {
       }
       this._schedule(this.intervalMs);
       void this._run('requested');
+    } else {
+      this.pendingRun = true;
     }
     return promise;
   }
@@ -178,6 +180,7 @@ class McpServerWorker extends EventEmitter {
     }
 
     this.generation += 1;
+    this.failureWindowStartedAt = Date.now();
     for (const waiter of this.waiters) waiter.generation = this.generation;
     this.cache.registerServer(this.config, this.generation);
 
@@ -233,12 +236,23 @@ class McpServerWorker extends EventEmitter {
 
     // MCP request ids are independent. A long tools/call must not hold up this
     // worker's scheduled verification; the worker still owns both operations.
-    const result = await this.invokeTool(config, toolName, args, extraHeaders);
+    let result;
+    try {
+      result = await this.invokeTool(config, toolName, args, extraHeaders);
+    } catch (error) {
+      if (!this.stopped && generation === this.generation && this.config.temporary !== true) {
+        if (!this.failureWindowStartedAt) this.failureWindowStartedAt = Date.now();
+        if (!this.running && !this.configurationChangePromise) {
+          this._schedule(this.getStaggeredDelay(1000, config.id));
+        } else {
+          this.pendingRun = true;
+        }
+      }
+      throw error;
+    }
     if (this.stopped || generation !== this.generation)
       throw new Error('The MCP server configuration changed while the tool call was running.');
 
-    // A user tools/call failure is not a health-check result. Only this
-    // worker's verification cycle may change cached health state.
     return result;
   }
 
@@ -256,6 +270,7 @@ class McpServerWorker extends EventEmitter {
       throw new TypeError('An enabled permanent MCP server configuration is required.');
 
     this.generation += 1;
+    this.failureWindowStartedAt = Date.now();
     this.config = cloneConfig({ ...nextConfig, temporary: false });
     this.intervalMs = Number(this.config.pollIntervalMs) > 0
       ? Number(this.config.pollIntervalMs)
@@ -302,14 +317,12 @@ class McpServerWorker extends EventEmitter {
     const runId = String(generation) + '-' + (++this.runSequence);
     const startedAt = new Date().toISOString();
     const started = Date.now();
-    if (config.pending !== true)
-      this.cache.setPolling(config.id, true, startedAt);
+    this.cache.setPolling(config.id, true, startedAt);
     this.emit('started', { serverId: config.id, runId, generation, reason, startedAt });
 
     this.currentPromise = (async () => {
       let result = null;
       let error = null;
-      let pending = false;
       try {
         result = await this._enqueueOperation(() => {
           if (this.stopped || generation !== this.generation)
@@ -324,6 +337,7 @@ class McpServerWorker extends EventEmitter {
       const responseTimeMs = Date.now() - started;
       const isCurrent = !this.stopped && generation === this.generation;
 
+      let pending = false;
       if (isCurrent) {
         if (error) {
           this.cache.setFailure(config.id, error, { completedAt, responseTimeMs });
@@ -356,20 +370,20 @@ class McpServerWorker extends EventEmitter {
 
       if (this.stopped) return;
       if (this.pendingRun || generation !== this.generation) {
+        const reasonNext = this.generation !== generation ? 'configuration-updated' : 'requested';
         this.pendingRun = false;
         const transition = this.configurationChangePromise;
         if (transition) {
           try { await transition; }
           catch (_) { return; }
         }
-        if (!this.stopped && this.generation !== generation)
-          void this._run('configuration-updated');
+        if (!this.stopped)
+          void this._run(reasonNext);
         return;
       }
-      if (pending || this.config.pending === true) {
-        // A pending local STDIO dependency is supervised by the C# process
-        // lifecycle. Do not wake this worker on the MCP polling cadence until
-        // the dependency becomes available and config.pending flips to false.
+      if (this.config.temporary === true) {
+        // Temporary verification workers are one-shot. Configured workers,
+        // including transports that are not available yet, keep polling.
         if (this.timer) {
           clearTimeout(this.timer);
           this.timer = null;
@@ -377,27 +391,24 @@ class McpServerWorker extends EventEmitter {
         return;
       }
 
-      if (this.config.temporary === true) {
-        if (this.timer) {
-          clearTimeout(this.timer);
-          this.timer = null;
-        }
-        return;
-      }
       let nextDelay = this.intervalMs;
       if (error) {
         if (!this.failureWindowStartedAt) {
           this.failureWindowStartedAt = Date.now();
         }
-        const elapsedRetryMs = Date.now() - this.failureWindowStartedAt;
-        if (elapsedRetryMs < 5 * 60 * 1000) {
-          nextDelay = 3000;
-        } else if (elapsedRetryMs < 10 * 60 * 1000) {
-          nextDelay = 10000;
+        if (config.scope === 'local') {
+          nextDelay = 1500;
         } else {
-          nextDelay = 30000;
+          const elapsedRetryMs = Date.now() - this.failureWindowStartedAt;
+          if (elapsedRetryMs < 5 * 60 * 1000) {
+            nextDelay = 3000;
+          } else if (elapsedRetryMs < 10 * 60 * 1000) {
+            nextDelay = 10000;
+          } else {
+            nextDelay = 30000;
+          }
+          nextDelay = this.getStaggeredDelay(nextDelay, config.id);
         }
-        nextDelay = this.getStaggeredDelay(nextDelay, config.id);
       } else {
         this.failureWindowStartedAt = 0;
       }

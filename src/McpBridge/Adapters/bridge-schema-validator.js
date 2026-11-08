@@ -60,9 +60,15 @@ function validateSchema(schema, value, root, path, errors, depth, referenceStack
   if (!isObject(schema)) return;
 
   if (typeof schema.$ref === 'string') {
-    const resolved = resolveLocalReference(root, schema.$ref);
-    if (resolved !== null)
-      validateSchema(resolved, value, root, path, errors, depth + 1, referenceStack);
+    const refKey = schema.$ref + '|' + path;
+    if (!referenceStack.has(refKey)) {
+      const resolved = resolveLocalReference(root, schema.$ref);
+      if (resolved !== null) {
+        const nextStack = new Set(referenceStack);
+        nextStack.add(refKey);
+        validateSchema(resolved, value, root, path, errors, depth + 1, nextStack);
+      }
+    }
   }
 
   if (schema.allOf && Array.isArray(schema.allOf)) {

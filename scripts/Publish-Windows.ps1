@@ -7,9 +7,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot 'src\McpBridge\McpBridge.csproj'
-$output = Join-Path $repoRoot 'artifacts\publish\win-x64'
-$diagnosticsDirectory = Join-Path $repoRoot 'artifacts\publish'
-$diagnosticsFile = Join-Path $diagnosticsDirectory 'build-diagnostics.txt'
+$output = Join-Path $repoRoot 'Work\Build\publish\win-x64'
+$diagnosticsDirectory = Join-Path $repoRoot 'Work\Diagnostics\Build'
+$diagnosticsFile = Join-Path $diagnosticsDirectory 'publish-build-diagnostics.txt'
 
 # Use the active dotnet SDK explicitly. Some IDE terminals leave MSBuildSDKsPath
 # pointing at an older SDK (for example 8.0.300) while dotnet selects a newer one

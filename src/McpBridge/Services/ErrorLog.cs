@@ -8,11 +8,19 @@ public static class ErrorLog
 {
     private static readonly object Sync = new();
     private static readonly UTF8Encoding Utf8NoBom = new(false);
+    private static volatile bool _enabled;
 
     public static string FilePath => Path.Combine(AppPaths.LogsDirectory, "errors.log");
     public static string ConnectionsFilePath => Path.Combine(AppPaths.LogsDirectory, "connections.log");
     public static string AppFilePath => Path.Combine(AppPaths.LogsDirectory, "app.log");
     public static string VerificationFilePath => Path.Combine(AppPaths.LogsDirectory, "verification.log");
+
+    /// <summary>When false (default), log writes are skipped. Toggle from the Logs page in real time.</summary>
+    public static bool Enabled
+    {
+        get => _enabled;
+        set => _enabled = value;
+    }
 
     public static event EventHandler? LogUpdated;
 
@@ -22,7 +30,7 @@ public static class ErrorLog
 
     private static void AppendTimestampedLine(string filePath, string tag, string message)
     {
-        if (string.IsNullOrWhiteSpace(message)) return;
+        if (!_enabled || string.IsNullOrWhiteSpace(message)) return;
         try
         {
             Directory.CreateDirectory(AppPaths.LogsDirectory);
@@ -106,6 +114,7 @@ public static class ErrorLog
 
     public static void WriteMessage(string source, string message)
     {
+        if (!_enabled) return;
         try
         {
             Directory.CreateDirectory(AppPaths.LogsDirectory);
@@ -120,6 +129,7 @@ public static class ErrorLog
 
     public static void Write(string source, Exception exception)
     {
+        if (!_enabled) return;
         try
         {
             Directory.CreateDirectory(AppPaths.LogsDirectory);

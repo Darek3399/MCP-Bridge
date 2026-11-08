@@ -255,7 +255,7 @@ public sealed class ServerJsonEditorWindow : Window
             FontSize = 13,
             Foreground = new SolidColorBrush(Color.FromRgb(234, 236, 239)),
             TextWrapping = TextWrapping.NoWrap,
-            Margin = new Thickness(10),
+            Margin = new Thickness(12, 10, 12, 10),
             IsHitTestVisible = false
         };
 
@@ -460,6 +460,7 @@ public sealed class ServerJsonEditorWindow : Window
 
     private void InitializeEditorDocument(string json)
     {
+        json = (json ?? string.Empty).Replace("\t", "  ");
         _settingEditorText = true;
         _jsonTextEditor.Text = json;
         _settingEditorText = false;
@@ -616,7 +617,7 @@ public sealed class ServerJsonEditorWindow : Window
     private static void AppendIndent(StringBuilder builder, int depth)
     {
         if (depth > 0)
-            builder.Append('\t', depth);
+            builder.Append(' ', depth * 2);
     }
 
     private void JsonTextEditor_TextChanged(object sender, TextChangedEventArgs e)

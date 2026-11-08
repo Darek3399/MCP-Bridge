@@ -1037,13 +1037,18 @@ internal sealed class TailscaleService : IDisposable
         var dnsCheck = await RunCommandAsync(executable, "get accept-dns", 5000, cancellationToken).ConfigureAwait(false);
         EnsureSuccess("Проверка Tailscale accept-dns", dnsCheck);
         if (!string.Equals(dnsCheck.StandardOutput.Trim(), "false", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Tailscale accept-dns должен быть false. Повторите настройку онлайн-доступа.");
+        {
+            var dnsSet = await RunCommandAsync(executable, "set --accept-dns=false", 8000, cancellationToken).ConfigureAwait(false);
+            EnsureSuccess("Восстановление Tailscale accept-dns=false", dnsSet);
+        }
 
         var unattendedCheck = await RunCommandAsync(executable, "get unattended", 5000, cancellationToken).ConfigureAwait(false);
         EnsureSuccess("Проверка Tailscale unattended mode", unattendedCheck);
         if (!string.Equals(unattendedCheck.StandardOutput.Trim(), "true", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Tailscale unattended mode выключен. Повторите настройку онлайн-доступа.");
-
+        {
+            var unattendedSet = await RunCommandAsync(executable, "set --unattended=true", 8000, cancellationToken).ConfigureAwait(false);
+            EnsureSuccess("Восстановление Tailscale unattended=true", unattendedSet);
+        }
     }
 
     private static bool HasCompletedInitialSetup()

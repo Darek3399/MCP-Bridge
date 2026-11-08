@@ -1,23 +1,38 @@
-# Папки сборки .NET и Visual Studio
-[Bb]in/
-[Oo]bj/
-[Aa]rtifacts/
-.vs/
-.vscode/
+# Local workspace: dependencies, builds, diagnostics, temporary data.
+/Work/
+/GitHub-Repository/
+
+# IDE and editor state.
+/.idea/
+**/.idea/
+/.vs/
+**/.vs/
+/.vscode/
+**/.vscode/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 
-# Временные файлы и кэш
+# Build output and package caches.
+[Bb]in/
+[Oo]bj/
+/artifacts/
+node_modules/
+**/node_modules/
+/Dependencies/*
+!/Dependencies/README.md
+
+# Temporary files and caches.
 *.tmp
 *.bak
+*.backup
 *.swp
 *~
 Thumbs.db
 Desktop.ini
 
-# Конфиги, состояние туннеля и логи приложения (чтобы не утекла личная инфа и токены)
+# Local application state, logs and private configuration.
 Config/
 Logs/
 *.log
@@ -28,12 +43,10 @@ router-upstreams.json
 filesystem-gateway.json
 composite-gateway.json
 
-# Сторонние бинарники и установщики в Payload (оставляем только README.md)
-Dependencies/
-node_modules/
+# Runtime dependencies are never committed. Keep the explanatory README only.
 installer/Payload/*
 !installer/Payload/README.md
 
-# Скомпилированные установщики (они загружаются отдельно в GitHub Releases)
+# Release installers and third-party installers are distributed separately.
 *.msi
 MCPBridge-Setup-*.exe

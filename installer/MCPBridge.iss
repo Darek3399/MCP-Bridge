@@ -1,7 +1,7 @@
 ﻿#define AppName "MCP Bridge"
-#define AppVersion "0.9.1"
+#define AppVersion "0.9.4"
 #define AppExeName "MCPBridge.exe"
-#define PublishDir "..\artifacts\publish\win-x64"
+#define PublishDir "..\Work\Build\publish\win-x64"
 
 [Setup]
 AppId={{17473ED1-A877-4A88-8485-A68A5DD8F646}
@@ -19,7 +19,7 @@ MinVersion=10.0.18362
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
-OutputDir=..\artifacts\installer
+OutputDir=..\Work\Build\installer
 OutputBaseFilename=MCPBridge-Setup-{#AppVersion}
 #ifdef FastDependencyPackaging
 Compression=none
@@ -115,17 +115,17 @@ Name: "{app}\Adapters"
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "Config\settings.json,Logs\errors.log,Logs\connections.log,Logs\app.log"
 #ifdef FilesystemMcpPayload
-Source: "Payload\FilesystemMcp\*"; DestDir: "{app}\Dependencies\FilesystemMcp"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: ShouldInstallFilesystemMcp
+Source: "..\Dependencies\FilesystemMcp\*"; DestDir: "{app}\Dependencies\FilesystemMcp"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: ShouldInstallFilesystemMcp
 #endif
-Source: "Payload\supergateway.exe"; DestDir: "{app}\Dependencies"; Flags: ignoreversion; Check: ShouldInstallSupergateway
-Source: "Payload\uv.exe"; DestDir: "{app}\Dependencies"; Flags: ignoreversion
-Source: "Payload\uvx.exe"; DestDir: "{app}\Dependencies"; Flags: ignoreversion
-Source: "Payload\tailscale-setup.msi"; DestDir: "{app}\Dependencies"; Flags: ignoreversion
+Source: "..\Dependencies\supergateway.exe"; DestDir: "{app}\Dependencies"; Flags: ignoreversion; Check: ShouldInstallSupergateway
+Source: "..\Dependencies\uv.exe"; DestDir: "{app}\Dependencies"; Flags: ignoreversion
+Source: "..\Dependencies\uvx.exe"; DestDir: "{app}\Dependencies"; Flags: ignoreversion
+Source: "..\Dependencies\tailscale-setup.msi"; DestDir: "{app}\Dependencies"; Flags: ignoreversion
 Source: "..\scripts\Uninstall-Tailscale.ps1"; DestDir: "{app}\Scripts"; Flags: ignoreversion
 Source: "..\scripts\TailscaleSetup.ps1"; DestDir: "{app}\Scripts"; Flags: ignoreversion
-Source: "Payload\node-v26.13.0-x64.msi"; Flags: dontcopy
+Source: "..\Dependencies\node-v26.13.0-x64.msi"; Flags: dontcopy
 #ifdef FilesystemMcpPayload
-Source: "Payload\FilesystemMcp-engine.json"; Flags: dontcopy
+Source: "..\Dependencies\FilesystemMcp-engine.json"; Flags: dontcopy
 #endif
 Source: "Check-Dependencies.ps1"; Flags: dontcopy
 Source: "NodeRuntimeDiscovery.ps1"; Flags: dontcopy
@@ -153,6 +153,7 @@ Type: filesandordirs; Name: "{app}\Dependencies\EmptyFilesystemRoot"
 [Code]
 var
   PreviousInstallDir: String;
+  OldUninstallString: String;
   ProbeLines: TArrayOfString;
   ProbeFile: string;
   ProbeError: string;
@@ -211,11 +212,11 @@ function InitializeSetup: Boolean;
 var
   UninstallKey: String;
   UninstallString: String;
-  ExitCode: Integer;
   OldUninstaller: String;
 begin
   Result := True;
   PreviousInstallDir := '';
+  OldUninstallString := '';
   UninstallString := '';
   UninstallKey := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{17473ED1-A877-4A88-8485-A68A5DD8F646}_is1';
 
@@ -227,25 +228,12 @@ begin
 
   if UninstallString <> '' then
   begin
-    // Capture the original directory BEFORE the old uninstaller removes its registry entry.
     PreviousInstallDir := GetPreviousInstallDir(HKLM64, UninstallKey);
-    if PreviousInstallDir = '' then
-    begin
-      OldUninstaller := RemoveQuotes(UninstallString);
-      if FileExists(OldUninstaller) then
-        PreviousInstallDir := ExtractFileDir(OldUninstaller);
-    end;
-
     OldUninstaller := RemoveQuotes(UninstallString);
-    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', '1');
-    if (not Exec(OldUninstaller, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ExitCode)) or (ExitCode <> 0) then
-    begin
-      RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
-      MsgBox(CustomMessage('ErrUninstallOld'), mbError, MB_OK);
-      Result := False;
-    end
-    else
-      RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
+    if (PreviousInstallDir = '') and FileExists(OldUninstaller) then
+      PreviousInstallDir := ExtractFileDir(OldUninstaller);
+    if FileExists(OldUninstaller) then
+      OldUninstallString := OldUninstaller;
   end;
 end;
 
@@ -293,6 +281,19 @@ var
 begin
   Result := False;
   FullReinstallPrepared := False;
+
+  if OldUninstallString <> '' then
+  begin
+    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', '1');
+    if not Exec(OldUninstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
+    begin
+      RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
+      Result := CustomMessage('ErrUninstallOld');
+      Exit;
+    end;
+    RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
+    OldUninstallString := '';
+  end;
   if not IsFullReinstallSelected then
   begin
     Result := True;
@@ -329,7 +330,7 @@ begin
     RaiseException(CustomMessage('ErrFullReinstall'));
 
   for I := 0 to GetArrayLength(OutputLines) - 1 do
-  begin
+    begin
     if OutputLines[I] = 'FullReinstallPrepared=1' then
       FullReinstallPrepared := True;
     if OutputLines[I] = 'RebootRequired=1' then
@@ -458,12 +459,27 @@ begin
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ExitCode: Integer;
 begin
   Result := '';
   NeedsRestart := False;
   NodeRestartRequired := False;
   RebootRequired := False;
   FullReinstallPrepared := False;
+
+  if OldUninstallString <> '' then
+  begin
+    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', '1');
+    if not Exec(OldUninstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
+    begin
+      RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
+      Result := CustomMessage('ErrUninstallOld');
+      Exit;
+    end;
+    RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
+    OldUninstallString := '';
+  end;
 
   try
     if not PrepareFullReinstall then
@@ -554,7 +570,7 @@ begin
 
   if (ExitCode <> 0) or not FileExists(OutputFile) then
   begin
-    ErrorText := '';
+    ErrorText := 'Диагностика не записана';
     if FileExists(OutputFile) and LoadStringsFromFile(OutputFile, OutputLines) then
       for I := 0 to GetArrayLength(OutputLines) - 1 do
         ErrorText := ErrorText + #13#10 + OutputLines[I];

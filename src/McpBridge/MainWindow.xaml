@@ -669,6 +669,8 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock x:Name="LogsHeaderTitleText" Text="Журнал подключений и MCP (Logs\connections.log)" FontSize="15" FontWeight="SemiBold"/>
+                                            <CheckBox x:Name="LoggingEnabledCheckBox" Content="Запись логов включена" Margin="0,8,0,0" Click="LoggingEnabled_Click"/>
+                                            <TextBlock x:Name="LoggingEnabledHintText" Text="По умолчанию выключено. Включение/выключение действует сразу." Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" TextWrapping="Wrap"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                                 <Button x:Name="LogTabConnectionsButton" Content="Подключения и MCP" Click="LogCategoryConnections_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="12,5" Margin="0,0,8,0"/>
                                                 <Button x:Name="LogTabAppButton" Content="Приложение" Click="LogCategoryApp_Click" Padding="12,5" Margin="0,0,8,0"/>

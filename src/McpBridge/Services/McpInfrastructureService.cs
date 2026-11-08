@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -662,25 +662,22 @@ public sealed class McpInfrastructureService : IDisposable
 
                 if (!dependencyAlive)
                 {
+                    status.RuntimeStartFailed = false;
                     if (hasRuntime)
                     {
                         await StopCustomStdioServerAsync(custom.Id).ConfigureAwait(false);
                         changed = true;
                     }
-
-                    if (status.HealthState != McpServerHealthState.Waiting || status.ToolsCount != 0)
+                    if (status.HealthState != McpServerHealthState.Offline)
                     {
-                        status.HealthState = McpServerHealthState.Waiting;
-                        status.StatusText = I18n.Tr(
-                            "Ожидание запуска внешней программы (:" + dependentPort + ")",
-                            "Waiting for external app (:" + dependentPort + ")");
+                        status.HealthState = McpServerHealthState.Offline;
                         status.ToolsCount = 0;
                         status.ToolsPreview = string.Empty;
+                        status.StatusText = I18n.Tr("Сервер офлайн", "Server offline");
                         changed = true;
                     }
                 }
-                else if (!runtimeAlive &&
-                    (hasRuntime || status.HealthState == McpServerHealthState.Waiting))
+                else if (!runtimeAlive)
                 {
                     await ReconcileCustomStdioServerAsync(dependencies, custom, hasRuntime).ConfigureAwait(false);
                     changed = true;
@@ -771,7 +768,7 @@ public sealed class McpInfrastructureService : IDisposable
             return "remote";
         }
 
-        if (dependentLocalPort > 0) return "local";
+        if (!string.Equals(transport, "http", StringComparison.OrdinalIgnoreCase)) return "local";
 
         var allArgs = args ?? Array.Empty<string>();
         foreach (var arg in allArgs)
@@ -833,15 +830,6 @@ public sealed class McpInfrastructureService : IDisposable
 
     private static int GuessDependentLocalPort(CustomMcpServerEntry server, string? logText)
     {
-        if (!string.IsNullOrWhiteSpace(logText))
-        {
-            var m = Regex.Match(logText!, @"(?:localhost|127\.0\.0\.1):(?<port>\d{2,5})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            if (m.Success && int.TryParse(m.Groups["port"].Value, out var p) && p != 8001 && (p < 8010 || p > 8099))
-                return p;
-        }
-        var combined = ((server.Id ?? "") + " " + (server.Name ?? "") + " " + (server.Command ?? "") + " " + string.Join(" ", server.Args ?? new List<string>())).ToLowerInvariant();
-        if (combined.Contains("blender-mcp") || combined.Contains("blender_mcp") || combined.Contains("mcp-for-blender") || combined.Contains("blender"))
-            return 9876;
         return 0;
     }
 
@@ -1210,7 +1198,7 @@ public sealed class McpInfrastructureService : IDisposable
                 verificationArguments,
                 out effectiveArguments);
             enrichedEnvironment = BuildEnrichedEnvironment(dependenciesForStdio, candidate.Env, !string.IsNullOrWhiteSpace(candidate.Id) ? candidate.Id : verificationId);
-            port = AllocateFreePort(VerifyPortRangeStart, VerifyPortRangeEnd);
+            port = promoteAsOnSuccess != null ? AllocateFreePort(CustomPortRangeStart, CustomPortRangeEnd) : AllocateFreePort(VerifyPortRangeStart, VerifyPortRangeEnd);
             endpoint = LoopbackPrefix + port + "/" + verificationId + "/mcp";
             configPath = Path.Combine(AppPaths.CustomGatewaysDirectory, "verify-" + verificationId + ".json");
             workingDirectory = !string.IsNullOrWhiteSpace(candidate.WorkingDirectory) &&
@@ -1419,18 +1407,19 @@ public sealed class McpInfrastructureService : IDisposable
         }
         finally
         {
+            lock (PortAllocationLock) { ReservedPortsInFlight.Remove(port); }
             if (temporaryGateway != null)
             {
                 await StopChildAsync(temporaryGateway).ConfigureAwait(false);
                 await WaitForPortReleaseAsync(port, 3000).ConfigureAwait(false);
-            }
-            try
-            {
-                if (File.Exists(configPath)) File.Delete(configPath);
-            }
-            catch (Exception exception)
-            {
-                ErrorLog.Write("McpInfrastructureService.VerifyCandidateAsync.Cleanup", exception);
+                try
+                {
+                    if (File.Exists(configPath)) File.Delete(configPath);
+                }
+                catch (Exception exception)
+                {
+                    ErrorLog.Write("McpInfrastructureService.VerifyCandidateAsync.Cleanup", exception);
+                }
             }
         }
     }
@@ -1544,13 +1533,27 @@ public sealed class McpInfrastructureService : IDisposable
             _activeRoots = roots;
             _activeFilesystemFingerprint = configurationFingerprint;
             status.UpstreamUrl = FilesystemEndpoint;
-            status.HealthState = McpServerHealthState.Waiting;
-            status.ToolsCount = 0;
-            status.ToolsPreview = string.Empty;
+            var requiresNewVerification =
+                status.HealthState == McpServerHealthState.Disabled ||
+                status.HealthState == McpServerHealthState.Quarantine ||
+                !rootsMatch ||
+                !configurationMatches;
+            if (requiresNewVerification)
+            {
+                status.HealthState = McpServerHealthState.Waiting;
+                status.ToolsCount = 0;
+                status.ToolsPreview = string.Empty;
+                status.StatusText = I18n.Tr(
+                    "Папки доступа изменены · проверка MCP endpoint…",
+                    "Access roots changed · verifying MCP endpoint…");
+            }
+            else if (status.HealthState == McpServerHealthState.Waiting)
+            {
+                status.StatusText = I18n.Tr(
+                    "Ожидание проверки MCP endpoint · папок: " + roots.Length,
+                    "Waiting for MCP endpoint verification · roots: " + roots.Length);
+            }
             status.LastDiagnosticLog = string.Empty;
-            status.StatusText = I18n.Tr(
-                "Процесс запущен · ожидание проверки Poll Manager · папок: " + roots.Length,
-                "Process started · awaiting Poll Manager verification · folders: " + roots.Length);
             _filesystemStatus = status.StatusText;
             ErrorLog.LogConnection(I18n.Tr(
                 "Filesystem MCP (:8003) запущен. MCP-проверку выполняет Poll Manager.",
@@ -1790,6 +1793,9 @@ public sealed class McpInfrastructureService : IDisposable
             _statusById[server.Id] = status;
         }
         var fingerprint = BuildStdioFingerprint(server);
+        if (forceRetry || !string.Equals(status.LastFingerprint, fingerprint, StringComparison.Ordinal))
+            status.RuntimeStartFailed = false;
+        status.LastFingerprint = fingerprint;
         status.Name = server.Name;
         status.Subtitle = (server.Command ?? string.Empty) + " " + McpServerConfigParser.FormatArguments(server.Args);
         status.TransportBadge = "STDIO -> HTTP";
@@ -1797,6 +1803,7 @@ public sealed class McpInfrastructureService : IDisposable
         status.IsEnabled = desiredStdioEnabled;
         if (!desiredStdioEnabled)
         {
+            status.RuntimeStartFailed = false;
             await StopCustomStdioServerAsync(server.Id).ConfigureAwait(false);
             if (IsDesiredEnabled(server.Id, server.Enabled)) return;
             status.PathDisplay = "/" + server.Id + "/mcp";
@@ -1813,10 +1820,10 @@ public sealed class McpInfrastructureService : IDisposable
                 await StopCustomStdioServerAsync(server.Id).ConfigureAwait(false);
                 status.EndpointDisplay = ":" + knownDepPort;
                 status.PathDisplay = "/" + server.Id + "/mcp";
-                status.HealthState = McpServerHealthState.Waiting;
-                status.StatusText = I18n.Tr("Ожидание запуска внешней программы (:", "Waiting for external app (:") + knownDepPort + ")";
+                status.HealthState = McpServerHealthState.Offline;
                 status.ToolsCount = 0;
                 status.ToolsPreview = string.Empty;
+                status.StatusText = I18n.Tr("Сервер офлайн", "Server offline");
                 return;
             }
         }
@@ -1829,6 +1836,7 @@ public sealed class McpInfrastructureService : IDisposable
                 status.EndpointDisplay = existingRuntime.Port.ToString();
                 status.PathDisplay = new Uri(existingRuntime.EndpointUrl).AbsolutePath;
                 status.UpstreamUrl = existingRuntime.EndpointUrl;
+                status.RuntimeStartFailed = false;
                 if (status.HealthState == McpServerHealthState.Disabled ||
                     status.HealthState == McpServerHealthState.Quarantine)
                 {
@@ -1841,13 +1849,12 @@ public sealed class McpInfrastructureService : IDisposable
             }
             await StopCustomStdioServerAsync(server.Id).ConfigureAwait(false);
         }
-        else if (status.HealthState == McpServerHealthState.Quarantine && string.Equals(status.LastFingerprint, fingerprint, StringComparison.Ordinal) && !forceRetry)
-        {
+        if (status.RuntimeStartFailed && !forceRetry)
             return;
-        }
 
         if (!dependencies.HasNode || !dependencies.HasSupergateway)
         {
+            status.RuntimeStartFailed = true;
             status.HealthState = McpServerHealthState.Quarantine;
             status.EndpointDisplay = "—";
             status.PathDisplay = "Dependency";
@@ -1861,14 +1868,14 @@ public sealed class McpInfrastructureService : IDisposable
             return;
         }
 
-        status.LastFingerprint = fingerprint;
         var resolvedCmd = ResolveCommandExecutable(server.Command, server.WorkingDirectory, out var cmdError);
         if (resolvedCmd == null)
         {
+            status.RuntimeStartFailed = true;
             status.HealthState = McpServerHealthState.Quarantine;
             status.EndpointDisplay = "ERR";
             status.PathDisplay = "Pre-flight";
-            status.StatusText = I18n.Tr("Карантин (Pre-flight): ", "Quarantine (Pre-flight): ") + cmdError;
+            status.StatusText = cmdError;
             return;
         }
         var port = AllocateFreePort(CustomPortRangeStart, CustomPortRangeEnd);
@@ -1891,6 +1898,7 @@ public sealed class McpInfrastructureService : IDisposable
             if (!listener.Success)
             {
                 await StopChildAsync(child).ConfigureAwait(false);
+                status.RuntimeStartFailed = true;
                 status.HealthState = McpServerHealthState.Quarantine;
                 status.StatusText = I18n.Tr("Карантин (сбой старта): ", "Quarantine (startup failed): ") + listener.Message;
                 return;
@@ -1909,6 +1917,7 @@ public sealed class McpInfrastructureService : IDisposable
                 return;
             }
             lock (_stateLock) { _customStdioRuntimes[server.Id] = new ManagedCustomStdioRuntime(server.Id, port, endpoint, fingerprint, child); } lock (PortAllocationLock) { ReservedPortsInFlight.Remove(port); }
+            status.RuntimeStartFailed = false;
             var pkgReady = IsServerPackageReady(server.Id);
             status.HealthState = pkgReady ? McpServerHealthState.Waiting : McpServerHealthState.Downloading;
             status.ToolsCount = 0;
@@ -1923,18 +1932,27 @@ public sealed class McpInfrastructureService : IDisposable
         catch (Exception ex)
         {
             if (child != null) await StopChildAsync(child).ConfigureAwait(false);
+            status.RuntimeStartFailed = true;
             status.HealthState = McpServerHealthState.Quarantine;
             status.StatusText = I18n.Tr("Карантин: ", "Quarantine: ") + ex.Message;
             ErrorLog.Write("McpInfrastructureService.ReconcileCustomStdioServerAsync." + server.Id, ex);
+        }
+        finally
+        {
+            lock (PortAllocationLock) { ReservedPortsInFlight.Remove(port); }
         }
     }
 
     private async Task StopCustomStdioServerAsync(string serverId)
     {
-        if (!_customStdioRuntimes.TryGetValue(serverId, out var runtime)) return;
-        _customStdioRuntimes.Remove(serverId);
-        await StopChildAsync(runtime.Child).ConfigureAwait(false);
-        var releaseError = await WaitForPortReleaseAsync(runtime.Port, 3000).ConfigureAwait(false);
+        ManagedCustomStdioRuntime? runtime;
+        lock (_stateLock)
+        {
+            if (!_customStdioRuntimes.TryGetValue(serverId, out runtime)) return;
+            _customStdioRuntimes.Remove(serverId);
+        }
+        await StopChildAsync(runtime!.Child).ConfigureAwait(false);
+        await WaitForPortReleaseAsync(runtime!.Port, 3000).ConfigureAwait(false);
     }
 
     private async Task<bool> PushUpstreamsToRouterAsync()
@@ -2045,9 +2063,7 @@ public sealed class McpInfrastructureService : IDisposable
                     BuildFilesystemFingerprint(_filesystemCustom, _activeRoots),
                     false);
             }
-            else if (_statusById.TryGetValue(SettingsStore.BuiltInFilesystemId, out var filesystemPendingStatus) &&
-                     (filesystemPendingStatus.HealthState == McpServerHealthState.Waiting ||
-                      filesystemPendingStatus.HealthState == McpServerHealthState.Offline))
+            else
             {
                 AddUpstream(
                     SettingsStore.BuiltInFilesystemId,
@@ -2119,33 +2135,28 @@ public sealed class McpInfrastructureService : IDisposable
             }
 
             if (!_customStdioRuntimes.TryGetValue(configured.Id, out var runtime) ||
-                IsExited(runtime.Child.Process))
+                IsExited(runtime!.Child.Process))
             {
-                if (_statusById.TryGetValue(configured.Id, out var pendingStatus) &&
-                    (pendingStatus.HealthState == McpServerHealthState.Waiting ||
-                     pendingStatus.HealthState == McpServerHealthState.Offline))
-                {
-                    AddUpstream(
-                        configured.Id,
-                        configured.Name,
-                        string.Empty,
-                        null,
-                        transport,
-                        BuildStdioFingerprint(configured),
-                        true,
-                        true,
-                        customScope);
-                }
+                AddUpstream(
+                    configured.Id,
+                    configured.Name,
+                    string.Empty,
+                    null,
+                    transport,
+                    BuildStdioFingerprint(configured),
+                    true,
+                    true,
+                    customScope);
                 continue;
             }
 
             AddUpstream(
                 configured.Id,
                 configured.Name,
-                runtime.EndpointUrl,
+                runtime!.EndpointUrl,
                 null,
                 "stdio",
-                runtime.Fingerprint,
+                runtime!.Fingerprint,
                 true,
                 false,
                 customScope);
@@ -2274,7 +2285,7 @@ public sealed class McpInfrastructureService : IDisposable
             return null;
 
         if (!_customStdioRuntimes.TryGetValue(configured.Id, out var runtime) ||
-            IsExited(runtime.Child.Process))
+            IsExited(runtime!.Child.Process))
         {
             return _statusById.TryGetValue(configured.Id, out var pendingStatus) &&
                 (pendingStatus.HealthState == McpServerHealthState.Waiting ||
@@ -2283,7 +2294,7 @@ public sealed class McpInfrastructureService : IDisposable
                 : null;
         }
 
-        return string.Equals(runtime.Fingerprint, candidateFingerprint, StringComparison.Ordinal)
+        return string.Equals(runtime!.Fingerprint, candidateFingerprint, StringComparison.Ordinal)
             ? configured.Id
             : null;
     }
@@ -2446,10 +2457,8 @@ public sealed class McpInfrastructureService : IDisposable
 
                     case McpServerHealthState.Offline:
                         status.StatusText = state.Stale
-                            ? I18n.Tr("Недоступен · используется последний каталог", "Offline · last known catalog retained")
-                            : I18n.Tr("MCP-сервер недоступен", "MCP server is offline");
-                        if (!string.IsNullOrWhiteSpace(state.LastError))
-                            status.StatusText += ": " + state.LastError;
+                            ? I18n.Tr("Сервер офлайн · кэш сохранён", "Server offline · cache retained")
+                            : I18n.Tr("Сервер офлайн", "Server offline");
                         break;
 
                     case McpServerHealthState.Disabled:
@@ -2461,31 +2470,37 @@ public sealed class McpInfrastructureService : IDisposable
                         break;
 
                     default:
-                        if (state.Pending)
+                        if (status.DependentLocalPort > 0 && TcpPortInspector.GetListeningProcessIds(status.DependentLocalPort).Count == 0)
+                        {
+                            status.HealthState = McpServerHealthState.Offline;
+                            status.ToolsCount = 0;
+                            status.ToolsPreview = string.Empty;
+                            status.StatusText = I18n.Tr("Сервер офлайн", "Server offline");
+                        }
+                        else if (state.Pending)
                         {
                             if (previousHealthState != McpServerHealthState.Waiting ||
                                 string.IsNullOrWhiteSpace(status.StatusText))
                             {
                                 status.StatusText = I18n.Tr(
-                                    "Ожидание локального процесса MCP",
-                                    "Waiting for the local MCP process");
+                                    "Ожидание локального MCP endpoint",
+                                    "Waiting for the local MCP endpoint");
                             }
                         }
-                        else if (string.Equals(state.ServerId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) &&
+                        else if (string.Equals(state.Scope, "local", StringComparison.OrdinalIgnoreCase) &&
+                                 string.Equals(state.Transport, "http", StringComparison.OrdinalIgnoreCase) &&
                                  !string.IsNullOrWhiteSpace(state.LastError) &&
                                  state.LastError.IndexOf("ECONNREFUSED", StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             status.StatusText = I18n.Tr(
-                                "Ожидание запуска Unreal Editor (:8000)",
-                                "Waiting for Unreal Editor (:8000)");
+                                "Ожидание локального MCP endpoint",
+                                "Waiting for the local MCP endpoint");
                         }
                         else
                         {
                             status.StatusText = I18n.Tr(
-                                "Ожидание следующей проверки MCP",
-                                "Waiting for next MCP verification");
-                            if (!string.IsNullOrWhiteSpace(state.LastError))
-                                status.StatusText += ": " + state.LastError;
+                                "Подключение к MCP…",
+                                "Connecting to MCP…");
                         }
                         break;
                 }
@@ -2589,7 +2604,7 @@ public sealed class McpInfrastructureService : IDisposable
             if (equalsIndex >= 0 && equalsIndex < argument.Length - 1)
                 argument = argument.Substring(equalsIndex + 1).Trim().Trim('"');
 
-            if (!Path.IsPathRooted(argument) && !Directory.Exists(argument)) continue;
+            if (rawArgument.TrimStart().StartsWith("-", StringComparison.Ordinal) || rawArgument.TrimStart().StartsWith("/", StringComparison.Ordinal) || (!Path.IsPathRooted(argument) && !Directory.Exists(argument))) continue;
             string normalized;
             try { normalized = SettingsStore.NormalizePath(argument); }
             catch { continue; }
@@ -2932,7 +2947,7 @@ public sealed class McpInfrastructureService : IDisposable
             foreach (var ext in extensions)
                 try { var full = Path.Combine(dir, expanded + ext); if (File.Exists(full)) return full; } catch { }
         }
-        error = I18n.Tr("Команда '" + rawCommand + "' не найдена в Dependencies или системном PATH.", "Command '" + rawCommand + "' was not found in Dependencies or system PATH.");
+        error = I18n.Tr("Нет зависимости: " + rawCommand, "Missing: " + rawCommand);
         return null;
     }
 
@@ -2958,24 +2973,14 @@ public sealed class McpInfrastructureService : IDisposable
 
     private static string BuildNodeDependencyUnavailableMessage(McpDependencySet dependencies)
     {
-        var node = dependencies.Report.Get("node");
-        return I18n.Tr(
-            "MCP-шлюз не запущен: требуется Node.js 18.0.0 или новее. " + node.Details,
-            "MCP gateway is not running: Node.js 18.0.0 or newer is required. " + node.Details);
+        return I18n.Tr("Нет зависимости: Node.js", "Missing: Node.js");
     }
 
     private static string BuildFilesystemDependencyUnavailableMessage(McpDependencySet dependencies)
     {
-        var missing = new List<string>();
-        if (!dependencies.HasNode) missing.Add("Node.js 18.0.0+");
-        if (!dependencies.HasFilesystemMcp) missing.Add("Filesystem MCP 1.0.0+");
-        if (!dependencies.HasSupergateway) missing.Add("Supergateway 4.2.1+");
-
-        return I18n.Tr(
-            "Filesystem MCP не запущен: отсутствует или устарел компонент — " + string.Join(", ", missing) +
-            ". Остальные HTTP MCP-серверы продолжают работать.",
-            "Filesystem MCP is not running: a component is missing or outdated — " + string.Join(", ", missing) +
-            ". Other HTTP MCP servers continue to work.");
+        if (!dependencies.HasNode) return I18n.Tr("Нет зависимости: Node.js", "Missing: Node.js");
+        if (!dependencies.HasSupergateway) return I18n.Tr("Нет зависимости: Supergateway", "Missing: Supergateway");
+        return I18n.Tr("Нет зависимости: Filesystem MCP", "Missing: Filesystem MCP");
     }
 
     private static string BuildFilesystemFingerprint(CustomMcpServerEntry? server, string[] roots)
@@ -3339,6 +3344,7 @@ public sealed class McpInfrastructureService : IDisposable
         public string ToolsPreview { get; set; } = string.Empty;
         public string LastDiagnosticLog { get; set; } = string.Empty;
         public string LastFingerprint { get; set; } = string.Empty;
+        public bool RuntimeStartFailed { get; set; }
         public int DependentLocalPort { get; set; }
         public McpServerStatusSnapshot ToSnapshot() => new()
         {
