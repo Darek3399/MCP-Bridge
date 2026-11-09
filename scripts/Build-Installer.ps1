@@ -15,6 +15,7 @@ $dependenciesDirectory = Join-Path $repoRoot 'Dependencies'
 $publishDirectory = Join-Path $buildRoot 'publish\win-x64'
 $installerDirectory = Join-Path $buildRoot 'installer'
 $installerScript = Join-Path $repoRoot 'installer\MCPBridge.iss'
+$versionPropsFile = Join-Path $repoRoot 'Directory.Build.props'
 $publishScript = Join-Path $PSScriptRoot 'Publish-Windows.ps1'
 $payloadScript = Join-Path $PSScriptRoot 'Prepare-InstallerPayload.ps1'
 $compilerDiscoveryScript = Join-Path $PSScriptRoot 'Find-InnoSetupCompiler.ps1'
@@ -30,6 +31,29 @@ if (-not (Test-Path -LiteralPath $dependenciesDirectory -PathType Container)) {
 if (-not (Test-Path -LiteralPath $installerScript -PathType Leaf)) {
     throw "Не найден сценарий Inno Setup: $installerScript"
 }
+
+if (-not (Test-Path -LiteralPath $versionPropsFile -PathType Leaf)) {
+    throw "Не найден единый источник версии продукта: $versionPropsFile"
+}
+
+try {
+    [xml]$versionProperties = Get-Content -LiteralPath $versionPropsFile -Raw
+}
+catch {
+    throw "Не удалось прочитать XML-файл с версией продукта '$versionPropsFile': $($_.Exception.Message)"
+}
+
+$versionNodes = @($versionProperties.SelectNodes('/Project/PropertyGroup/Version'))
+if ($versionNodes.Count -ne 1) {
+    throw "В '$versionPropsFile' должен находиться ровно один элемент <Version> в PropertyGroup. Найдено: $($versionNodes.Count)."
+}
+
+$installerVersion = $versionNodes[0].InnerText.Trim()
+if ($installerVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$') {
+    throw "Некорректная версия продукта '$installerVersion' в '$versionPropsFile'. Ожидается SemVer вида 1.2.3 или 1.2.3-preview.1."
+}
+
+Write-Host "Версия MCP Bridge: $installerVersion (Directory.Build.props)"
 
 if (-not (Test-Path -LiteralPath $publishScript -PathType Leaf)) {
     throw "Не найден сценарий публикации приложения: $publishScript"
@@ -83,14 +107,6 @@ foreach ($sourceAdapter in $sourceAdapters) {
 
 Write-Host "Проверка MCP-адаптеров пройдена: $($sourceAdapters.Count) файлов совпадают с исходниками."
 
-$installerVersionMatch = [regex]::Match(
-    (Get-Content -LiteralPath $installerScript -Raw),
-    '(?m)^\s*#define\s+AppVersion\s+"([^"]+)"')
-if (-not $installerVersionMatch.Success) {
-    throw "Не удалось определить AppVersion в '$installerScript'."
-}
-
-$installerVersion = $installerVersionMatch.Groups[1].Value
 $installerOutput = Join-Path $installerDirectory "MCPBridge-Setup-$installerVersion.exe"
 $compilerLog = Join-Path $diagnosticsDirectory 'inno-setup-build.log'
 
@@ -134,7 +150,10 @@ if (Test-Path -LiteralPath $installerOutput -PathType Leaf) {
     Remove-Item -LiteralPath $installerOutput -Force
 }
 
-$compilerArguments = @('/DFilesystemMcpPayload=1')
+$compilerArguments = @(
+    '/DFilesystemMcpPayload=1'
+    ('/DAppVersion="' + $installerVersion + '"')
+)
 if ($FastDependencyPackaging) {
     Write-Host 'Быстрый режим: зависимости добавляются в установщик без повторного сжатия.'
     $compilerArguments += '/DFastDependencyPackaging=1'

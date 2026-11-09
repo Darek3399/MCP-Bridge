@@ -817,6 +817,38 @@ public sealed class ServerJsonEditorWindow : Window
         }
 
         var candidate = McpServerConfigJson.ParseSingleServer(json, _editingId, _enabled);
+        if (_editingId == null)
+        {
+            var isFsDuplicate = string.Equals(candidate.Id, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(candidate.Name, "Filesystem MCP", StringComparison.OrdinalIgnoreCase) ||
+                (candidate.Args != null && candidate.Args.Any(a => a != null && a.IndexOf("server-filesystem", StringComparison.OrdinalIgnoreCase) >= 0));
+            if (isFsDuplicate)
+                throw new FormatException(I18n.Tr(
+                    "Filesystem MCP уже встроен в систему. Настройте разрешённые папки в существующем Filesystem MCP вместо повторного добавления.",
+                    "Filesystem MCP is already built in. Configure allowed folders in the existing Filesystem MCP instead of adding it again."));
+
+            try
+            {
+                var currentSettings = new SettingsStore().Load();
+                var baseId = SettingsStore.SanitizeServerId(candidate.Id);
+                var isHttp = string.Equals(candidate.Transport, "http", StringComparison.OrdinalIgnoreCase);
+                var dup = currentSettings.CustomServers.FirstOrDefault(s =>
+                    string.Equals(s.Id, baseId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(s.Name, candidate.Name, StringComparison.OrdinalIgnoreCase) ||
+                    (isHttp && string.Equals(s.Transport, "http", StringComparison.OrdinalIgnoreCase) &&
+                     !string.IsNullOrWhiteSpace(s.Url) &&
+                     string.Equals(s.Url.Trim().TrimEnd('/'), (candidate.Url ?? string.Empty).Trim().TrimEnd('/'), StringComparison.OrdinalIgnoreCase)) ||
+                    (!isHttp && !string.Equals(s.Transport, "http", StringComparison.OrdinalIgnoreCase) &&
+                     string.Equals((s.Command ?? string.Empty).Trim(), (candidate.Command ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase) &&
+                     (s.Args ?? new List<string>()).SequenceEqual(candidate.Args ?? new List<string>(), StringComparer.OrdinalIgnoreCase)));
+                if (dup != null)
+                    throw new FormatException(I18n.Tr(
+                        "Такой MCP-сервер уже добавлен в список («" + dup.Name + "»). Повторное добавление дубликата запрещено.",
+                        "This MCP server is already in the list ('" + dup.Name + "'). Adding duplicates is not allowed."));
+            }
+            catch (FormatException) { throw; }
+            catch { }
+        }
         if (_requiresStdio && !string.Equals(candidate.Transport, "stdio", StringComparison.OrdinalIgnoreCase))
             throw new FormatException(I18n.Tr(
                 "Встроенный Filesystem MCP использует только STDIO-транспорт.",
@@ -1107,7 +1139,7 @@ public sealed class ServerJsonEditorWindow : Window
                 _diagBox.Visibility = Visibility.Collapsed;
             }
 
-            if (saveOnSuccess)
+            if (saveOnSuccess && IsLoaded && IsVisible)
             {
                 if (report.IsSuccess)
                 {
@@ -1123,7 +1155,7 @@ public sealed class ServerJsonEditorWindow : Window
                         I18n.Tr("Сохранение сервера", "Save Server"),
                         MessageBoxButton.YesNo);
 
-                    if (ask == MessageBoxResult.Yes)
+                    if (ask == MessageBoxResult.Yes && IsLoaded && IsVisible)
                     {
                         ResultServers.Clear();
                         ResultServers.Add(candidate);
@@ -1156,6 +1188,7 @@ public sealed class ServerJsonEditorWindow : Window
 
     private MessageBoxResult ShowCustomDialog(string message, string title, MessageBoxButton buttons = MessageBoxButton.OK)
     {
+        if (!IsLoaded || !IsVisible) return MessageBoxResult.None;
         var dialog = new Window
         {
             Title = title,

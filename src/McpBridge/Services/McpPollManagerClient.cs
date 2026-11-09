@@ -324,7 +324,7 @@ internal sealed class McpPollManagerClient
         }
         finally
         {
-            if (!preserveOnSuccess || completion?.Success != true || !cacheReadSucceeded)
+            if (!preserveOnSuccess || !cacheReadSucceeded)
             {
                 try { await RemoveTemporaryVerificationAsync(server.Id).ConfigureAwait(false); }
                 catch (Exception exception)

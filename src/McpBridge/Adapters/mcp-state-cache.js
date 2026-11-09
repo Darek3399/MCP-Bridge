@@ -187,7 +187,7 @@ class McpServerStateCache extends EventEmitter {
     state.consecutiveFailures = 0;
     state.stale = false;
     state.lastError = null;
-    state.serverInfo = result.serverInfo ? cloneJson(result.serverInfo) : null;
+    state.serverInfo = result.serverInfo ? cloneJson(result.serverInfo) : state.serverInfo;
     state.protocolMode = nextProtocolMode;
     state.updatedAt = new Date().toISOString();
     this._publish('verification.completed', state.serverId, {
@@ -227,9 +227,17 @@ class McpServerStateCache extends EventEmitter {
     return true;
   }
 
-  setFailure(id, error, result = {}) {
+    setFailure(id, error, result = {}) {
     const state = this.states.get(String(id));
     if (!state) return false;
+
+    if (error && Array.isArray(error.discoveredTools) && error.discoveredTools.length > 0 && state.tools.length === 0) {
+      state.tools = cloneJson(error.discoveredTools);
+      state.toolFingerprint = fingerprint(state.tools);
+    }
+    if (error && error.discoveredServerInfo && !state.serverInfo) {
+      state.serverInfo = cloneJson(error.discoveredServerInfo);
+    }
 
     state.consecutiveFailures += 1;
     state.pending = false;

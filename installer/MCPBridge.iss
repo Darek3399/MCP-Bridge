@@ -1,5 +1,7 @@
 ﻿#define AppName "MCP Bridge"
-#define AppVersion "0.9.4"
+#ifndef AppVersion
+  #error AppVersion must be supplied by Build-Installer.ps1 from Directory.Build.props
+#endif
 #define AppExeName "MCPBridge.exe"
 #define PublishDir "..\Work\Build\publish\win-x64"
 

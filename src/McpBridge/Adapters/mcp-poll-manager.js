@@ -146,10 +146,14 @@ class McpServerWorker extends EventEmitter {
     action(value);
   }
 
-  async updateConfig(nextConfig) {
+    async updateConfig(nextConfig) {
     if (this.stopped) throw new Error('The MCP worker has been stopped.');
     const previous = this.config;
     const next = cloneConfig(nextConfig);
+    if (previous.scope === 'local' && next.scope === 'remote') {
+      next.scope = 'local';
+      next.pollIntervalMs = 2500;
+    }
     const previousFingerprint = configFingerprint(previous);
     const nextFingerprint = configFingerprint(next);
     if (previousFingerprint === nextFingerprint) return false;
@@ -396,7 +400,7 @@ class McpServerWorker extends EventEmitter {
         if (!this.failureWindowStartedAt) {
           this.failureWindowStartedAt = Date.now();
         }
-        if (config.scope === 'local') {
+        if (this.config.scope === 'local' || config.scope === 'local') {
           nextDelay = 1500;
         } else {
           const elapsedRetryMs = Date.now() - this.failureWindowStartedAt;
@@ -650,8 +654,9 @@ class McpPollManager extends EventEmitter {
     if (worker.running)
       throw new Error('The temporary MCP worker is still verifying.');
 
-    const state = this.cache.getInternalServer(temporaryId);
-    if (!state || state.health !== 'online' || !state.lastSuccessAt)
+        const state = this.cache.getInternalServer(temporaryId);
+    const hasVerifiedTools = state && Array.isArray(state.tools) && state.tools.length > 0;
+    if (!state || (!hasVerifiedTools && (state.health !== 'online' || !state.lastSuccessAt)))
       throw new Error('Only a successfully verified temporary MCP worker can be promoted.');
 
     const existingPermanent = this.workers.get(permanentId);

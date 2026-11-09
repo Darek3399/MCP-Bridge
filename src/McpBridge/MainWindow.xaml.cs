@@ -663,21 +663,36 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() != true || dialog.ResultServers.Count == 0)
             return;
 
+        var addedCount = 0;
         foreach (var candidate in dialog.ResultServers)
         {
             var baseId = string.IsNullOrWhiteSpace(candidate.Id) ? "custom_mcp" : SettingsStore.SanitizeServerId(candidate.Id);
             if (string.IsNullOrWhiteSpace(baseId)) baseId = "custom_mcp";
-            var uniqueId = baseId;
-            var suffix = 2;
-            while (string.Equals(uniqueId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(uniqueId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
-                   _settings.CustomServers.Any(s => string.Equals(s.Id, uniqueId, StringComparison.OrdinalIgnoreCase)))
+
+            var isBuiltInDup = string.Equals(baseId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) ||
+                               string.Equals(baseId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+                               (candidate.Args != null && candidate.Args.Any(a => a != null && a.IndexOf("server-filesystem", StringComparison.OrdinalIgnoreCase) >= 0));
+            var existingDup = _settings.CustomServers.FirstOrDefault(s =>
+                string.Equals(s.Id, baseId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(s.Name, candidate.Name, StringComparison.OrdinalIgnoreCase) ||
+                (string.Equals(s.Transport, "http", StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(candidate.Transport, "http", StringComparison.OrdinalIgnoreCase) &&
+                 !string.IsNullOrWhiteSpace(s.Url) &&
+                 string.Equals(s.Url.Trim().TrimEnd('/'), (candidate.Url ?? string.Empty).Trim().TrimEnd('/'), StringComparison.OrdinalIgnoreCase)));
+
+            if (isBuiltInDup || existingDup != null)
             {
-                uniqueId = baseId + "_" + suffix++;
+                FooterStatusText.Text = I18n.Tr(
+                    "Сервер «" + candidate.Name + "» уже есть в списке и не был продублирован.",
+                    "Server '" + candidate.Name + "' is already in the list and was not duplicated.");
+                continue;
             }
-            candidate.Id = uniqueId;
+
+            candidate.Id = baseId;
             _settings.CustomServers.Add(candidate);
+            addedCount++;
         }
+        if (addedCount == 0) return;
 
         if (!SaveSettings()) return;
 
@@ -2007,16 +2022,33 @@ public partial class MainWindow : Window
     {
         try
         {
-            var asm = System.Reflection.Assembly.GetExecutingAssembly();
-            var ver = asm.GetName().Version;
-            if (ver != null)
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var informationalVersion = assembly
+                .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+                .Select(attribute => attribute.InformationalVersion)
+                .FirstOrDefault();
+
+            var versionText = informationalVersion;
+            if (string.IsNullOrWhiteSpace(versionText))
             {
-                AppVersionText.Text = $"v{ver.Major}.{ver.Minor}.{ver.Build}";
+                var assemblyVersion = assembly.GetName().Version;
+                if (assemblyVersion != null)
+                    versionText = $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{Math.Max(assemblyVersion.Build, 0)}";
             }
+
+            if (!string.IsNullOrWhiteSpace(versionText))
+            {
+                var metadataSeparator = versionText.IndexOf('+');
+                if (metadataSeparator >= 0)
+                    versionText = versionText.Substring(0, metadataSeparator);
+            }
+
+            AppVersionText.Text = string.IsNullOrWhiteSpace(versionText) ? "v—" : $"v{versionText}";
         }
         catch
         {
-            AppVersionText.Text = "v0.9.0";
+            AppVersionText.Text = "v—";
         }
     }
 

@@ -737,7 +737,14 @@ public sealed class McpInfrastructureService : IDisposable
             foreach (var header in headers)
                 if (!string.IsNullOrEmpty(header.Value) && Regex.IsMatch(header.Key, @"authorization|token|secret|api[-_]?key|credential", RegexOptions.IgnoreCase))
                     safe = safe.Replace(header.Value, "[REDACTED]");
-        return safe.Length > 320 ? safe.Substring(0, 317) + "..." : safe;
+        var filteredLines = safe.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(l => l.IndexOf("Supergateway is supported by", StringComparison.OrdinalIgnoreCase) < 0 &&
+                        l.IndexOf("[supergateway] Starting...", StringComparison.OrdinalIgnoreCase) < 0 &&
+                        l.IndexOf("- outputTransport:", StringComparison.OrdinalIgnoreCase) < 0 &&
+                        l.IndexOf("- Headers:", StringComparison.OrdinalIgnoreCase) < 0)
+            .ToArray();
+        safe = string.Join(Environment.NewLine, filteredLines);
+        return safe.Length > 600 ? "..." + safe.Substring(safe.Length - 597) : safe;
     }
 
     private static string DetermineServerScope(
@@ -768,7 +775,10 @@ public sealed class McpInfrastructureService : IDisposable
             return "remote";
         }
 
-        if (!string.Equals(transport, "http", StringComparison.OrdinalIgnoreCase)) return "local";
+        if (!string.Equals(transport, "http", StringComparison.OrdinalIgnoreCase))
+        {
+            if (dependentLocalPort > 0) return "local";
+        }
 
         var allArgs = args ?? Array.Empty<string>();
         foreach (var arg in allArgs)
@@ -1063,7 +1073,7 @@ public sealed class McpInfrastructureService : IDisposable
                     string.Equals(state.Health, "online", StringComparison.OrdinalIgnoreCase);
                 report.IsDone = true;
                 report.DiscoveredServerName = verification.DiscoveredServerName ?? candidate.Name;
-                report.ToolsCount = state?.ToolsCount ?? 0;
+                report.ToolsCount = state?.ToolsCount ?? (verification.ToolNames?.Count ?? 0);
                 report.ToolNames = verification.ToolNames ?? new List<string>();
                 report.Step2Transport = report.IsSuccess
                     ? I18n.Tr("OK: временный HTTP Worker подключён", "OK: temporary HTTP worker connected")
@@ -1082,8 +1092,8 @@ public sealed class McpInfrastructureService : IDisposable
                     ? I18n.Tr("Верификация пройдена! Инструментов: ", "Verification passed! Tools: ") + report.ToolsCount
                     : I18n.Tr("Верификация не пройдена: ", "Verification failed: ") +
                       (string.IsNullOrWhiteSpace(report.DiagnosticOutput) ? "MCP Worker offline" : report.DiagnosticOutput);
-                if (report.IsSuccess && !isHttp) MarkServerPackageReady(!string.IsNullOrWhiteSpace(candidate.Id) ? candidate.Id : verificationId);
-            if (report.IsSuccess && promoteAsOnSuccess != null)
+
+                if (report.IsSuccess && promoteAsOnSuccess != null)
                 {
                     try
                     {
@@ -1298,28 +1308,57 @@ public sealed class McpInfrastructureService : IDisposable
                 preserveOnSuccess: promoteAsOnSuccess != null).ConfigureAwait(false);
 
             var state = verification.State;
-            report.IsSuccess = verification.Success && state != null &&
-                string.Equals(state.Health, "online", StringComparison.OrdinalIgnoreCase);
+            var error = state?.LastError ?? verification.Error;
+            report.ToolsCount = state?.ToolsCount ?? (verification.ToolNames?.Count ?? 0);
+            report.ToolNames = verification.ToolNames ?? new List<string>();
+            var toolsDiscovered = report.ToolsCount > 0;
+            var isLocalAppOffline = toolsDiscovered &&
+                !string.IsNullOrWhiteSpace(error) &&
+                error!.IndexOf("ECONNREFUSED", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            report.IsSuccess = (verification.Success && state != null &&
+                string.Equals(state.Health, "online", StringComparison.OrdinalIgnoreCase)) || isLocalAppOffline;
             report.IsDone = true;
             report.DiscoveredServerName = verification.DiscoveredServerName ?? candidate.Name;
-            report.ToolsCount = state?.ToolsCount ?? 0;
-            report.ToolNames = verification.ToolNames ?? new List<string>();
-            report.Step3Initialize = report.IsSuccess
+            report.Step3Initialize = (report.IsSuccess || toolsDiscovered)
                 ? I18n.Tr("OK: MCP discovery / initialize", "OK: MCP discovery / initialize")
                 : I18n.Tr("MCP handshake не завершён", "MCP handshake did not complete");
-            report.Step4Tools = report.IsSuccess
+            report.Step4Tools = (report.IsSuccess && !isLocalAppOffline)
                 ? I18n.Tr("OK: инструментов: ", "OK: tools: ") + report.ToolsCount
-                : I18n.Tr("tools/list не пройден", "tools/list failed");
-            var error = state?.LastError ?? verification.Error;
+                : toolsDiscovered
+                    ? I18n.Tr("OK: инструментов: ", "OK: tools: ") + report.ToolsCount + I18n.Tr(" (приложение сейчас офлайн)", " (target app currently offline)")
+                    : I18n.Tr("tools/list не пройден", "tools/list failed");
+            var cleanError = string.IsNullOrWhiteSpace(error) ? string.Empty : SanitizeUpstreamDiagnostic(error, candidate.Env);
             var processOutput = temporaryGateway.GetOutput();
-            report.DiagnosticOutput = SanitizeUpstreamDiagnostic(
-                string.Join(Environment.NewLine, new[] { error, processOutput }.Where(value => !string.IsNullOrWhiteSpace(value))),
-                candidate.Env);
+            var cleanOutput = string.IsNullOrWhiteSpace(processOutput) ? string.Empty : SanitizeUpstreamDiagnostic(processOutput, candidate.Env);
+            if (!isHttp)
+            {
+                try
+                {
+                    var tempNetLog = Path.Combine(AppPaths.CustomGatewaysDirectory, "net-" + SettingsStore.SanitizeServerId(verificationId) + ".jsonl");
+                    if (File.Exists(tempNetLog))
+                    {
+                        foreach (var keyCandidate in new[] { candidate.Id, SettingsStore.SanitizeServerId(candidate.Name) })
+                        {
+                            if (string.IsNullOrWhiteSpace(keyCandidate)) continue;
+                            var permNetLog = Path.Combine(AppPaths.CustomGatewaysDirectory, "net-" + SettingsStore.SanitizeServerId(keyCandidate) + ".jsonl");
+                            File.Copy(tempNetLog, permNetLog, true);
+                            MarkServerPackageReady(keyCandidate);
+                        }
+                    }
+                }
+                catch { }
+            }
+            report.DiagnosticOutput = report.IsSuccess ? string.Empty : string.Join(Environment.NewLine, new[] { cleanError, cleanOutput }.Where(v => !string.IsNullOrWhiteSpace(v)));
             report.Summary = report.IsSuccess
-                ? I18n.Tr("Верификация пройдена! Инструментов: ", "Verification passed! Tools: ") + report.ToolsCount
+                ? (isLocalAppOffline
+                    ? I18n.Tr("Верификация пройдена! Инструментов: ", "Verification passed! Tools: ") + report.ToolsCount + I18n.Tr(" (целевое приложение сейчас офлайн)", " (target app is currently offline)")
+                    : I18n.Tr("Верификация пройдена! Инструментов: ", "Verification passed! Tools: ") + report.ToolsCount)
                 : I18n.Tr("Верификация не пройдена: ", "Verification failed: ") +
-                  (string.IsNullOrWhiteSpace(report.DiagnosticOutput) ? "MCP Worker offline" : report.DiagnosticOutput);
+                  (!string.IsNullOrWhiteSpace(cleanError) ? cleanError : (!string.IsNullOrWhiteSpace(cleanOutput) ? cleanOutput : "MCP Worker offline"));
+
             if (report.IsSuccess && !isHttp) MarkServerPackageReady(!string.IsNullOrWhiteSpace(candidate.Id) ? candidate.Id : verificationId);
+
             if (report.IsSuccess && promoteAsOnSuccess != null)
             {
                 try
@@ -1341,44 +1380,48 @@ public sealed class McpInfrastructureService : IDisposable
                         var promotion = await _pollManagerClient.PromoteTemporaryVerificationAsync(
                             verificationId,
                             permanent).ConfigureAwait(false);
+
                         if (!promotion.Promoted)
                             throw new InvalidOperationException(promotion.Error ?? "Poll Manager did not promote the verified worker.");
-
-                        ManagedCustomStdioRuntime? replacedRuntime = null;
-                        if (_customStdioRuntimes.TryGetValue(promoteAsOnSuccess.Id, out var existingRuntime))
-                        {
-                            replacedRuntime = existingRuntime;
-                            _customStdioRuntimes.Remove(promoteAsOnSuccess.Id);
-                        }
-
-                        _customStdioRuntimes[promoteAsOnSuccess.Id] = new ManagedCustomStdioRuntime(
-                            promoteAsOnSuccess.Id,
-                            port,
-                            endpoint,
-                            BuildStdioFingerprint(promoteAsOnSuccess),
-                            temporaryGateway!);
-                        temporaryGateway = null;
-
-                        if (replacedRuntime != null)
-                        {
-                            await StopChildAsync(replacedRuntime.Child).ConfigureAwait(false);
-                            await WaitForPortReleaseAsync(replacedRuntime.Port, 3000).ConfigureAwait(false);
-                        }
 
                         if (!_statusById.TryGetValue(promoteAsOnSuccess.Id, out var promotedStatus))
                         {
                             promotedStatus = new ServerRuntimeStatus { Id = promoteAsOnSuccess.Id, IsBuiltIn = false, TransportBadge = "STDIO -> HTTP" };
                             _statusById[promoteAsOnSuccess.Id] = promotedStatus;
                         }
+
                         promotedStatus.Name = promoteAsOnSuccess.Name;
+                        promotedStatus.Subtitle = (promoteAsOnSuccess.Command ?? string.Empty) + " " + McpServerConfigParser.FormatArguments(promoteAsOnSuccess.Args);
+                        promotedStatus.LastFingerprint = BuildStdioFingerprint(promoteAsOnSuccess);
+                        promotedStatus.RuntimeStartFailed = false;
                         promotedStatus.IsEnabled = true;
-                        promotedStatus.UpstreamUrl = endpoint;
                         promotedStatus.EndpointDisplay = port.ToString();
-                        promotedStatus.PathDisplay = "/" + verificationId + "/mcp";
-                        promotedStatus.HealthState = McpServerHealthState.Online;
+                        promotedStatus.PathDisplay = "/" + promoteAsOnSuccess.Id + "/mcp";
+                        promotedStatus.UpstreamUrl = endpoint;
+                        promotedStatus.HealthState = isLocalAppOffline ? McpServerHealthState.Offline : McpServerHealthState.Online;
                         promotedStatus.ToolsCount = report.ToolsCount;
                         promotedStatus.ToolsPreview = string.Join(", ", report.ToolNames.Take(6));
-                        promotedStatus.StatusText = I18n.Tr("Верифицирован и активен", "Verified & active");
+                        promotedStatus.StatusText = isLocalAppOffline
+                            ? I18n.Tr("Сервер офлайн", "Server offline")
+                            : I18n.Tr("Верифицирован и активен", "Verified & active");
+
+                        if (temporaryGateway != null)
+                        {
+                            if (_customStdioRuntimes.ContainsKey(promoteAsOnSuccess.Id))
+                            {
+                                var existing = _customStdioRuntimes[promoteAsOnSuccess.Id];
+                                _customStdioRuntimes.Remove(promoteAsOnSuccess.Id);
+                                await StopChildAsync(existing.Child).ConfigureAwait(false);
+                            }
+
+                            _customStdioRuntimes[promoteAsOnSuccess.Id] = new ManagedCustomStdioRuntime(
+                                promoteAsOnSuccess.Id,
+                                port,
+                                endpoint,
+                                promotedStatus.LastFingerprint,
+                                temporaryGateway);
+                            temporaryGateway = null;
+                        }
                     }
                     finally
                     {
@@ -1423,7 +1466,6 @@ public sealed class McpInfrastructureService : IDisposable
             }
         }
     }
-
     private async Task ReconcileFilesystemServerAsync(McpDependencySet dependencies, string[] roots, bool forceRestartIfChanged)
     {
         const string id = SettingsStore.BuiltInFilesystemId;
@@ -2761,6 +2803,7 @@ public sealed class McpInfrastructureService : IDisposable
         return dict;
     }
 
+    private static readonly Dictionary<string, Tuple<Uri?, DateTime>> _proxyCache = new Dictionary<string, Tuple<Uri?, DateTime>>(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string> BuildRouterEnvironment(McpDependencySet dependencies)
     {
         var result = BuildEnrichedEnvironment(dependencies, null);
@@ -2778,38 +2821,55 @@ public sealed class McpInfrastructureService : IDisposable
         Uri? selectedProxy = null;
         var directHosts = new List<string>();
 
-        foreach (var server in configuredServers)
+                foreach (var server in configuredServers)
         {
             if (!Uri.TryCreate(server.Url, UriKind.Absolute, out var targetUri) ||
                 (!string.Equals(targetUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
                  !string.Equals(targetUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            try
+            Uri? effectiveProxy = null;
+            var cacheKey = targetUri.Host;
+            var fetchProxy = true;
+
+            lock (_stateLock)
             {
-                var proxy = WebRequest.GetSystemWebProxy();
-                if (proxy == null || proxy.IsBypassed(targetUri))
+                if (_proxyCache.TryGetValue(cacheKey, out var cached) && cached.Item2 > DateTime.UtcNow)
                 {
-                    directHosts.Add(targetUri.Host);
-                    continue;
+                    effectiveProxy = cached.Item1;
+                    fetchProxy = false;
                 }
-
-                var effectiveProxy = proxy.GetProxy(targetUri);
-                if (effectiveProxy == null || effectiveProxy == targetUri)
-                {
-                    directHosts.Add(targetUri.Host);
-                    continue;
-                }
-
-                if (selectedProxy == null)
-                    selectedProxy = effectiveProxy;
-                else if (selectedProxy != effectiveProxy)
-                    directHosts.Add(targetUri.Host);
             }
-            catch
+
+            if (fetchProxy)
+            {
+                try
+                {
+                    var proxy = WebRequest.GetSystemWebProxy();
+                    if (proxy != null && !proxy.IsBypassed(targetUri))
+                    {
+                        effectiveProxy = proxy.GetProxy(targetUri);
+                        if (effectiveProxy == targetUri) effectiveProxy = null;
+                    }
+                }
+                catch { effectiveProxy = null; }
+
+                lock (_stateLock)
+                {
+                    _proxyCache[cacheKey] = new Tuple<Uri?, DateTime>(effectiveProxy, DateTime.UtcNow.AddSeconds(60));
+                }
+            }
+
+            if (effectiveProxy == null)
             {
                 directHosts.Add(targetUri.Host);
+                continue;
             }
+
+            if (selectedProxy == null)
+                selectedProxy = effectiveProxy;
+            else if (selectedProxy != effectiveProxy)
+                directHosts.Add(targetUri.Host);
         }
 
         if (selectedProxy != null)
@@ -2832,10 +2892,11 @@ public sealed class McpInfrastructureService : IDisposable
             noProxyEntries.Add("localhost");
             noProxyEntries.Add("::1");
 
-            var noProxy = string.Join(",", noProxyEntries
+                        var noProxy = string.Join(",", noProxyEntries
                 .Select(value => value.Trim())
                 .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Distinct(StringComparer.OrdinalIgnoreCase));
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
             result["NO_PROXY"] = noProxy;
             result["no_proxy"] = noProxy;
         }
@@ -2874,6 +2935,10 @@ public sealed class McpInfrastructureService : IDisposable
         var machinePath = Environment.GetEnvironmentVariable("Path", EnvironmentVariableTarget.Machine) ?? string.Empty;
         result["PATH"] = string.Join(Path.PathSeparator.ToString(), extraPaths.Concat(new[] { currentPath, userPath, machinePath }).Where(s => !string.IsNullOrWhiteSpace(s)));
         result["PYTHONUNBUFFERED"] = "1";
+        result["NPM_CONFIG_PREFER_OFFLINE"] = "true";
+        result["NPM_CONFIG_UPDATE_NOTIFIER"] = "false";
+        result["NPM_CONFIG_FUND"] = "false";
+        result["NPM_CONFIG_AUDIT"] = "false";
         return result;
     }
 
@@ -3009,8 +3074,82 @@ public sealed class McpInfrastructureService : IDisposable
             ["args"] = args,
             ["outputTransport"] = "streamableHttp"
         };
-        if (env != null && env.Count > 0)
-            serverConfig["env"] = new Dictionary<string, string>(env, StringComparer.OrdinalIgnoreCase);
+        var childEnv = env != null
+            ? new Dictionary<string, string>(env, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            Directory.CreateDirectory(AppPaths.CustomGatewaysDirectory);
+            var safeKey = SettingsStore.SanitizeServerId(serverKey);
+            var netLogPath = Path.Combine(AppPaths.CustomGatewaysDirectory, "net-" + safeKey + ".jsonl");
+            childEnv["MCPBRIDGE_NET_LOG"] = netLogPath;
+            childEnv["MCPBRIDGE_SELF_PORT"] = port.ToString();
+
+            var nodeHookPath = Path.Combine(AppPaths.AdaptersDirectory, "socket-hook.js");
+            if (File.Exists(nodeHookPath))
+            {
+                var reqArg = "--require \"" + nodeHookPath.Replace("\\", "/") + "\"";
+                childEnv["NODE_OPTIONS"] = childEnv.TryGetValue("NODE_OPTIONS", out var existingNodeOpts) && !string.IsNullOrWhiteSpace(existingNodeOpts)
+                    ? existingNodeOpts + " " + reqArg
+                    : reqArg;
+            }
+
+            var pyHookDir = Path.Combine(AppPaths.CustomGatewaysDirectory, "pyhook");
+            Directory.CreateDirectory(pyHookDir);
+            var siteCustomizePath = Path.Combine(pyHookDir, "sitecustomize.py");
+            const string pyHookCode =
+                "import os, socket, json, time\n" +
+                "_log = os.environ.get('MCPBRIDGE_NET_LOG')\n" +
+                "_self = int(os.environ.get('MCPBRIDGE_SELF_PORT') or 0)\n" +
+                "def _is_local(h):\n" +
+                "    h = str(h or 'localhost').lower().strip()\n" +
+                "    return h in ('localhost', '127.0.0.1', '::1', '[::1]') or h.startswith('127.')\n" +
+                "def _write(h, p, ok, code):\n" +
+                "    if not _log or not isinstance(p, int) or p <= 0 or p == _self: return\n" +
+                "    try:\n" +
+                "        with open(_log, 'a', encoding='utf-8') as f:\n" +
+                "            f.write(json.dumps({'ts': int(time.time()*1000), 'host': str(h), 'port': p, 'scope': 'local' if _is_local(h) else 'remote', 'ok': ok, 'code': str(code)}) + '\\n')\n" +
+                "    except Exception: pass\n" +
+                "if _log and not getattr(socket, '_mcpb_hooked', False):\n" +
+                "    socket._mcpb_hooked = True\n" +
+                "    _in_sp = False\n" +
+                "    _orig_sp = getattr(socket, 'socketpair', None)\n" +
+                "    if _orig_sp:\n" +
+                "        def _wrap_sp(*a, **kw):\n" +
+                "            global _in_sp\n" +
+                "            _in_sp = True\n" +
+                "            try: return _orig_sp(*a, **kw)\n" +
+                "            finally: _in_sp = False\n" +
+                "        socket.socketpair = _wrap_sp\n" +
+                "    _orig_conn = socket.socket.connect\n" +
+                "    _orig_conn_ex = socket.socket.connect_ex\n" +
+                "    def _wrap_conn(self, addr):\n" +
+                "        try:\n" +
+                "            res = _orig_conn(self, addr)\n" +
+                "            if not _in_sp and isinstance(addr, tuple) and len(addr) >= 2 and self.gettimeout() != 0: _write(addr[0], addr[1], True, 'OK')\n" +
+                "            return res\n" +
+                "        except Exception as e:\n" +
+                "            code = getattr(e, 'winerror', None) or getattr(e, 'errno', None) or 'ECONNREFUSED'\n" +
+                "            if not _in_sp and code != 10035 and isinstance(addr, tuple) and len(addr) >= 2: _write(addr[0], addr[1], False, code)\n" +
+                "            raise\n" +
+                "    def _wrap_conn_ex(self, addr):\n" +
+                "        res = _orig_conn_ex(self, addr)\n" +
+                "        if not _in_sp and res != 10035 and isinstance(addr, tuple) and len(addr) >= 2: _write(addr[0], addr[1], res == 0, 'OK' if res == 0 else res)\n" +
+                "        return res\n" +
+                "    socket.socket.connect = _wrap_conn\n" +
+                "    socket.socket.connect_ex = _wrap_conn_ex\n";
+            if (!File.Exists(siteCustomizePath) || File.ReadAllText(siteCustomizePath) != pyHookCode)
+                File.WriteAllText(siteCustomizePath, pyHookCode, new UTF8Encoding(false));
+
+            childEnv["PYTHONPATH"] = childEnv.TryGetValue("PYTHONPATH", out var existingPyPath) && !string.IsNullOrWhiteSpace(existingPyPath)
+                ? pyHookDir + Path.PathSeparator + existingPyPath
+                : pyHookDir;
+        }
+        catch { }
+
+        if (childEnv.Count > 0)
+            serverConfig["env"] = childEnv;
 
         if (!string.IsNullOrWhiteSpace(additionalJson) &&
             McpServerConfigParser.DeserializeJson(additionalJson!) is IDictionary<string, object?> additionalProperties)

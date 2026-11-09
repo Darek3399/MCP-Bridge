@@ -2,6 +2,7 @@
 'use strict';
 [process.stdin, process.stdout, process.stderr].forEach(s => { if (s && typeof s.on === 'function') s.on('error', () => {}); });
 
+const net = require('node:net');
 const http = require('node:http');
 const https = require('node:https');
 const zlib = require('node:zlib');
@@ -455,9 +456,15 @@ function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, mod
 
     req.on('socket', (sock) => {
       markActivity();
-      sock.on('lookup', () => markActivity());
-      sock.on('connect', () => markActivity());
-      sock.on('secureConnect', () => markActivity());
+      const onSockActivity = () => markActivity();
+      sock.on('lookup', onSockActivity);
+      sock.on('connect', onSockActivity);
+      sock.on('secureConnect', onSockActivity);
+      req.once('close', () => {
+        sock.removeListener('lookup', onSockActivity);
+        sock.removeListener('connect', onSockActivity);
+        sock.removeListener('secureConnect', onSockActivity);
+      });
     });
 
     trackUpstreamRequest(upstream.id, req);
@@ -1224,7 +1231,7 @@ async function verifyUpstreamForWorker(upstream) {
   const pollTimeoutMs = upstream.transport === 'stdio' ? 30000 : (upstream.scope === 'local' ? 3500 : 30000);
   let measuredRpcMs = 0;
 
-  const cachedStdioTools = (upstream.transport === 'stdio' && String(upstream.id).toLowerCase() !== 'filesystem')
+  const cachedStdioTools = (upstream.transport === 'stdio')
     ? stdioKnownToolsByServer.get(String(upstream.id))
     : null;
 
@@ -1275,29 +1282,129 @@ async function verifyUpstreamForWorker(upstream) {
 
     if (upstream.transport === 'stdio' && tools.length > 0) {
       stdioKnownToolsByServer.set(String(upstream.id), tools);
+      if (upstream.name) {
+        const sanitizedName = String(upstream.name).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^[_-]+|[_-]+$/g, '');
+        if (sanitizedName) stdioKnownToolsByServer.set(sanitizedName, tools);
+      }
       saveStdioToolsCache();
     }
   }
 
   if (upstream.transport === 'stdio' && String(upstream.id).toLowerCase() !== 'filesystem' && tools.length > 0) {
+    const safeKey = String(upstream.id || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^[_-]+|[_-]+$/g, '');
+    const netLogPath = options.config
+      ? path.join(path.dirname(options.config), 'CustomGateways', 'net-' + safeKey + '.jsonl')
+      : null;
+
+    const readNetEventsSince = (sinceTs) => {
+      if (!netLogPath || !fs.existsSync(netLogPath)) return [];
+      try {
+        return fs.readFileSync(netLogPath, 'utf8')
+          .split(/\r?\n/)
+          .filter(Boolean)
+          .map(line => { try { return JSON.parse(line); } catch (_) { return null; } })
+          .filter(item => item && Number(item.ts) >= sinceTs);
+      } catch (_) {
+        return [];
+      }
+    };
+
+    const buildDummyValue = (propName, propSchema) => {
+      const s = propSchema && typeof propSchema === 'object' ? propSchema : {};
+      if (s.default !== undefined) return s.default;
+      if (Array.isArray(s.enum) && s.enum.length > 0) return s.enum[0];
+      if (s.const !== undefined) return s.const;
+      const t = Array.isArray(s.type) ? s.type[0] : s.type;
+      if (t === 'integer' || t === 'number') return typeof s.minimum === 'number' ? s.minimum : 1;
+      if (t === 'boolean') return false;
+      if (t === 'array') return [];
+      if (t === 'object') return {};
+      if (/url|uri|endpoint|link/i.test(String(propName || ''))) return 'https://example.com';
+      return 'test';
+    };
+
+    const buildProbeArgs = (tool) => {
+      const schema = tool && tool.inputSchema && typeof tool.inputSchema === 'object' ? tool.inputSchema : {};
+      const props = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
+      const req = Array.isArray(schema.required) ? schema.required : [];
+      const args = {};
+      for (const key of req) {
+        args[key] = buildDummyValue(key, props[key]);
+      }
+      return args;
+    };
+
     const candidates = tools.filter(t => {
       if (!t || typeof t.name !== 'string') return false;
-      if (/(?:screenshot|image|render|thumbnail|viewport|save|export|import|delete|remove|clear|reset|write|create|update|set|exec|run|eval|kill|stop|close|quit|exit|install|download|jump_to)/i.test(t.name)) {
+      if (t.annotations && (t.annotations.destructiveHint === true || t.annotations.readOnlyHint === false || t.annotations.openWorldHint === true)) return false;
+      if (/(?:^browser_|screenshot|image|render|thumbnail|viewport|navigate|click|type|press|fill|drag|hover|evaluate|upload|drop|save|export|import|delete|remove|clear|reset|write|create|update|set|exec|run|eval|kill|stop|close|quit|exit|install|download|jump_to|move_|edit_|fetch|search|calc)/i.test(t.name)) {
         return false;
       }
       const schema = t.inputSchema && typeof t.inputSchema === 'object' ? t.inputSchema : {};
-      const req = Array.isArray(schema.required) ? schema.required : [];
-      if (req.length > 0) return false;
+      const propsCount = schema.properties && typeof schema.properties === 'object' ? Object.keys(schema.properties).length : 0;
+      const reqCount = Array.isArray(schema.required) ? schema.required.length : 0;
+      if (propsCount > 0 || reqCount > 0) return false;
       return /^(?:get_|list_|read_|check_|status|ping|health|info|version)/i.test(t.name);
     });
 
     candidates.sort((a, b) => {
-      const score = (name) => /^(?:status|ping|health|check_|get_.*(?:status|info|summary|version|state|scene))/i.test(name) ? 0 : 1;
-      return score(a.name) - score(b.name);
+      const getRank = (tool) => {
+        const schema = tool.inputSchema && typeof tool.inputSchema === 'object' ? tool.inputSchema : {};
+        const propsCount = schema.properties && typeof schema.properties === 'object' ? Object.keys(schema.properties).length : 0;
+        const reqCount = Array.isArray(schema.required) ? schema.required.length : 0;
+        const isStatusName = /^(?:status|ping|health|check_|get_.*(?:status|info|summary|version|state|scene))/i.test(tool.name);
+        if (propsCount === 0 && isStatusName) return 0;
+        if (propsCount === 0 && reqCount === 0) return 1;
+        if (reqCount === 0 && isStatusName) return 2;
+        if (reqCount === 0) return 3;
+        return 4;
+      };
+      return getRank(a) - getRank(b);
     });
+
+        let serverInfo = null;
+    const allNetEvents = readNetEventsSince(0);
+    const knownLocalPortEvent = [...allNetEvents].reverse().find(e => e.scope === 'local' && Number(e.port) > 0);
+    if (Array.isArray(cachedStdioTools) && cachedStdioTools.length > 0 && knownLocalPortEvent) {
+      upstream.scope = 'local';
+      const worker = pollManager && pollManager.getWorker(upstream.id);
+      if (worker) { worker.config.scope = 'local'; worker.intervalMs = 2500; }
+      const targetPort = Number(knownLocalPortEvent.port);
+      const tcpStart = Date.now();
+      const portOpen = await new Promise((resolve) => {
+        const sock = new net.Socket();
+        let done = false;
+        const finish = (ok) => {
+          if (done) return;
+          done = true;
+          sock.destroy();
+          resolve(ok);
+        };
+        sock.setTimeout(600);
+        sock.once('connect', () => finish(true));
+        sock.once('timeout', () => finish(false));
+        sock.once('error', () => finish(false));
+        sock.connect(targetPort, '127.0.0.1');
+      });
+      measuredRpcMs += (Date.now() - tcpStart);
+      if (!portOpen) {
+        const err = new Error('ECONNREFUSED: local target 127.0.0.1:' + targetPort + ' refused connection (10061)');
+        err.discoveredTools = cachedStdioTools;
+        err.discoveredServerInfo = null;
+        throw err;
+      }
+      clearUpstreamFailure(upstream.id);
+      return {
+        tools: cachedStdioTools,
+        serverInfo: null,
+        measuredResponseTimeMs: measuredRpcMs,
+        protocolMode: upstreamTransportModes.get(String(upstream.id)) || 'auto'
+      };
+    }
 
     const probeTool = candidates[0] || null;
     if (probeTool) {
+      const probeArgs = buildProbeArgs(probeTool);
       const probeStart = Date.now();
       const probeRes = await sendUpstreamRpc(
         upstream,
@@ -1305,25 +1412,47 @@ async function verifyUpstreamForWorker(upstream) {
           jsonrpc: '2.0',
           id: ++nextUpstreamRpcId,
           method: 'tools/call',
-          params: { name: probeTool.name, arguments: {} }
+          params: { name: probeTool.name, arguments: probeArgs }
         },
         25000
       );
       measuredRpcMs += (Date.now() - probeStart);
 
       const rpcErr = probeRes && probeRes.data && probeRes.data.error;
-      const callResult = probeRes && probeRes.data && probeRes.data.result;
-      const isToolError = Boolean(callResult && callResult.isError === true);
-      const structStatus = callResult && callResult.structuredContent && callResult.structuredContent.status;
-      const firstText = (callResult && Array.isArray(callResult.content) && callResult.content[0] && callResult.content[0].text)
-        ? String(callResult.content[0].text).trim()
-        : '';
-      const hasErrorPayload = structStatus === 'error' ||
-        /^\s*\{\s*"status"\s*:\s*"error"/i.test(firstText) ||
-        /^\s*(?:error\b[^a-z0-9]*|(?:could not|failed to|unable to|cannot)\s+connect\b|connection\s+refused\b|econnrefused\b)/i.test(firstText);
+      if (!probeRes.ok || (rpcErr && Number(rpcErr.code) === -32603)) {
+        throw new Error(formatUpstreamRpcFailure('tools/call ' + probeTool.name, probeRes, upstream));
+      }
 
-      if (!probeRes.ok || rpcErr || isToolError || hasErrorPayload) {
-        throw new Error('ECONNREFUSED: target application did not complete probe operation ' + probeTool.name);
+      const netEvents = readNetEventsSince(probeStart - 100);
+      const localEvents = netEvents.filter(e => e.scope === 'local');
+      const remoteEvents = netEvents.filter(e => e.scope === 'remote');
+
+      if (localEvents.length > 0) {
+        upstream.scope = 'local';
+        const worker = pollManager && pollManager.getWorker(upstream.id);
+        if (worker) { worker.config.scope = 'local'; worker.intervalMs = 2500; }
+        const anyLocalOk = localEvents.some(e => e.ok === true);
+        if (!anyLocalOk) {
+          const lastFail = localEvents[localEvents.length - 1];
+          const err = new Error('ECONNREFUSED: local target ' + lastFail.host + ':' + lastFail.port + ' refused connection (' + lastFail.code + ')'); err.discoveredTools = tools; err.discoveredServerInfo = serverInfo; throw err;
+        }
+      } else if (remoteEvents.length > 0) {
+        upstream.scope = 'remote';
+        const worker = pollManager && pollManager.getWorker(upstream.id);
+        if (worker) { worker.config.scope = 'remote'; worker.intervalMs = 30000; }
+        const anyRemoteOk = remoteEvents.some(e => e.ok === true);
+        if (!anyRemoteOk) {
+          const lastFail = remoteEvents[remoteEvents.length - 1];
+          const err = new Error('ECONNREFUSED: remote target ' + lastFail.host + ':' + lastFail.port + ' unreachable (' + lastFail.code + ')'); err.discoveredTools = tools; err.discoveredServerInfo = serverInfo; throw err;
+        }
+      } else {
+        const callResult = probeRes && probeRes.data && probeRes.data.result;
+        const firstText = (callResult && Array.isArray(callResult.content) && callResult.content[0] && callResult.content[0].text)
+          ? String(callResult.content[0].text).trim()
+          : '';
+        if (/(?:econnrefused|connection\s+refused|winerror\s+10061|(?:could not|failed to|unable to|cannot)\s+connect\s+to\s+(?:localhost|127\.0\.0\.1|blender|unreal|unity|godot))/i.test(firstText)) {
+          const err = new Error('ECONNREFUSED: target application did not complete probe operation ' + probeTool.name); err.discoveredTools = tools; err.discoveredServerInfo = serverInfo; throw err;
+        }
       }
     }
   }

@@ -31,3 +31,11 @@ The resulting installer is:
     Work\Build\installer\MCPBridge-Setup-<version>.exe
 
 All runtime dependencies remain embedded in the installer. They are not committed to GitHub.
+
+## Product version
+
+The single source of truth for the MCP Bridge product version is the `<Version>` property in the repository-root `Directory.Build.props`.
+
+Change that value once when preparing a release. MSBuild uses it for the application's generated assembly version metadata, the application displays the informational assembly version, and `Build-Installer.ps1` passes the same value to Inno Setup for the installer metadata and output filename.
+
+Do not add a separate product version to `McpBridge.csproj` or `installer/MCPBridge.iss`. The fixed `1.0.0.0` in `src/McpBridge/app.manifest` is a Windows manifest identity, not the product release version.

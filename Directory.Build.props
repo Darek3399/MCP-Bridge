@@ -1,5 +1,7 @@
 <Project>
   <PropertyGroup>
+    <!-- Single source of truth for the MCP Bridge product version. -->
+    <Version>0.9.5</Version>
     <BaseOutputPath>$(MSBuildThisFileDirectory)Work\Build\bin\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)Work\Build\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
   </PropertyGroup>
