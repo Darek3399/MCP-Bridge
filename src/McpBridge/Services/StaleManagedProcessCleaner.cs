@@ -116,8 +116,7 @@ internal static class StaleManagedProcessCleaner
             {
                 AppPaths.FilesystemGatewayConfig,
                 AppPaths.CompositeGatewayConfig,
-                AppPaths.CustomGatewaysDirectory,
-                Path.Combine(Path.GetTempPath(), "ue-mcp-gateway.json")
+                AppPaths.CustomGatewaysDirectory
             }))
         {
             return true;

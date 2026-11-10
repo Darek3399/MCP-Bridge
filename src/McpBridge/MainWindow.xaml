@@ -446,33 +446,7 @@
                                     </Border>
 
                                     <Grid Visibility="Collapsed">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
-                                            <StackPanel>
-                                                <Grid Margin="0,0,0,14">
-                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock x:Name="DashUeTitleText" Text="Unreal Editor" Style="{StaticResource SectionTitleStyle}"/>
-                                                        <TextBlock Text="  |  " FontSize="14" Foreground="#444B54" VerticalAlignment="Center"/>
-                                                        <TextBlock x:Name="DashUeSubText" Text="Обнаруженные сессии" FontSize="12.5" Foreground="#7A828C" VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <Button x:Name="DashFoldersBtn" Grid.Column="1" Content="Разрешённые папки →" Click="NavSettings_Click" Padding="10,4" FontSize="11"/>
-                                                </Grid>
-
-                                                <TextBlock x:Name="DashUeProcLabel" Text="ПРОЦЕСС РЕДАКТОРА" Style="{StaticResource EyebrowStyle}" Margin="0,0,0,6"/>
-                                                <Border Background="#181A1E" BorderBrush="#2A2E35" BorderThickness="1" Padding="12,10" Margin="0,0,0,12">
-                                                    <TextBlock x:Name="EditorProcessText" Text="Не подключён" FontFamily="Consolas" FontSize="12" Foreground="#EAECEF" TextWrapping="Wrap"/>
-                                                </Border>
-
-                                                <TextBlock x:Name="DashUeProjLabel" Text="ПУТЬ ПРОЕКТА (.UPROJECT)" Style="{StaticResource EyebrowStyle}" Margin="0,0,0,6"/>
-                                                <Border Background="#181A1E" BorderBrush="#2CE5D0" BorderThickness="2,0,0,0" Padding="12,10">
-                                                    <TextBlock x:Name="EditorProjectText" Text="Новые запуски будут обнаружены автоматически." FontFamily="Consolas" FontSize="11.5" Foreground="#B0B8C0" TextWrapping="Wrap"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                                        <Border Style="{StaticResource CardBorderStyle}">
                                             <StackPanel>
                                                 <Grid Margin="0,0,0,14">
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>

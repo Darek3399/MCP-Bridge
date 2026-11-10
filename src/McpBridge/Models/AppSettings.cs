@@ -27,9 +27,9 @@ public sealed class AppSettings
     [DataMember(Order = 7, EmitDefaultValue = false)]
     public List<string> DisabledRoots { get; set; } = new List<string>();
 
-    /// <summary>Whether built-in Unreal MCP auto-attach is enabled.</summary>
+    /// <summary>Whether built-in Unreal MCP template is enabled. Disabled by default.</summary>
     [DataMember(Order = 8, EmitDefaultValue = false)]
-    public bool? UnrealMcpEnabled { get; set; } = true;
+    public bool? UnrealMcpEnabled { get; set; } = false;
 
     /// <summary>Whether built-in Filesystem MCP is enabled.</summary>
     [DataMember(Order = 9, EmitDefaultValue = false)]

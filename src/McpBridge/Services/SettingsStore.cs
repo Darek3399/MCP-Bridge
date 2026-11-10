@@ -76,7 +76,7 @@ public sealed class SettingsStore
             .Where(allowedSet.Contains)
             .ToList();
 
-        if (!settings.UnrealMcpEnabled.HasValue) settings.UnrealMcpEnabled = true;
+        if (!settings.UnrealMcpEnabled.HasValue) settings.UnrealMcpEnabled = false;
         if (!settings.FilesystemMcpEnabled.HasValue) settings.FilesystemMcpEnabled = true;
 
         // Legacy online-access state is intentionally ignored. A public endpoint

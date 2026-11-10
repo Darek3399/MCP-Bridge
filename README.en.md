@@ -37,33 +37,73 @@
 <table>
   <thead>
     <tr>
-      <th width="500" align="left">Keep AI Context Clean</th>
-      <th width="500" align="left">One Connection Instead of Dozens</th>
+      <th width="500" align="left">Clean AI Context &amp; Real-Time Switching</th>
+      <th width="500" align="left">Single Connection &amp; 1-Click Presets</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
-        Connecting a dozen servers (50–100 tools) at once confuses the model and wastes tokens. With Bridge, you enable only the servers you need <b>right in the middle of a conversation</b> — without restarting the chat.
+        <details>
+          <summary>Connecting a dozen servers (50–150 tools) at once confuses the model and wastes tokens. With Bridge, you enable only the servers you need <b>right in the middle of a conversation</b> — without restarting the chat or refreshing the page.</summary>
+          <br>
+          Instead of dumping dozens of heavy JSON tool schemas into the system prompt on startup, the external gateway permanently exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>). This saves thousands of tokens per turn and 100% bypasses client-side <code>tools/list</code> caching — active server changes are picked up immediately via cache revisions (<code>catalog_revision</code>) with 0 ms read latency.
+        </details>
       </td>
       <td width="500" valign="top">
-        Instead of manually editing JSON configs in every separate AI client, you connect the Bridge endpoint once and add, configure, or toggle all your servers inside a single window.
+        <details>
+          <summary>Stop manually editing JSON configs across every separate AI client. Connect the Bridge endpoint once, and add, configure, or toggle all your servers inside a single window.</summary>
+          <br>
+          Group servers into task-specific <b>Server Presets</b> and switch workflows in 1 click without dropping active sessions. When adding a new server, smart clipboard import automatically parses <code>mcpServers</code> JSON blocks, CLI commands, or URLs.
+        </details>
       </td>
     </tr>
   </tbody>
   <thead>
     <tr>
       <th width="500" align="left">Local STDIO Servers in Web AI Apps</th>
-      <th width="500" align="left">RAM Control & Everything Included</th>
+      <th width="500" align="left">RAM Control (0 MB Idle Overhead)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
-        Most MCP servers only run locally via CLI (<code>npx</code>, <code>uvx</code>, <code>python</code>), while web AI services require a public <code>HTTPS</code> URL. Bridge turns any local server into a secure HTTPS link in one click.
+        <details>
+          <summary>Most MCP servers only run locally via CLI (<code>npx</code>, <code>uvx</code>, <code>python</code>), while web AI services require a public <code>HTTPS</code> URL. Bridge turns any local server into a secure HTTPS link in one click.</summary>
+          <br>
+          Built-in <code>Supergateway</code> and <b>Tailscale Funnel</b> expose local STDIO servers over <code>Streamable HTTP</code> without router port forwarding and without modifying Windows DNS settings (<code>accept-dns=false</code>). Pre-existing Tailscale installations and preferences are preserved untouched.
+        </details>
       </td>
       <td width="500" valign="top">
-        Disabled servers never linger as background processes — Bridge completely terminates them to free RAM. <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> are already bundled in the installer.
+        <details>
+          <summary>Native <b>Windows WPF app</b> with system-tray support (no bloated Electron). Disabled servers never linger as background processes — Bridge completely terminates them to free RAM.</summary>
+          <br>
+          Every managed child process is bound to a <b>Windows Job Object</b> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>) with descendant process-tree cleanup (<code>Toolhelp</code>) and startup WMI/TCP orphan sweeps. Unchecking a server guarantees zero leftover <code>node.exe</code> or <code>python.exe</code> processes in Task Manager.
+        </details>
+      </td>
+    </tr>
+  </tbody>
+  <thead>
+    <tr>
+      <th width="500" align="left">Verification Sandbox, Quarantine &amp; Auto-Wait</th>
+      <th width="500" align="left">Live Folder Security &amp; Everything Included</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
+        <details>
+          <summary>A broken or misconfigured server never crashes the whole gateway. Failing services are isolated in <code>QUARANTINE</code>, while local plugins automatically wait for their target app to launch.</summary>
+          <br>
+          New servers pass through a 4-stage verification pipeline (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Lightweight socket hooks automatically detect whether a STDIO server connects to a local application port (e.g., a 3D editor, IDE, or local DB) or a remote API, keeping the server in <code>WAITING</code> while the target app is closed.
+        </details>
+      </td>
+      <td width="500" valign="top">
+        <details>
+          <summary>Grant or revoke AI folder access on the fly using simple checkboxes. <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> come pre-bundled in the installer — no manual setup required.</summary>
+          <br>
+          The internal <code>roots-filter</code> strips client-supplied <code>roots</code> capabilities on <code>initialize</code> so remote clients cannot override your local folder allow-list. Remote servers require explicit per-origin HTTPS trust approval, and API keys or Bearer tokens are automatically redacted (<code>[REDACTED]</code>) in logs.
+        </details>
       </td>
     </tr>
   </tbody>
@@ -190,7 +230,7 @@
   <tbody>
     <tr>
       <td width="250" valign="top">The server is connected, verified, and exposing its tools to the chat.</td>
-      <td width="250" valign="top">Waiting for an external application to start (e.g., Unreal Editor on port <code>:8000</code>).</td>
+      <td width="250" valign="top">Waiting for a local application or endpoint to become available (e.g., an IDE, 3D editor, or local service).</td>
       <td width="250" valign="top">Startup or MCP protocol error. The server is isolated so other services keep working.</td>
       <td width="250" valign="top">Manually disabled by the user (shown only in the <i>MCP Services</i> tab).</td>
     </tr>
@@ -234,13 +274,28 @@
   <tbody>
     <tr>
       <td width="333" valign="top">
-        Check the combination of servers you need for a specific task and click <b>+ Save Preset</b>. Switch between saved profiles in 1 click without interrupting your session.
+        Click <b>Save Preset</b> to save the currently enabled combination of servers. Switch between saved profiles in 1 click without interrupting your session.
       </td>
       <td width="333" valign="top">
-        The <b>ON</b> checkbox attaches a server to the chat on the fly or completely stops its process to free RAM, while <code>Tools: N</code> shows its active tool count.
+        The <b>ON</b> checkbox attaches a server to the chat on the fly or completely terminates its process tree (via Windows Job Objects) to free RAM, while <code>Tools: N</code> shows its active tool count.
       </td>
       <td width="334" valign="top">
         The <b>✎</b> button opens the JSON configuration editor for the selected server, and <b>✕</b> removes the server from the list.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr>
+      <th width="1000" align="left">Under the Hood: 2-Meta-Tool Architecture (<code>all_tools</code> &amp; <code>call_tool</code>)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="1000">
+        Instead of dumping 50–150+ raw tool schemas into the AI client's system prompt on startup (which bloats context and locks the tool list in clients that ignore <code>notifications/tools/list_changed</code>), <b>MCP Bridge</b> exposes a permanent 2-tool contract on <code>:8004/mcp</code>: <code>all_tools</code> (reads the live in-memory catalog cache maintained by the internal Poll Manager without blocking) and <code>call_tool</code> (validates arguments against the cached JSON Schema and dispatches directly to the target worker).
       </td>
     </tr>
   </tbody>

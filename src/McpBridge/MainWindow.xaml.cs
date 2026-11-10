@@ -37,13 +37,10 @@ public partial class MainWindow : Window
     private bool _pendingForceRetryQuarantined;
     private readonly HashSet<string> _pendingForceRetryServerIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly AppSettings _settings;
-    private readonly EditorMonitor _editorMonitor = new();
     private readonly McpInfrastructureService _mcpInfrastructure = new();
     private readonly TailscaleConnectionManager _tailscaleManager;
     private readonly Forms.NotifyIcon _trayIcon;
     private readonly Forms.ContextMenuStrip _trayMenu;
-    private readonly Dictionary<int, string> _observedEditors = new();
-    private readonly Dictionary<int, string> _detectionErrors = new();
     private readonly Dictionary<FrameworkElement, double> _baseFontSizes = new();
 
     private string? _currentMcpUrl; private string? _currentLocalMcpUrl; private string _activeLogCategory = "connections";
@@ -108,7 +105,8 @@ public partial class MainWindow : Window
             ApplyFontScale(FontScaleSlider.Value);
             if (LoggingEnabledCheckBox != null)
                 LoggingEnabledCheckBox.IsChecked = _settings.LoggingEnabled;
-            ErrorLog.LogApp(I18n.Tr("MCP Bridge запущен.", "MCP Bridge started.")); ErrorLog.LogUpdated += (_, _) => Dispatcher.BeginInvoke(new Action(() => { if (MainPages.SelectedIndex == 2) RefreshLogs(); }), DispatcherPriority.Background); StartEditorMonitoring();
+            ErrorLog.LogApp(I18n.Tr("MCP Bridge запущен.", "MCP Bridge started.")); ErrorLog.LogUpdated += (_, _) => Dispatcher.BeginInvoke(new Action(() => { if (MainPages.SelectedIndex == 2) RefreshLogs(); }), DispatcherPriority.Background);
+            FooterStatusText.Text = I18n.Tr("Оркестратор запущен.", "Orchestrator started.");
             UpdateTailscaleUi();
             await SyncMcpInfrastructureAsync(forceRetryQuarantined: true);
             _tailscaleManager.Start(_mcpInfrastructure.IsReady);
@@ -430,11 +428,6 @@ public partial class MainWindow : Window
         DashColServiceText.Text = I18n.Tr("СЕРВИС", "SERVICE");
         DashColStatusText.Text = I18n.Tr("СТАТУС", "STATUS");
 
-        DashUeSubText.Text = I18n.Tr("Обнаруженные сессии", "Detected sessions");
-        DashFoldersBtn.Content = I18n.Tr("Разрешённые папки →", "Allowed Folders →");
-        DashUeProcLabel.Text = I18n.Tr("ПРОЦЕСС РЕДАКТОРА", "EDITOR PROCESS");
-        DashUeProjLabel.Text = I18n.Tr("ПУТЬ ПРОЕКТА (.UPROJECT)", "PROJECT PATH (.UPROJECT)");
-
         DashTunnelCardTitleText.Text = I18n.Tr("Внешнее подключение", "External Connection");
         DashTunnelCardSubText.Text = I18n.Tr("Tailscale Funnel", "Tailscale Funnel");
         DashTunnelStateLabel.Text = I18n.Tr("СОСТОЯНИЕ ТУННЕЛЯ", "TUNNEL STATE");
@@ -545,7 +538,6 @@ public partial class MainWindow : Window
         }
 
         UpdateTopRuntimeBadge();
-        RefreshEditorDisplay();
         UpdateTailscaleUi();
         SwitchLogCategory(_activeLogCategory);
     }
@@ -714,9 +706,9 @@ public partial class MainWindow : Window
                 Name = "Unreal MCP",
                 Transport = "http",
                 Url = "http://127.0.0.1:8000/mcp",
-                Enabled = _settings.UnrealMcpEnabled != false
+                Enabled = _settings.UnrealMcpEnabled == true
             };
-            unrealEntry.Enabled = _settings.UnrealMcpEnabled != false;
+            unrealEntry.Enabled = _settings.UnrealMcpEnabled == true;
             var unrealDialog = new ServerJsonEditorWindow(_mcpInfrastructure, unrealEntry) { Owner = this };
             if (unrealDialog.ShowDialog() != true || unrealDialog.ResultServers.Count == 0) return;
             var updatedUnreal = unrealDialog.ResultServers[0];
@@ -1056,7 +1048,7 @@ public partial class MainWindow : Window
         var enabledIds = new List<string>();
         var enabledNames = new List<string>();
 
-        if (!_settings.UnrealMcpDeleted && _settings.UnrealMcpEnabled != false)
+        if (!_settings.UnrealMcpDeleted && _settings.UnrealMcpEnabled == true)
         {
             enabledIds.Add(SettingsStore.BuiltInUnrealId);
             enabledNames.Add(_settings.UnrealMcpCustom?.Name ?? "Unreal MCP");
@@ -1274,99 +1266,6 @@ public partial class MainWindow : Window
         {
             UpdateTailscaleUi();
         }
-    }
-
-    private void StartEditorMonitoring()
-    {
-        FooterStatusText.Text = I18n.Tr("Оркестратор запущен.", "Orchestrator started.");
-        RefreshEditorDisplay();
-    }
-
-    private void EditorMonitor_ProcessObserved(object? sender, EditorProcessEventArgs e)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _observedEditors[e.ProcessId] = e.ProcessName;
-            _detectionErrors.Remove(e.ProcessId);
-            RefreshEditorDisplay();
-        }), DispatcherPriority.Background);
-    }
-
-    private void EditorMonitor_ProcessNoLongerRunning(object? sender, EditorProcessEventArgs e)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _observedEditors.Remove(e.ProcessId);
-            _detectionErrors.Remove(e.ProcessId);
-            RefreshEditorDisplay();
-        }), DispatcherPriority.Background);
-    }
-
-    private void EditorMonitor_SessionChanged(object? sender, EditorSessionEventArgs e)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _observedEditors[e.Session.ProcessId] = e.Session.ProcessName;
-            RefreshEditorDisplay();
-        }), DispatcherPriority.Background);
-    }
-
-    private void EditorMonitor_SessionEnded(object? sender, EditorSessionEventArgs e)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _observedEditors.Remove(e.Session.ProcessId);
-            _detectionErrors.Remove(e.Session.ProcessId);
-            RefreshEditorDisplay();
-            if (_observedEditors.Count == 0)
-            {
-                FooterStatusText.Text = I18n.Tr(
-                    "Unreal Editor закрыт. Доступность MCP определяется независимой проверкой endpoint.",
-                    "Unreal Editor closed. MCP availability is determined by endpoint verification.");
-            }
-        }), DispatcherPriority.Background);
-    }
-
-    private void EditorMonitor_DetectionFailed(object? sender, EditorDetectionFailedEventArgs e)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (e.ProcessId > 0)
-                _detectionErrors[e.ProcessId] = e.Message;
-            else
-                FooterStatusText.Text = e.Message;
-            RefreshEditorDisplay();
-        }), DispatcherPriority.Background);
-    }
-
-    private void RefreshEditorDisplay()
-    {
-        var sessions = _editorMonitor.Sessions.ToDictionary(session => session.ProcessId);
-        var editorIds = _observedEditors.Keys.OrderBy(pid => pid).ToArray();
-
-        if (editorIds.Length == 0)
-        {
-            EditorProcessText.Text = I18n.Tr("Не запущен (Auto-Attach в режиме ожидания)", "Not running (Auto-Attach waiting)");
-            EditorProjectText.Text = I18n.Tr("При открытии Unreal Editor его MCP-сервер (:8000) автоматически подключится в общий шлюз.", "When Unreal Editor opens, its MCP server (:8000) will automatically attach to the gateway.");
-        }
-        else
-        {
-            EditorProcessText.Text = string.Join(Environment.NewLine, editorIds.Select(pid =>
-                _observedEditors[pid] + " · PID " + pid));
-
-            EditorProjectText.Text = string.Join(Environment.NewLine + Environment.NewLine, editorIds.Select(pid =>
-            {
-                if (_detectionErrors.TryGetValue(pid, out var error))
-                    return "PID " + pid + ": " + error;
-
-                if (sessions.TryGetValue(pid, out var session) && !string.IsNullOrWhiteSpace(session.ProjectPath))
-                    return "PID " + pid + ": " + session.ProjectPath;
-
-                return "PID " + pid + I18n.Tr(": процесс обнаружен; чтение пути .uproject…", ": process detected; reading .uproject path…");
-            }));
-        }
-
-        UpdateTopRuntimeBadge();
     }
 
     private void UpdateTopRuntimeBadge()
@@ -1729,9 +1628,6 @@ public partial class MainWindow : Window
 
         try
         {
-            try { _editorMonitor.Dispose(); }
-            catch (Exception exception) { ErrorLog.Write("MainWindow.ExitEditorCleanup", exception); }
-
             async Task StopTailscaleAsync()
             {
                 try { await _tailscaleManager.ShutdownAsync().ConfigureAwait(false); }

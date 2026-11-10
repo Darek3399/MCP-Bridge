@@ -14,11 +14,6 @@ using McpBridge.Models;
 
 namespace McpBridge.Services;
 
-public sealed class UnrealMcpUnavailableException : InvalidOperationException
-{
-    public UnrealMcpUnavailableException(string message) : base(message) { }
-}
-
 public sealed class McpVerificationStepReport
 {
     public string Step1Preflight { get; set; } = I18n.Tr("Ожидание...", "Waiting...");
@@ -97,13 +92,13 @@ public sealed class McpInfrastructureService : IDisposable
     private volatile bool _routerReady;
     private volatile bool _lastPublishedGatewayReady;
     private string _lastPublishedUiFingerprint = string.Empty;
-    private string _unrealStatus = "Ожидание Unreal Editor";
+    private string _unrealStatus = "Выключен";
     private string _filesystemStatus = "Не запущен";
     private string _gatewayStatus = "Не запущен";
     private string[] _activeRoots = Array.Empty<string>();
     private string[] _desiredRoots = Array.Empty<string>();
     private string _activeFilesystemFingerprint = string.Empty;
-    private bool _unrealEnabled = true; private bool _unrealDeleted; private bool _filesystemDeleted; private CustomMcpServerEntry? _unrealCustom; private CustomMcpServerEntry? _filesystemCustom;
+    private bool _unrealEnabled = false; private bool _unrealDeleted; private bool _filesystemDeleted; private CustomMcpServerEntry? _unrealCustom; private CustomMcpServerEntry? _filesystemCustom;
     private bool _filesystemEnabled = true;
     private List<CustomMcpServerEntry> _customServers = new();
 
@@ -191,7 +186,7 @@ public sealed class McpInfrastructureService : IDisposable
         _filesystemDeleted = settings.FilesystemMcpDeleted;
         _unrealCustom = settings.UnrealMcpCustom?.Clone();
         _filesystemCustom = settings.FilesystemMcpCustom?.Clone();
-        _unrealEnabled = !_unrealDeleted && (settings.UnrealMcpEnabled ?? true);
+        _unrealEnabled = !_unrealDeleted && (settings.UnrealMcpEnabled ?? false);
         _filesystemEnabled = !_filesystemDeleted && (settings.FilesystemMcpEnabled ?? true);
         _customServers = (settings.CustomServers ?? new List<CustomMcpServerEntry>()).Select(s => s.Clone()).ToList();
         _desiredRoots = NormalizeRoots(enabledRoots);
