@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -16,6 +16,58 @@ internal static class TcpPortInspector
     private const uint TcpStateListen = 2;
     private const int ErrorInsufficientBuffer = 122;
     private const int ErrorNoData = 232;
+
+    public static bool IsPortActivelyListening(int port, string? portFile = null)
+    {
+        if (!string.IsNullOrWhiteSpace(portFile))
+        {
+            try
+            {
+                if (!System.IO.File.Exists(portFile)) return false;
+                var firstLine = System.IO.File.ReadAllLines(portFile!);
+                if (firstLine.Length > 0 && int.TryParse(firstLine[0].Trim(), out var parsedPort) && parsedPort > 0 && parsedPort <= 65535)
+                    port = parsedPort;
+            }
+            catch { return false; }
+        }
+
+        if (port <= 0 || port > 65535) return false;
+        HashSet<int> pids;
+        try { pids = GetListeningProcessIds(port); }
+        catch { return false; }
+
+        if (pids.Count == 0) return false;
+
+        foreach (var pid in pids)
+        {
+            try
+            {
+                using var proc = Process.GetProcessById(pid);
+                if (proc.SessionId == 0) return true;
+
+                var procName = proc.ProcessName;
+                var anyWindow = false;
+                foreach (var p in Process.GetProcessesByName(procName))
+                {
+                    using (p)
+                    {
+                        try
+                        {
+                            if (p.MainWindowHandle != IntPtr.Zero)
+                            {
+                                anyWindow = true;
+                                break;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                if (anyWindow) return true;
+            }
+            catch { }
+        }
+        return false;
+    }
 
     public static HashSet<int> GetListeningProcessIds(int port)
     {

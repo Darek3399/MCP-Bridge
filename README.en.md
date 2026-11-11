@@ -45,9 +45,9 @@
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary>Connecting a dozen servers (50–150 tools) at once confuses the model and wastes tokens. With Bridge, you enable only the servers you need <b>right in the middle of a conversation</b> — without restarting the chat or refreshing the page.</summary>
+          <summary>Connecting many MCP servers (for example, 50–150 tools) can clutter the available tool list and increase context usage. With Bridge, you can enable only the servers you need <b>right in the middle of a conversation</b> — without restarting the chat or refreshing the page.</summary>
           <br>
-          Instead of dumping dozens of heavy JSON tool schemas into the system prompt on startup, the external gateway permanently exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>). This saves thousands of tokens per turn and 100% bypasses client-side <code>tools/list</code> caching — active server changes are picked up immediately via cache revisions (<code>catalog_revision</code>) with 0 ms read latency.
+          Instead of registering dozens of individual JSON tool schemas as tools in the external MCP connection, the gateway permanently exposes only 2 lightweight meta-tools: <code>all_tools</code> and <code>call_tool</code>. When it needs to find a capability, the model can request the current catalogue through <code>all_tools</code>, choose the relevant tool itself, and invoke it through <code>call_tool</code>. This can reduce the amount of tool-definition data supplied up front, helping lower token usage and context overhead — especially when many servers are connected — while reducing reliance on client-side <code>tools/list</code> refresh behavior. Catalogue revisions (<code>catalog_revision</code>) help the model identify an updated snapshot when it requests the catalogue again.
         </details>
       </td>
       <td width="500" valign="top">
@@ -62,7 +62,7 @@
   <thead>
     <tr>
       <th width="500" align="left">Local STDIO Servers in Web AI Apps</th>
-      <th width="500" align="left">RAM Control (0 MB Idle Overhead)</th>
+      <th width="500" align="left">Managed Server Process &amp; RAM Control</th>
     </tr>
   </thead>
   <tbody>
@@ -76,9 +76,9 @@
       </td>
       <td width="500" valign="top">
         <details>
-          <summary>Native <b>Windows WPF app</b> with system-tray support (no bloated Electron). Disabled servers never linger as background processes — Bridge completely terminates them to free RAM.</summary>
+          <summary>Native <b>Windows WPF app</b> with system-tray support. When you disable a server, Bridge stops its managed process tree so it does not keep running in the background and consuming memory.</summary>
           <br>
-          Every managed child process is bound to a <b>Windows Job Object</b> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>) with descendant process-tree cleanup (<code>Toolhelp</code>) and startup WMI/TCP orphan sweeps. Unchecking a server guarantees zero leftover <code>node.exe</code> or <code>python.exe</code> processes in Task Manager.
+          Managed child processes are assigned to a <b>Windows Job Object</b> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Additional descendant cleanup (<code>Toolhelp</code>) and startup WMI/TCP checks help terminate Bridge-managed process trees and prevent orphaned <code>node.exe</code> or <code>python.exe</code> processes.
         </details>
       </td>
     </tr>
@@ -93,7 +93,7 @@
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary>A broken or misconfigured server never crashes the whole gateway. Failing services are isolated in <code>QUARANTINE</code>, while local plugins automatically wait for their target app to launch.</summary>
+          <summary>A failure or configuration issue in one server should not bring down the entire gateway. Failing services are isolated in <code>QUARANTINE</code>, while local plugins can wait for their target application to launch.</summary>
           <br>
           New servers pass through a 4-stage verification pipeline (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Lightweight socket hooks automatically detect whether a STDIO server connects to a local application port (e.g., a 3D editor, IDE, or local DB) or a remote API, keeping the server in <code>WAITING</code> while the target app is closed.
         </details>
@@ -277,7 +277,7 @@
         Click <b>Save Preset</b> to save the currently enabled combination of servers. Switch between saved profiles in 1 click without interrupting your session.
       </td>
       <td width="333" valign="top">
-        The <b>ON</b> checkbox attaches a server to the chat on the fly or completely terminates its process tree (via Windows Job Objects) to free RAM, while <code>Tools: N</code> shows its active tool count.
+        The <b>ON</b> checkbox makes a server available to the chat. When disabled, Bridge stops its managed process tree through Windows Job Objects, releasing the memory used by those processes. <code>Tools: N</code> shows the number of available tools.
       </td>
       <td width="334" valign="top">
         The <b>✎</b> button opens the JSON configuration editor for the selected server, and <b>✕</b> removes the server from the list.
@@ -295,7 +295,7 @@
   <tbody>
     <tr>
       <td width="1000">
-        Instead of dumping 50–150+ raw tool schemas into the AI client's system prompt on startup (which bloats context and locks the tool list in clients that ignore <code>notifications/tools/list_changed</code>), <b>MCP Bridge</b> exposes a permanent 2-tool contract on <code>:8004/mcp</code>: <code>all_tools</code> (reads the live in-memory catalog cache maintained by the internal Poll Manager without blocking) and <code>call_tool</code> (validates arguments against the cached JSON Schema and dispatches directly to the target worker).
+        <b>MCP Bridge</b> uses <b>Model-Directed Tool Discovery (MTD)</b>: a model-directed way to discover and invoke tools. The external gateway at <code>:8004/mcp</code> permanently exposes only 2 meta-tools: <code>all_tools</code> and <code>call_tool</code>. When the model needs a capability, it requests the catalogue through <code>all_tools</code>, selects the tool relevant to its current task, and invokes it through <code>call_tool</code>. The full current catalogue remains available on request, but server tools are not all registered upfront as separate tools in the external MCP connection. This is a different division of responsibility from semantic Smart Routing: a separate mechanism selects tools by semantic relevance, while with MTD the model explores the catalogue and chooses the tools it needs. This can reduce the amount of tool-definition data supplied up front, helping lower token usage and context overhead — especially when many servers are connected — while reducing reliance on how a client handles <code>notifications/tools/list_changed</code> and caches <code>tools/list</code>. <code>all_tools</code> reads the cached snapshot maintained by the internal Poll Manager, while <code>call_tool</code> validates arguments against the JSON Schema and dispatches the call to the target server.
       </td>
     </tr>
   </tbody>

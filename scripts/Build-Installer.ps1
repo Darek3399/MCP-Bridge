@@ -77,7 +77,7 @@ if (-not $dotnet) {
     throw 'Команда dotnet не найдена. Установите .NET SDK.'
 }
 
-& $publishScript -Configuration $Configuration
+& $publishScript -Configuration $Configuration -LaunchAfterPublish $false
 
 $adapterSourceDirectory = Join-Path $repoRoot 'src\McpBridge\Adapters'
 $adapterPublishDirectory = Join-Path $publishDirectory 'Adapters'
@@ -152,7 +152,7 @@ if (Test-Path -LiteralPath $installerOutput -PathType Leaf) {
 
 $compilerArguments = @(
     '/DFilesystemMcpPayload=1'
-    ('/DAppVersion="' + $installerVersion + '"')
+    ('/DAppVersion=' + $installerVersion)
 )
 if ($FastDependencyPackaging) {
     Write-Host 'Быстрый режим: зависимости добавляются в установщик без повторного сжатия.'

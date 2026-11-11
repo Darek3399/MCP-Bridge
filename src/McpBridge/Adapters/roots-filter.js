@@ -18,6 +18,10 @@ const MANAGER_API_KEY = String(process.env.MCPBRIDGE_MANAGER_API_KEY || '');
 const PROTOCOL_VERSION = '2025-06-18';
 const MODERN_PROTOCOL_VERSION = '2026-07-28';
 const MODERN_CLIENT_INFO = { name: 'MCP Bridge Router', version: '0.9.1' };
+const directHttpAgent = new http.Agent({ keepAlive: true, keepAliveMsecs: 15000, timeout: 65000, maxSockets: 32 });
+const directHttpsAgent = new https.Agent({ keepAlive: true, keepAliveMsecs: 15000, timeout: 65000, maxSockets: 32 });
+const pinnedRouteByServer = new Map();
+
 let proxyEnvironmentConfigured = Boolean(
   process.env.HTTPS_PROXY || process.env.https_proxy ||
   process.env.HTTP_PROXY || process.env.http_proxy
@@ -27,20 +31,7 @@ let currentProxySignature = '';
 let restoreGlobalProxy = null;
 
 async function restartRemoteHttpWorkers() {
-  if (!pollManager || !pollManager.workers) return;
-  const remoteConfigs = [];
-  for (const worker of [...pollManager.workers.values()]) {
-    if (!worker || worker.stopped || !worker.config || worker.config.enabled === false || worker.config.temporary === true) continue;
-    if (worker.config.scope === 'remote' && worker.config.transport !== 'stdio') {
-      remoteConfigs.push({ ...worker.config });
-    }
-  }
-  for (const config of remoteConfigs) {
-    await pollManager.removeServer(config.id);
-  }
-  await Promise.all(
-    remoteConfigs.map((config, idx) => pollManager.upsertServer(config, { startDelayMs: idx * 250 }))
-  );
+  pinnedRouteByServer.clear();
 }
 
 function configureEnvironmentProxy(customEnv = null) {
@@ -171,7 +162,6 @@ const STDIO_REVALIDATE_INTERVAL_MS = 15 * 60 * 1000;
 function revalidateStdioServerInBackground(upstream, isCurrent) {
   if (!upstream || upstream.transport !== 'stdio') return;
   const serverId = String(upstream.id);
-  if (serverId.toLowerCase() === 'filesystem') return;
   if (stdioRevalidationInFlight.has(serverId)) return;
 
   const lastTime = stdioLastRevalidatedAt.get(serverId) || 0;
@@ -183,10 +173,12 @@ function revalidateStdioServerInBackground(upstream, isCurrent) {
   setTimeout(async () => {
     try {
       if (typeof isCurrent === 'function' && !isCurrent()) return;
-      const res = await sendUpstreamRpc(
+      const res = await callUpstreamWithAutoInit(
         upstream,
         { jsonrpc: '2.0', id: ++nextUpstreamRpcId, method: 'tools/list', params: {} },
-        15000
+        15000,
+        null,
+        isCurrent
       );
       const freshTools = res && res.data && res.data.result && res.data.result.tools;
       if (res && res.ok && Array.isArray(freshTools) && freshTools.length > 0) {
@@ -321,7 +313,7 @@ function createModernRequestPayload(rpcPayload) {
   return { ...rpcPayload, params };
 }
 
-function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, modern = false, extraHeaders = null, legacyProtocolVersion = null) {
+function sendStreamableHttpRpcSingle(upstream, rpcPayload, stallTimeoutMs = 15000, modern = false, extraHeaders = null, legacyProtocolVersion = null, routeMode = 'direct', onReqCreated = null) {
   const expectedSessionEpoch = getUpstreamSessionEpoch(upstream.id);
   return new Promise((resolve) => {
     let targetUrl;
@@ -387,13 +379,18 @@ function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, mod
 
     markActivity();
 
-    req = transport.request({
+    const reqOptions = {
       hostname: targetUrl.hostname,
       port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
       path: targetUrl.pathname + targetUrl.search,
       method: 'POST',
       headers
-    }, (res) => {
+    };
+    if (routeMode === 'direct') {
+      reqOptions.agent = targetUrl.protocol === 'https:' ? directHttpsAgent : directHttpAgent;
+    }
+
+    req = transport.request(reqOptions, (res) => {
       markActivity();
       const newSession = res.headers['mcp-session-id'];
       if (!modern && newSession && isUpstreamSessionEpochCurrent(upstream.id, expectedSessionEpoch))
@@ -406,8 +403,12 @@ function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, mod
         resolved = true;
         clearWatchdog();
         const status = res.statusCode || 0;
+        const isOk = status >= 200 && status < 300 && (!!parsed || outboundPayload.id === undefined);
+        if (!isOk && res.socket) {
+          try { res.socket.destroy(); } catch (_) {}
+        }
         resolve({
-          ok: status >= 200 && status < 300 && (!!parsed || outboundPayload.id === undefined),
+          ok: isOk,
           status,
           data: parsed,
           error: status >= 200 && status < 300 ? null : (chunks || ('Upstream HTTP ' + status + '.'))
@@ -447,6 +448,7 @@ function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, mod
       stream.on('end', () => finish(parseSseOrJson(chunks)));
       stream.on('error', (err) => {
         clearWatchdog();
+        if (res.socket) { try { res.socket.destroy(); } catch (_) {} }
         if (!resolved) {
           resolved = true;
           resolve({ ok: false, status: res.statusCode || 0, error: err.message });
@@ -454,8 +456,12 @@ function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, mod
       });
     });
 
+    if (typeof onReqCreated === 'function') onReqCreated(req);
+
     req.on('socket', (sock) => {
+      try { sock.setMaxListeners(0); } catch (_) {}
       markActivity();
+      if (!sock.connecting) return;
       const onSockActivity = () => markActivity();
       sock.on('lookup', onSockActivity);
       sock.on('connect', onSockActivity);
@@ -479,6 +485,52 @@ function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, mod
   });
 }
 
+async function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 15000, modern = false, extraHeaders = null, legacyProtocolVersion = null) {
+  const key = String(upstream.id);
+  const isRemoteHttp = upstream.scope === 'remote' && upstream.transport !== 'stdio';
+  if (!isRemoteHttp || !proxyEnvironmentConfigured) {
+    return sendStreamableHttpRpcSingle(upstream, rpcPayload, stallTimeoutMs, modern, extraHeaders, legacyProtocolVersion, 'direct');
+  }
+
+  const pinned = pinnedRouteByServer.get(key);
+  if (pinned) {
+    const res = await sendStreamableHttpRpcSingle(upstream, rpcPayload, stallTimeoutMs, modern, extraHeaders, legacyProtocolVersion, pinned);
+    if (res.ok && !(res.data && res.data.error)) {
+      return res;
+    }
+    pinnedRouteByServer.delete(key);
+  }
+
+  const routeModes = ['direct', 'proxy'];
+  const activeReqs = [];
+  let lastFail = null;
+
+  const racePromises = routeModes.map(mode =>
+    sendStreamableHttpRpcSingle(
+      upstream, rpcPayload, stallTimeoutMs, modern, extraHeaders, legacyProtocolVersion, mode,
+      req => activeReqs.push({ mode, req })
+    ).then(res => {
+      if (res.ok && !(res.data && res.data.error)) {
+        return { mode, res };
+      }
+      lastFail = res;
+      throw res;
+    })
+  );
+
+  try {
+    const winner = await Promise.any(racePromises);
+    pinnedRouteByServer.set(key, winner.mode);
+    for (const item of activeReqs) {
+      if (item.mode !== winner.mode) {
+        try { item.req.destroy(); } catch (_) {}
+      }
+    }
+    return winner.res;
+  } catch (_) {
+    return lastFail || { ok: false, status: 0, error: 'All transport routes failed.' };
+  }
+}
 function getUpstreamRequestEpoch(upstreamId) {
   return upstreamRequestEpochs.get(String(upstreamId)) || 0;
 }
@@ -1008,11 +1060,7 @@ function invalidateUpstreamSession(
 async function ensureUpstreamInitialized(upstream, isCurrent = () => true) {
   const key = String(upstream.id);
   if (!isCurrent()) return { ok: false, error: 'MCP verification was superseded by a configuration change.' };
-  if (upstream.transport === 'stdio') {
-    upstreamTransportModes.set(key, 'streamable-http');
-    upstreamInitialized.add(key);
-    return { ok: true };
-  }
+
   if (upstreamInitialized.has(key)) return { ok: true };
 
   const expectedSessionEpoch = getUpstreamSessionEpoch(key);
@@ -1092,9 +1140,7 @@ async function callUpstreamWithAutoInit(
   if (!isUpstreamSessionEpochCurrent(upstream.id, requestSessionEpoch))
     return { ok: false, status: 0, error: 'MCP request was superseded by session recovery.' };
 
-  if (upstream.transport === 'stdio') {
-    return res;
-  }
+
 
   if (!res.ok || (res.data && res.data.error)) {
     invalidateUpstreamSession(
@@ -1211,16 +1257,23 @@ async function verifyUpstreamForWorker(upstream) {
     };
   }
 
-  const initialized = await ensureUpstreamInitialized(upstream, isCurrent);
-  if (!initialized.ok) {
-    const failure = initialized.error || 'MCP initialize failed.';
-    if (/superseded by a configuration change/i.test(failure)) throw new Error(failure);
-    logUpstreamFailure('initialize', upstream, {
-      ok: false,
-      status: Number(initialized.status) || 0,
-      error: failure
-    }, failure);
-    throw new Error(failure);
+  const cachedStdioTools = (upstream.transport === 'stdio')
+    ? stdioKnownToolsByServer.get(String(upstream.id))
+    : null;
+  const hasCachedStdioTools = Array.isArray(cachedStdioTools) && cachedStdioTools.length > 0;
+
+  if (!hasCachedStdioTools) {
+    const initialized = await ensureUpstreamInitialized(upstream, isCurrent);
+    if (!initialized.ok) {
+      const failure = initialized.error || 'MCP initialize failed.';
+      if (/superseded by a configuration change/i.test(failure)) throw new Error(failure);
+      logUpstreamFailure('initialize', upstream, {
+        ok: false,
+        status: Number(initialized.status) || 0,
+        error: failure
+      }, failure);
+      throw new Error(failure);
+    }
   }
 
   const tools = [];
@@ -1230,10 +1283,6 @@ async function verifyUpstreamForWorker(upstream) {
   let pageCount = 0;
   const pollTimeoutMs = upstream.transport === 'stdio' ? 30000 : (upstream.scope === 'local' ? 3500 : 30000);
   let measuredRpcMs = 0;
-
-  const cachedStdioTools = (upstream.transport === 'stdio')
-    ? stdioKnownToolsByServer.get(String(upstream.id))
-    : null;
 
   if (Array.isArray(cachedStdioTools) && cachedStdioTools.length > 0) {
     tools.push(...cachedStdioTools);
@@ -1290,7 +1339,7 @@ async function verifyUpstreamForWorker(upstream) {
     }
   }
 
-  if (upstream.transport === 'stdio' && String(upstream.id).toLowerCase() !== 'filesystem' && tools.length > 0) {
+  if (upstream.transport === 'stdio' && tools.length > 0) {
     const safeKey = String(upstream.id || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^[_-]+|[_-]+$/g, '');
     const netLogPath = options.config
       ? path.join(path.dirname(options.config), 'CustomGateways', 'net-' + safeKey + '.jsonl')
@@ -1369,7 +1418,28 @@ async function verifyUpstreamForWorker(upstream) {
       upstream.scope = 'local';
       const worker = pollManager && pollManager.getWorker(upstream.id);
       if (worker) { worker.config.scope = 'local'; worker.intervalMs = 2500; }
-      const targetPort = Number(knownLocalPortEvent.port);
+      if (upstream.localTargetOffline === true) {
+        const err = new Error('ECONNREFUSED: local target application is offline or has no active window');
+        err.discoveredTools = cachedStdioTools;
+        err.discoveredServerInfo = null;
+        throw err;
+      }
+      let targetPort = Number(knownLocalPortEvent.port);
+      if (knownLocalPortEvent.portFile) {
+        try {
+          if (!fs.existsSync(knownLocalPortEvent.portFile)) {
+            const err = new Error('ECONNREFUSED: DevToolsActivePort file not found');
+            err.discoveredTools = cachedStdioTools;
+            err.discoveredServerInfo = null;
+            throw err;
+          }
+          const pfLines = fs.readFileSync(knownLocalPortEvent.portFile, 'utf8').split(/\r?\n/);
+          const pfPort = parseInt((pfLines[0] || '').trim(), 10);
+          if (pfPort > 0 && pfPort <= 65535) targetPort = pfPort;
+        } catch (pfErr) {
+          if (pfErr.discoveredTools) throw pfErr;
+        }
+      }
       const tcpStart = Date.now();
       const portOpen = await new Promise((resolve) => {
         const sock = new net.Socket();
@@ -1393,6 +1463,7 @@ async function verifyUpstreamForWorker(upstream) {
         err.discoveredServerInfo = null;
         throw err;
       }
+      revalidateStdioServerInBackground(upstream, isCurrent);
       clearUpstreamFailure(upstream.id);
       return {
         tools: cachedStdioTools,
@@ -1402,7 +1473,7 @@ async function verifyUpstreamForWorker(upstream) {
       };
     }
 
-    const probeTool = candidates[0] || null;
+    const probeTool = (!hasCachedStdioTools && candidates.length > 0) ? candidates[0] : null;
     if (probeTool) {
       const probeArgs = buildProbeArgs(probeTool);
       const probeStart = Date.now();
@@ -1445,14 +1516,11 @@ async function verifyUpstreamForWorker(upstream) {
           const lastFail = remoteEvents[remoteEvents.length - 1];
           const err = new Error('ECONNREFUSED: remote target ' + lastFail.host + ':' + lastFail.port + ' unreachable (' + lastFail.code + ')'); err.discoveredTools = tools; err.discoveredServerInfo = serverInfo; throw err;
         }
-      } else {
-        const callResult = probeRes && probeRes.data && probeRes.data.result;
-        const firstText = (callResult && Array.isArray(callResult.content) && callResult.content[0] && callResult.content[0].text)
-          ? String(callResult.content[0].text).trim()
-          : '';
-        if (/(?:econnrefused|connection\s+refused|winerror\s+10061|(?:could not|failed to|unable to|cannot)\s+connect\s+to\s+(?:localhost|127\.0\.0\.1|blender|unreal|unity|godot))/i.test(firstText)) {
-          const err = new Error('ECONNREFUSED: target application did not complete probe operation ' + probeTool.name); err.discoveredTools = tools; err.discoveredServerInfo = serverInfo; throw err;
-        }
+      } else if (upstream.localTargetOffline === true) {
+        const err = new Error('ECONNREFUSED: local target application is offline');
+        err.discoveredTools = tools;
+        err.discoveredServerInfo = serverInfo;
+        throw err;
       }
     }
   }
@@ -1481,7 +1549,7 @@ async function invokeWorkerTool(upstream, toolName, args, extraHeaders) {
   }
 
   const requestSessionEpoch = getUpstreamSessionEpoch(key);
-  const response = await sendUpstreamRpc(
+  const response = await callUpstreamWithAutoInit(
     upstream,
     {
       jsonrpc: '2.0',
@@ -1645,7 +1713,7 @@ function resetUpstreamConnectionState(previous, reason) {
   upstreamSessions.delete(key);
   upstreamTransportModes.delete(key);
   clearUpstreamFailure(key);
-  if (stdioKnownToolsByServer.delete(key)) saveStdioToolsCache();
+  // preserve stdioKnownToolsByServer across session resets
   for (const [name, route] of toolRouteMap) {
     if (route && route.upstream && String(route.upstream.id) === key)
       toolRouteMap.delete(name);

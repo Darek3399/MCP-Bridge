@@ -1,4 +1,4 @@
-# Local workspace: dependencies, builds, diagnostics, temporary data.
+# Local workspace: developer-only scripts, builds, diagnostics and temporary data.
 /Work/
 /GitHub-Repository/
 
@@ -17,7 +17,6 @@
 # Build output and package caches.
 [Bb]in/
 [Oo]bj/
-/artifacts/
 node_modules/
 **/node_modules/
 /Dependencies/*

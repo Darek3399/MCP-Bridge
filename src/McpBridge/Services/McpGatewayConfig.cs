@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace McpBridge.Services;
@@ -95,5 +95,8 @@ internal sealed class RouterUpstreamItem
 
     [DataMember(Name = "configurationFingerprint", Order = 9, EmitDefaultValue = false)]
     public string? ConfigurationFingerprint { get; set; }
+
+    [DataMember(Name = "localTargetOffline", Order = 10, EmitDefaultValue = false)]
+    public bool LocalTargetOffline { get; set; }
 }
 

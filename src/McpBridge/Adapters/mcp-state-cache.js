@@ -30,6 +30,7 @@ function transportFingerprint(config) {
   delete transportConfig.scope;
   delete transportConfig.pollIntervalMs;
   delete transportConfig.temporary;
+  delete transportConfig.localTargetOffline;
   return fingerprint(transportConfig);
 }
 

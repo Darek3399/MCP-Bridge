@@ -140,7 +140,7 @@ else {
 
 if ([string]::IsNullOrWhiteSpace($ReportPath)) {
     $repoRoot = Split-Path -Parent $PSScriptRoot
-    $ReportPath = Join-Path $repoRoot "artifacts\installer\compiler-discovery.txt"
+    $ReportPath = Join-Path $repoRoot "Work\Diagnostics\Installer\compiler-discovery.txt"
 }
 
 $reportDirectory = Split-Path -Parent $ReportPath

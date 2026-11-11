@@ -1,7 +1,8 @@
 ﻿[CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [bool]$LaunchAfterPublish = $true
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +28,16 @@ if (-not (Test-Path -LiteralPath $project -PathType Leaf)) {
 
 # The publish directory is generated output, never a source of truth.
 # Remove it completely so files from an earlier build cannot survive into a new installer.
+$runningBridge = @(Get-Process -Name 'MCPBridge' -ErrorAction SilentlyContinue)
+if ($runningBridge.Count -gt 0) {
+    Write-Host "Останавливаю запущенный MCPBridge.exe (PID: $($runningBridge.Id -join ', '))..." -ForegroundColor Yellow
+    $runningBridge | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 1200
+}
+Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='supergateway.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match 'roots-filter\.js|bridge-mcp-gateway\.js|CustomGateways|filesystem-gateway\.json' } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
 if (Test-Path -LiteralPath $output) {
     Remove-Item -LiteralPath $output -Recurse -Force
 }
@@ -162,3 +173,11 @@ finally {
 
 Write-Host "Готово: $output"
 Write-Host "Диагностика сборки: $diagnosticsFile"
+
+if ($LaunchAfterPublish) {
+    $exePath = Join-Path $output 'MCPBridge.exe'
+    if (Test-Path -LiteralPath $exePath -PathType Leaf) {
+        Write-Host "Запускаю собранный MCPBridge: $exePath" -ForegroundColor Green
+        Start-Process -FilePath $exePath -WorkingDirectory $output
+    }
+}
