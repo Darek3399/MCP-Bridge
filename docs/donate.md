@@ -1,3 +1,5 @@
+<div style="max-width: 1000px; margin: 0 auto;">
+
 <div align="right">
   <a href="../README.md"><img src="https://img.shields.io/badge/←-Русский%20README-15322F?style=for-the-badge&labelColor=181A1D" alt="Русский README"></a>&nbsp;&nbsp;<a href="../README.en.md"><img src="https://img.shields.io/badge/←-English%20README-22252A?style=for-the-badge&labelColor=181A1D" alt="English README"></a>
 </div>
@@ -119,4 +121,6 @@
   <sub>
     <b>Thank you for supporting open-source development! · Спасибо за поддержку открытой разработки!</b>
   </sub>
+</div>
+
 </div>

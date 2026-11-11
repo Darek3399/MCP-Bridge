@@ -1,3 +1,5 @@
+<div style="max-width: 1000px; margin: 0 auto;">
+
 <a id="top"></a>
 
 <div align="right">
@@ -37,7 +39,7 @@
 <table>
   <thead>
     <tr>
-      <th width="500" align="left">Clean AI Context &amp; Real-Time Switching</th>
+      <th width="500" align="left">Token Savings &amp; Real-Time Switching</th>
       <th width="500" align="left">Single Connection &amp; 1-Click Presets</th>
     </tr>
   </thead>
@@ -45,9 +47,9 @@
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary>Connecting many MCP servers (for example, 50–150 tools) can clutter the available tool list and increase context usage. With Bridge, you can enable only the servers you need <b>right in the middle of a conversation</b> — without restarting the chat or refreshing the page.</summary>
+          <summary>Connecting many MCP servers (50–150+ tools) bloats the context window and burns tokens on every message. With Bridge, you disable unused servers <b>right in the middle of a conversation</b> — their tools stop arriving immediately without refreshing the page.</summary>
           <br>
-          Instead of registering dozens of individual JSON tool schemas as tools in the external MCP connection, the gateway permanently exposes only 2 lightweight meta-tools: <code>all_tools</code> and <code>call_tool</code>. When it needs to find a capability, the model can request the current catalogue through <code>all_tools</code>, choose the relevant tool itself, and invoke it through <code>call_tool</code>. This can reduce the amount of tool-definition data supplied up front, helping lower token usage and context overhead — especially when many servers are connected — while reducing reliance on client-side <code>tools/list</code> refresh behavior. Catalogue revisions (<code>catalog_revision</code>) help the model identify an updated snapshot when it requests the catalogue again.
+          In standard clients, tool schemas from every connected server remain in context even when idle. <b>MCP Bridge</b> exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) upfront, and whenever you uncheck an unused server in the app window, its schemas are immediately excluded from the gateway catalogue — without restarting the chat or losing conversation history.
         </details>
       </td>
       <td width="500" valign="top">
@@ -104,6 +106,22 @@
           <br>
           The internal <code>roots-filter</code> strips client-supplied <code>roots</code> capabilities on <code>initialize</code> so remote clients cannot override your local folder allow-list. Remote servers require explicit per-origin HTTPS trust approval, and API keys or Bearer tokens are automatically redacted (<code>[REDACTED]</code>) in logs.
         </details>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr>
+      <th width="1000" align="left">Live Demo: Saving Context Tokens by Disabling Unused MCP Servers on the Fly</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="1000">
+        When you dynamically disable unused MCP servers in <b>MCP Bridge</b> right during an active chat, their tools immediately stop being sent to the dialogue <b>without reloading the browser page</b> — drastically reducing context token consumption:<br><br>
+        <video src="docs/images/token-saving-demo.mp4" width="974" style="max-width: 100%; height: auto; display: block;" controls muted playsinline></video>
       </td>
     </tr>
   </tbody>
@@ -295,7 +313,7 @@
   <tbody>
     <tr>
       <td width="1000">
-        <b>MCP Bridge</b> uses <b>Model-Directed Tool Discovery (MTD)</b>: a model-directed way to discover and invoke tools. The external gateway at <code>:8004/mcp</code> permanently exposes only 2 meta-tools: <code>all_tools</code> and <code>call_tool</code>. When the model needs a capability, it requests the catalogue through <code>all_tools</code>, selects the tool relevant to its current task, and invokes it through <code>call_tool</code>. The full current catalogue remains available on request, but server tools are not all registered upfront as separate tools in the external MCP connection. This is a different division of responsibility from semantic Smart Routing: a separate mechanism selects tools by semantic relevance, while with MTD the model explores the catalogue and chooses the tools it needs. This can reduce the amount of tool-definition data supplied up front, helping lower token usage and context overhead — especially when many servers are connected — while reducing reliance on how a client handles <code>notifications/tools/list_changed</code> and caches <code>tools/list</code>. <code>all_tools</code> reads the cached snapshot maintained by the internal Poll Manager, while <code>call_tool</code> validates arguments against the JSON Schema and dispatches the call to the target server.
+        <b>MCP Bridge</b> uses <b>Model-Directed Tool Discovery (MTD)</b>: a model-directed way to discover and invoke tools. The external gateway at <code>:8004/mcp</code> exposes only 2 meta-tools: <code>all_tools</code> and <code>call_tool</code>. Unlike semantic Smart Routing — where an external mechanism guesses relevant tools by keyword similarity — with MTD the model requests the live catalogue snapshot through <code>all_tools</code> (served from the internal Poll Manager cache with <code>catalog_revision</code> tracking), selects the exact tool it needs, and invokes it via <code>call_tool</code> with JSON Schema validation. This also eliminates reliance on how individual AI clients handle <code>notifications/tools/list_changed</code> or cache <code>tools/list</code>.
       </td>
     </tr>
   </tbody>
@@ -389,7 +407,9 @@
   <p><a href="#top"><img src="https://img.shields.io/badge/-↑%20Back%20to%20Top-181A1D?style=for-the-badge" alt="Back to Top"></a></p>
   <sub>
     <b>System Requirements:</b> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
-    <a href="docs/ARCHITECTURE.md">Architecture</a> · <a href="SECURITY.md">Security</a> · <a href="THIRD_PARTY_NOTICES.md">Third-Party Notices</a>
+    <a href="SECURITY.md">Security</a> · <a href="THIRD_PARTY_NOTICES.md">Third-Party Notices</a>
   </sub>
+</div>
+
 </div>
 
