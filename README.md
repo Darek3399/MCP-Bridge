@@ -121,7 +121,7 @@
     <tr>
       <td width="1000">
         Когда вы отключаете неиспользуемые серверы прямо во время диалога, их инструменты сразу перестают приходить в чат <b>без перезагрузки страницы в браузере</b>, что кратно снижает расход токенов на контекст:<br><br>
-        <video src="docs/images/token-saving-demo.mp4" width="974" style="max-width: 100%; height: auto; display: block;" controls muted playsinline></video>
+        <video src="https://github.com/user-attachments/assets/6b1b49db-0a66-40c0-ac24-ed31efa85cad" width="974" style="max-width: 100%; height: auto; display: block;" controls muted playsinline></video>
       </td>
     </tr>
   </tbody>
