@@ -389,6 +389,6 @@
   <p><a href="#top"><img src="https://img.shields.io/badge/-↑%20Вернуться%20наверх-181A1D?style=for-the-badge" alt="Наверх"></a></p>
   <sub>
     <b>Системные требования:</b> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
-    <a href="docs/ARCHITECTURE.md">Архитектура</a> · <a href="SECURITY.md">Безопасность</a> · <a href="THIRD_PARTY_NOTICES.md">Сторонние компоненты</a> · <a href="CONTRIBUTING.md">Участие в разработке</a>
+    <a href="docs/ARCHITECTURE.md">Архитектура</a> · <a href="SECURITY.md">Безопасность</a> · <a href="THIRD_PARTY_NOTICES.md">Сторонние компоненты</a>
   </sub>
 </div>

@@ -1,7 +1,3 @@
-# Local workspace: developer-only scripts, builds, diagnostics and temporary data.
-/Work/
-/GitHub-Repository/
-
 # IDE and editor state.
 /.idea/
 **/.idea/

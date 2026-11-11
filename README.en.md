@@ -389,7 +389,7 @@
   <p><a href="#top"><img src="https://img.shields.io/badge/-↑%20Back%20to%20Top-181A1D?style=for-the-badge" alt="Back to Top"></a></p>
   <sub>
     <b>System Requirements:</b> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
-    <a href="docs/ARCHITECTURE.md">Architecture</a> · <a href="SECURITY.md">Security</a> · <a href="THIRD_PARTY_NOTICES.md">Third-Party Notices</a> · <a href="CONTRIBUTING.md">Contributing</a>
+    <a href="docs/ARCHITECTURE.md">Architecture</a> · <a href="SECURITY.md">Security</a> · <a href="THIRD_PARTY_NOTICES.md">Third-Party Notices</a>
   </sub>
 </div>
 
