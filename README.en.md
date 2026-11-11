@@ -112,6 +112,21 @@
 </table>
 
 
+<table>
+  <thead>
+    <tr>
+      <th width="1000" align="left">Live Demo: Saving Context Tokens by Disabling Unused MCP Servers on the Fly</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td width="1000">
+        When you dynamically disable unused MCP servers in <b>MCP Bridge</b> right during an active chat, their tools immediately stop being sent to the dialogue <b>without reloading the browser page</b> — drastically reducing context token consumption:<br><br>
+        <video src="https://github.com/user-attachments/assets/6b1b49db-0a66-40c0-ac24-ed31efa85cad" width="974" style="max-width: 100%; height: auto; display: block;" controls muted playsinline></video>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 <br>
 <p><a href="docs/donate.md"><img src="docs/images/coffee-en.svg" width="100%" alt="Buy the developer a coffee"></a></p>
