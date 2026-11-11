@@ -1,8 +1,6 @@
 <div style="max-width: 1000px; margin: 0 auto;">
 
-<div align="right">
-  <a href="../README.md"><img src="https://img.shields.io/badge/←-Русский%20README-15322F?style=for-the-badge&labelColor=181A1D" alt="Русский README"></a>&nbsp;&nbsp;<a href="../README.en.md"><img src="https://img.shields.io/badge/←-English%20README-22252A?style=for-the-badge&labelColor=181A1D" alt="English README"></a>
-</div>
+
 
 <div align="center">
   <img src="../src/McpBridge/Resources/MCPBridge.ico" width="72" height="72" alt="MCP Bridge">
@@ -114,10 +112,7 @@
 <br>
 
 <div align="center">
-  <p>
-    <a href="../README.md"><img src="https://img.shields.io/badge/←-Вернуться%20к%20описанию%20(RU)-181A1D?style=for-the-badge" alt="Назад к README"></a>&nbsp;&nbsp;
-    <a href="../README.en.md"><img src="https://img.shields.io/badge/←-Back%20to%20Documentation%20(EN)-181A1D?style=for-the-badge" alt="Back to README"></a>
-  </p>
+
   <sub>
     <b>Thank you for supporting open-source development! · Спасибо за поддержку открытой разработки!</b>
   </sub>

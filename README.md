@@ -111,21 +111,7 @@
   </tbody>
 </table>
 
-<table>
-  <thead>
-    <tr>
-      <th width="1000" align="left">Демонстрация: как отключение лишних MCP на лету экономит токены</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td width="1000">
-        Когда вы отключаете неиспользуемые серверы прямо во время диалога, их инструменты сразу перестают приходить в чат <b>без перезагрузки страницы в браузере</b>, что кратно снижает расход токенов на контекст:<br><br>
-        <video src="https://github.com/user-attachments/assets/6b1b49db-0a66-40c0-ac24-ed31efa85cad" width="974" style="max-width: 100%; height: auto; display: block;" controls muted playsinline></video>
-      </td>
-    </tr>
-  </tbody>
-</table>
+
 
 <br>
 <p><a href="docs/donate.md"><img src="docs/images/coffee-ru.svg" width="100%" alt="На кофе разработчику"></a></p>
