@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 680" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0D1117"/>
+      <stop offset="100%" stop-color="#111720"/>
+    </linearGradient>
+    <linearGradient id="bridgeBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#122321"/>
+      <stop offset="100%" stop-color="#151A21"/>
+    </linearGradient>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10B981"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#60A5FA"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F59E0B"/>
+    </marker>
+  </defs>
+
+  <!-- ФОН -->
+  <rect width="1280" height="680" rx="16" fill="url(#bg)" stroke="#2A313C" stroke-width="2"/>
+
+  <!-- ВЕРХНИЙ ЗАГОЛОВОК -->
+  <text x="640" y="42" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="22" font-weight="800" letter-spacing="0.5">HOW MCP BRIDGE WORKS (ZERO-TAX HOT-SWAP PIPELINE)</text>
+
+  <!-- ==================== 1. ЛЕВАЯ КОЛОНКА: ВХОД (СЕРВЕРЫ) ==================== -->
+  <text x="145" y="88" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700" letter-spacing="1">1. MANY SERVERS (INPUT)</text>
+
+  <!-- Сервер 1 -->
+  <rect x="30" y="105" width="230" height="90" rx="10" fill="#1C2128" stroke="#374151" stroke-width="1.5"/>
+  <text x="145" y="138" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Local STDIO (npx)</text>
+  <text x="145" y="162" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="13">e.g. GitHub MCP (46 tools)</text>
+  <text x="145" y="182" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12">Node.js bundled</text>
+
+  <!-- Сервер 2 -->
+  <rect x="30" y="215" width="230" height="90" rx="10" fill="#1C2128" stroke="#374151" stroke-width="1.5"/>
+  <text x="145" y="248" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Local STDIO (uvx / py)</text>
+  <text x="145" y="272" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="13">e.g. Blender, IDE, DB</text>
+  <text x="145" y="292" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12">uv &amp; FS MCP bundled</text>
+
+  <!-- Сервер 3 -->
+  <rect x="30" y="325" width="230" height="90" rx="10" fill="#1C2128" stroke="#374151" stroke-width="1.5"/>
+  <text x="145" y="358" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Remote HTTP Servers</text>
+  <text x="145" y="382" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="13">Streamable HTTP / SSE</text>
+  <text x="145" y="402" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12">1-Click Clipboard Import</text>
+
+  <!-- Плашка проблемы без Bridge -->
+  <rect x="30" y="435" width="230" height="68" rx="8" fill="#2A1619" stroke="#EF4444" stroke-width="1.2"/>
+  <text x="145" y="460" text-anchor="middle" fill="#F87171" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700">Without Bridge:</text>
+  <text x="145" y="480" text-anchor="middle" fill="#FCA5A5" font-family="Consolas, monospace" font-size="12">150+ schemas = 60k+ tokens</text>
+  <text x="145" y="496" text-anchor="middle" fill="#FCA5A5" font-family="Consolas, monospace" font-size="12">+ Zombie node.exe in RAM</text>
+
+  <!-- СТРЕЛКИ СЛИЯНИЯ: ОТ 3 СЕРВЕРОВ В ЯДРО BRIDGE -->
+  <path d="M 260 150 L 295 150 L 295 260" fill="none" stroke="#10B981" stroke-width="3"/>
+  <path d="M 260 370 L 295 370 L 295 260" fill="none" stroke="#10B981" stroke-width="3"/>
+  <line x1="260" y1="260" x2="332" y2="260" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+
+  <!-- ==================== 2. ЦЕНТР: ЯДРО MCP BRIDGE ==================== -->
+  <rect x="340" y="70" width="560" height="435" rx="14" fill="url(#bridgeBg)" stroke="#10B981" stroke-width="2.5"/>
+  <rect x="340" y="70" width="560" height="44" rx="14" fill="#15322F"/>
+  <text x="620" y="98" text-anchor="middle" fill="#34D399" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="800" letter-spacing="0.8">2. MCP BRIDGE CORE (WINDOWS NATIVE HUB)</text>
+
+  <!-- ШАГ 2.1: OS SANDBOX -->
+  <rect x="360" y="132" width="155" height="305" rx="10" fill="#1C2229" stroke="#343D48" stroke-width="1.5"/>
+  <rect x="375" y="146" width="125" height="24" rx="5" fill="#15322F"/>
+  <text x="437" y="163" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">STEP A · GUARD</text>
+  <text x="437" y="194" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">OS Sandbox</text>
+
+  <rect x="372" y="212" width="131" height="48" rx="6" fill="#14181D" stroke="#2D353F"/>
+  <text x="437" y="232" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12.5" font-weight="700">Job Object</text>
+  <text x="437" y="250" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Kills node.exe tree</text>
+
+  <rect x="372" y="268" width="131" height="48" rx="6" fill="#14181D" stroke="#F59E0B" stroke-width="1"/>
+  <text x="437" y="288" text-anchor="middle" fill="#FBBF24" font-family="Consolas, monospace" font-size="12.5" font-weight="700">WAITING Mode</text>
+  <text x="437" y="306" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Sleeps till app starts</text>
+
+  <rect x="372" y="324" width="131" height="48" rx="6" fill="#14181D" stroke="#EF4444" stroke-width="1"/>
+  <text x="437" y="344" text-anchor="middle" fill="#F87171" font-family="Consolas, monospace" font-size="12.5" font-weight="700">QUARANTINE</text>
+  <text x="437" y="362" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Isolates broken MCP</text>
+
+  <rect x="372" y="380" width="131" height="44" rx="6" fill="#14181D" stroke="#2D353F"/>
+  <text x="437" y="400" text-anchor="middle" fill="#E5E7EB" font-family="Consolas, monospace" font-size="12" font-weight="700">roots-filter</text>
+  <text x="437" y="416" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11">Live folder security</text>
+
+  <!-- Стрелка Шаг A -> Шаг B -->
+  <line x1="515" y1="284" x2="540" y2="284" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+
+  <!-- ШАГ 2.2: HOT-SWAP PRESETS -->
+  <rect x="546" y="132" width="155" height="305" rx="10" fill="#1C2229" stroke="#343D48" stroke-width="1.5"/>
+  <rect x="561" y="146" width="125" height="24" rx="5" fill="#15322F"/>
+  <text x="623" y="163" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">STEP B · FILTER</text>
+  <text x="623" y="194" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Hot-Swap</text>
+
+  <rect x="558" y="215" width="131" height="62" rx="6" fill="#15322F" stroke="#10B981"/>
+  <text x="623" y="240" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="13.5" font-weight="700">1-Click Presets</text>
+  <text x="623" y="260" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="11.5">Coding / 3D / Web</text>
+
+  <rect x="558" y="289" width="131" height="62" rx="6" fill="#14181D" stroke="#2D353F"/>
+  <text x="623" y="314" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="13.5" font-weight="700">Live Toggles</text>
+  <text x="623" y="334" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Turn servers ON/OFF</text>
+
+  <rect x="558" y="363" width="131" height="60" rx="6" fill="#14181D" stroke="#2D353F"/>
+  <text x="623" y="388" text-anchor="middle" fill="#34D399" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700">No Page Reload</text>
+  <text x="623" y="408" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Switch mid-dialogue</text>
+
+  <!-- Стрелка Шаг B -> Шаг C -->
+  <line x1="701" y1="284" x2="726" y2="284" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+
+  <!-- ШАГ 2.3: ZERO-TAX FACADE (2 META-TOOLS) -->
+  <rect x="732" y="132" width="150" height="305" rx="10" fill="#132A26" stroke="#10B981" stroke-width="2"/>
+  <rect x="745" y="146" width="124" height="24" rx="5" fill="#0D1F1C"/>
+  <text x="807" y="163" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">STEP C · OUTPUT</text>
+  <text x="807" y="194" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Zero-Tax</text>
+  <text x="807" y="216" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="12">Exposes ONLY 2 tools:</text>
+
+  <rect x="746" y="232" width="122" height="72" rx="8" fill="#0F201E" stroke="#34D399" stroke-width="1.5"/>
+  <text x="807" y="262" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="16" font-weight="700">all_tools</text>
+  <text x="807" y="286" text-anchor="middle" fill="#E5E7EB" font-family="Segoe UI, Inter, sans-serif" font-size="12">Fetches catalog</text>
+
+  <rect x="746" y="316" width="122" height="72" rx="8" fill="#0F201E" stroke="#34D399" stroke-width="1.5"/>
+  <text x="807" y="346" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="16" font-weight="700">call_tool</text>
+  <text x="807" y="370" text-anchor="middle" fill="#E5E7EB" font-family="Segoe UI, Inter, sans-serif" font-size="12">Runs tool by ID</text>
+
+  <text x="807" y="418" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12.5" font-weight="700">~0 Turn-0 Tokens!</text>
+
+  <!-- Нижняя плашка внутри ядра -->
+  <rect x="360" y="450" width="522" height="38" rx="8" fill="#14181E" stroke="#2A313C"/>
+  <text x="621" y="474" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="13">All-in-One Installer: <tspan fill="#34D399" font-weight="700">Node.js • uv • Filesystem MCP • Tailscale</tspan> + Auto <tspan fill="#FBBF24" font-family="Consolas, monospace">[REDACTED]</tspan> Logs</text>
+
+  <!-- ==================== ОТДЕЛЬНОЕ ОБЛАЧКО СНИЗУ: COMING SOON ==================== -->
+  <line x1="623" y1="437" x2="623" y2="532" stroke="#F59E0B" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#arrowAmber)"/>
+  <rect x="370" y="540" width="500" height="114" rx="14" fill="#211D15" stroke="#F59E0B" stroke-width="2" stroke-dasharray="8,5"/>
+  <rect x="390" y="554" width="145" height="24" rx="12" fill="#3B2A14" stroke="#F59E0B"/>
+  <text x="462" y="570" text-anchor="middle" fill="#FBBF24" font-family="Consolas, monospace" font-size="12" font-weight="700">⚡ COMING SOON</text>
+  <text x="550" y="571" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Per-Tool Toggle Inside Any Server</text>
+  <text x="620" y="604" text-anchor="middle" fill="#E5E7EB" font-family="Segoe UI, Inter, sans-serif" font-size="13.5">Mute individual tools instead of disabling the whole server.</text>
+  <text x="620" y="630" text-anchor="middle" fill="#FBBF24" font-family="Consolas, monospace" font-size="13" font-weight="700">Example: GitHub MCP (46 tools) ➔ Mute 40 unused, keep only 6 active</text>
+
+  <!-- ==================== СТРЕЛКИ ВЫХОДА ИЗ ШАГА C НАПРАВО ==================== -->
+  <path d="M 882 284 L 930 284 L 930 195 L 968 195" fill="none" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+  <path d="M 882 284 L 930 284 L 930 405 L 968 405" fill="none" stroke="#60A5FA" stroke-width="3" marker-end="url(#arrowBlue)"/>
+
+  <!-- ==================== 3. ПРАВАЯ КОЛОНКА: ВЫХОД В КЛИЕНТЫ ==================== -->
+  <text x="1115" y="88" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700" letter-spacing="1">3. ONE LINK FOR AI (OUTPUT)</text>
+
+  <!-- Выход 1: Браузерный ИИ -->
+  <rect x="976" y="105" width="274" height="185" rx="12" fill="#182224" stroke="#10B981" stroke-width="2"/>
+  <rect x="994" y="121" width="238" height="26" rx="6" fill="#15322F"/>
+  <text x="1113" y="139" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12.5" font-weight="700">BROWSER &amp; WEB AI (HTTPS)</text>
+  <text x="1113" y="174" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="17" font-weight="700">1-Click Web Bridge</text>
+  <text x="1113" y="198" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="13">Supergateway + Tailscale Funnel</text>
+  <text x="1113" y="220" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">✓ Never breaks Windows DNS</text>
+  <text x="1113" y="240" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">✓ No router port forwarding</text>
+  <text x="1113" y="270" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12.5" font-weight="600">Claude Web • ChatGPT • OpenWebUI</text>
+
+  <!-- Выход 2: Десктопный ИИ -->
+  <rect x="976" y="315" width="274" height="185" rx="12" fill="#181E27" stroke="#60A5FA" stroke-width="2"/>
+  <rect x="994" y="331" width="238" height="26" rx="6" fill="#1E293B"/>
+  <text x="1113" y="349" text-anchor="middle" fill="#93C5FD" font-family="Consolas, monospace" font-size="12.5" font-weight="700">DESKTOP &amp; IDE AI (LOCAL)</text>
+  <text x="1113" y="384" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="17" font-weight="700">Single Local Endpoint</text>
+  <text x="1113" y="408" text-anchor="middle" fill="#93C5FD" font-family="Consolas, monospace" font-size="13">http://localhost:&lt;port&gt;/mcp</text>
+  <text x="1113" y="430" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="12.5">✓ Connect once, no JSON editing</text>
+  <text x="1113" y="450" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="12.5">✓ 1 shared process for all tabs</text>
+  <text x="1113" y="480" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12.5" font-weight="600">Claude • Cursor • OpenCode • Codex</text>
+</svg>

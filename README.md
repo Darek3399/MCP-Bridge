@@ -2,10 +2,6 @@
 
 <a id="top"></a>
 
-<div align="left">
-  <a href="https://mcpservers.org/servers/darek3399/mcp-bridge"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org"></a>
-</div>
-
 <div align="right">
   <a href="README.ru.md"><img src="https://img.shields.io/badge/-Русский-22252A?style=for-the-badge" alt="Русский"></a>&nbsp;&nbsp;<a href="README.md"><img src="https://img.shields.io/badge/-English-15322F?style=for-the-badge" alt="English"></a>
 </div>
@@ -39,6 +35,8 @@
 
 <a id="sec-why"></a>
 <p><a href="#sec-why"><img src="docs/images/sec-01-en.svg" width="100%" alt="01 Why MCP Bridge"></a></p>
+
+<p><img src="docs/images/architecture-en.svg" width="100%" alt="MCP Bridge architecture"></p>
 
 <table>
   
