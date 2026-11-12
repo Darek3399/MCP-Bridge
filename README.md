@@ -126,7 +126,7 @@
 
 <p>Open the <b>Settings</b> tab — here you configure folder access, the public tunnel, and copy the connection URLs for your AI client:</p>
 
-<p><img src="docs/images/Settings.png" width="100%" alt="Settings"></p>
+<p><img src="docs/images/Settings_ENG.png" width="100%" alt="Settings"></p>
 
 <table>
   <thead>
@@ -220,7 +220,7 @@
 
 <p>The <code>Dashboard</code> tab shows the gateway overview and currently enabled servers. Disabled servers (<code>DISABLED</code>) are hidden from the <i>MCP Services Status</i> table to keep it clean — they are visible in the <i>MCP Services</i> tab.</p>
 
-<p><img src="docs/images/Main.png" width="100%" alt="Dashboard"></p>
+<p><img src="docs/images/Main_ENG.png" width="100%" alt="Dashboard"></p>
 
 <table>
   <thead>
@@ -250,7 +250,7 @@
 <a id="sec-servers"></a>
 <p><a href="#sec-servers"><img src="docs/images/sec-05-en.svg" width="100%" alt="05 Managing MCP Servers & Presets"></a></p>
 
-<p><img src="docs/images/MSP_Servises.png" width="100%" alt="MCP Services"></p>
+<p><img src="docs/images/MSP_Servises_ENG.png" width="100%" alt="MCP Services"></p>
 
 <table>
   <thead>
@@ -316,7 +316,7 @@
 
 <p>Click <code>+ Add Server</code> in the <i>MCP Services</i> tab to add a new local or remote server:</p>
 
-<p><img src="docs/images/Add_MCP.png" width="100%" alt="Add MCP Server"></p>
+<p><img src="docs/images/Add_MCP_ENG.png" width="100%" alt="Add MCP Server"></p>
 
 <table>
   <thead>

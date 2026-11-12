@@ -126,7 +126,7 @@
 
 <p>Откройте вкладку <b>Settings</b> — здесь настраивается доступ к папкам, внешний туннель и находятся готовые ссылки для подключения ИИ:</p>
 
-<p><img src="docs/images/Settings.png" width="100%" alt="Settings"></p>
+<p><img src="docs/images/Settings_RU.png" width="100%" alt="Settings"></p>
 
 <table>
   <thead>
@@ -220,7 +220,7 @@
 
 <p>На вкладке <code>Dashboard</code> отображается сводка по шлюзу и список включённых серверов. Выключенные серверы (<code>DISABLED</code>) в списке <i>MCP Services Status</i> скрыты — они находятся во вкладке <i>MCP Services</i>.</p>
 
-<p><img src="docs/images/Main.png" width="100%" alt="Dashboard"></p>
+<p><img src="docs/images/Main_RU.png" width="100%" alt="Dashboard"></p>
 
 <table>
   <thead>
@@ -250,7 +250,7 @@
 <a id="sec-servers"></a>
 <p><a href="#sec-servers"><img src="docs/images/sec-05-ru.svg" width="100%" alt="05 Управление MCP-серверами и пресетами"></a></p>
 
-<p><img src="docs/images/MSP_Servises.png" width="100%" alt="MCP Services"></p>
+<p><img src="docs/images/MSP_Servises_RU.png" width="100%" alt="MCP Services"></p>
 
 <table>
   <thead>
@@ -316,7 +316,7 @@
 
 <p>Нажмите <code>+ Add Server</code> во вкладке <i>MCP Services</i>, чтобы подключить новый локальный или удалённый сервер:</p>
 
-<p><img src="docs/images/Add_MCP.png" width="100%" alt="Add MCP Server"></p>
+<p><img src="docs/images/Add_MCP_RU.png" width="100%" alt="Add MCP Server"></p>
 
 <table>
   <thead>
