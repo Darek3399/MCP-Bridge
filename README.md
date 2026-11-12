@@ -3,108 +3,108 @@
 <a id="top"></a>
 
 <div align="right">
-  <a href="README.md"><img src="https://img.shields.io/badge/-Русский-15322F?style=for-the-badge" alt="Русский"></a>&nbsp;&nbsp;<a href="README.en.md"><img src="https://img.shields.io/badge/-English-22252A?style=for-the-badge" alt="English"></a>
+  <a href="README.ru.md"><img src="https://img.shields.io/badge/-Русский-22252A?style=for-the-badge" alt="Русский"></a>&nbsp;&nbsp;<a href="README.md"><img src="https://img.shields.io/badge/-English-15322F?style=for-the-badge" alt="English"></a>
 </div>
 
 <div align="center">
   <img src="src/McpBridge/Resources/MCPBridge.ico" width="80" height="80" alt="MCP Bridge">
   <h1>mcp<b>Bridge</b></h1>
   <p>
-    <b>Единый локальный хаб и менеджер MCP-серверов для Windows</b><br>
-    Подключите Bridge к своему AI-клиенту один раз и управляйте всеми серверами из одного окна.
+    <b>Unified Local Hub & MCP Server Manager for Windows</b><br>
+    Connect all your local MCP servers to any <b>Browser AI or Desktop client</b> via a single link — powered by <b>Zero-Tax Hot-Swap</b> architecture and managed from one window.
   </p>
   <p>
-    <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇-Скачать%20установщик%20(Windows%20x64)-15322F?style=for-the-badge&labelColor=181A1D" alt="Скачать установщик"></a>
+    <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇-Download%20Installer%20(Windows%20x64)-15322F?style=for-the-badge&labelColor=181A1D" alt="Download Installer"></a>
   </p>
   <p>
-    <a href="#sec-why"><img src="https://img.shields.io/badge/01-Зачем%20нужен-22252A?style=for-the-badge&labelColor=15322F" alt="01 Зачем нужен"></a>&nbsp;
-    <a href="#sec-settings"><img src="https://img.shields.io/badge/02-Настройка%20и%20URL-22252A?style=for-the-badge&labelColor=15322F" alt="02 Настройка и URL"></a>&nbsp;
+    <a href="#sec-why"><img src="https://img.shields.io/badge/01-Why%20MCP%20Bridge-22252A?style=for-the-badge&labelColor=15322F" alt="01 Why MCP Bridge"></a>&nbsp;
+    <a href="#sec-settings"><img src="https://img.shields.io/badge/02-Setup%20%26%20URLs-22252A?style=for-the-badge&labelColor=15322F" alt="02 Setup & URLs"></a>&nbsp;
     <a href="#sec-tailscale"><img src="https://img.shields.io/badge/03-Tailscale-22252A?style=for-the-badge&labelColor=15322F" alt="03 Tailscale"></a>&nbsp;
-    <a href="#sec-dashboard"><img src="https://img.shields.io/badge/04-Главный%20экран-22252A?style=for-the-badge&labelColor=15322F" alt="04 Главный экран"></a>&nbsp;
-    <a href="#sec-servers"><img src="https://img.shields.io/badge/05-Серверы%20и%20Пресеты-22252A?style=for-the-badge&labelColor=15322F" alt="05 Серверы и Пресеты"></a>&nbsp;
-    <a href="#sec-add"><img src="https://img.shields.io/badge/06-Добавление%20MCP-22252A?style=for-the-badge&labelColor=15322F" alt="06 Добавление MCP"></a>&nbsp;
-    <a href="#sec-security"><img src="https://img.shields.io/badge/07-Безопасность-22252A?style=for-the-badge&labelColor=332915" alt="07 Безопасность"></a>
+    <a href="#sec-dashboard"><img src="https://img.shields.io/badge/04-Dashboard-22252A?style=for-the-badge&labelColor=15322F" alt="04 Dashboard"></a>&nbsp;
+    <a href="#sec-servers"><img src="https://img.shields.io/badge/05-Servers%20%26%20Presets-22252A?style=for-the-badge&labelColor=15322F" alt="05 Servers & Presets"></a>&nbsp;
+    <a href="#sec-add"><img src="https://img.shields.io/badge/06-Adding%20MCP-22252A?style=for-the-badge&labelColor=15322F" alt="06 Adding MCP"></a>&nbsp;
+    <a href="#sec-security"><img src="https://img.shields.io/badge/07-Security-22252A?style=for-the-badge&labelColor=332915" alt="07 Security"></a>
   </p>
 </div>
 
 <br>
 
 <!-- ===================================================================== -->
-<!-- 01. ЗАЧЕМ НУЖЕН MCP BRIDGE                                            -->
+<!-- 01. WHY MCP BRIDGE                                                    -->
 <!-- ===================================================================== -->
 
 <a id="sec-why"></a>
-<p><a href="#sec-why"><img src="docs/images/sec-01-ru.svg" width="100%" alt="01 Зачем нужен MCP Bridge"></a></p>
+<p><a href="#sec-why"><img src="docs/images/sec-01-en.svg" width="100%" alt="01 Why MCP Bridge"></a></p>
 
 <table>
   <thead>
     <tr>
-      <th width="500" align="left">Экономия токенов и переключение на лету</th>
-      <th width="500" align="left">Одно подключение и пресеты в 1 клик</th>
+      <th width="500" align="left">Token Savings &amp; Real-Time Switching</th>
+      <th width="500" align="left">Single Connection &amp; 1-Click Presets</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary>Десяток MCP-серверов с 50–150 инструментами перегружает контекст и сжигает токены на каждом сообщении. С Bridge вы отключаете лишние серверы <b>прямо посреди диалога</b> — их инструменты перестают приходить в чат без перезагрузки страницы.</summary>
+          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Zero-Tax Hot-Swap: Token Saving &amp; Live Switching</strong><br>Instead of loading 50–150 heavy tool schemas into every prompt, the gateway exposes only <b>2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>)</b> — cutting the token tax to zero. Enable or disable servers and presets mid-conversation, with no chat-page reload.</summary>
           <br>
-          В обычных клиентах описания всех подключённых инструментов висят в контексте постоянно, даже когда сервер не используется. В <b>MCP Bridge</b> шлюз публикует наружу только 2 лёгких мета-инструмента (<code>all_tools</code> и <code>call_tool</code>), а при выключении ненужного сервера в окне программы его схемы мгновенно исключаются из выдачи каталога — без перезапуска чата и без потери истории диалога.
+          In standard clients, tool schemas from every connected server remain in context even when idle. <b>MCP Bridge</b> exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) upfront, and whenever you uncheck an unused server in the app window, its schemas are immediately excluded from the gateway catalogue — without restarting the chat or losing conversation history.
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary>Забудьте про ручную правку JSON в каждом клиенте. Подключите адрес Bridge один раз, а все остальные серверы добавляйте и переключайте внутри одного окна.</summary>
+          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>One Connection, 1-Click Presets &amp; Smart Import</strong><br>Connect your AI client <b>once</b>, switch ready-made server presets in <b>1 click</b>, and smart-import clipboard content with automatic recognition of <code>mcpServers</code> JSON, CLI commands, and URLs.</summary>
           <br>
-          Собирайте готовые профили серверов (<b>Server Presets</b>) под разные задачи и переключайте их одним кликом без разрыва сессии. При добавлении нового сервера умный импорт сам распознаёт блоки <code>mcpServers</code>, команды CLI или URL из буфера обмена.
+          Group servers into task-specific <b>Server Presets</b> and switch workflows in 1 click without dropping active sessions. When adding a new server, smart clipboard import automatically parses <code>mcpServers</code> JSON blocks, CLI commands, or URLs.
         </details>
       </td>
     </tr>
   </tbody>
   <thead>
     <tr>
-      <th width="500" align="left">Локальные STDIO-серверы в веб-приложениях ИИ</th>
-      <th width="500" align="left">Контроль памяти и фоновых процессов</th>
+      <th width="500" align="left">Local STDIO Servers in Web AI Apps</th>
+      <th width="500" align="left">Managed Server Process &amp; RAM Control</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary>Большинство MCP-серверов работают только локально через консоль (<code>npx</code>, <code>uvx</code>, <code>python</code>), а веб-сервисы требуют внешний <code>HTTPS</code>. Bridge превращает любой локальный сервер в защищённую ссылку в один клик.</summary>
+          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Local STDIO Servers for Browser AI</strong><br>Bridge combines all your local console servers (<code>npx</code>, <code>uvx</code>, <code>python</code>) into one protected <b>HTTPS link</b> for Browser AI using built-in <code>Supergateway</code> + <b>Tailscale Funnel</b> — <b>no router port forwarding and no changes to system DNS</b> (<code>accept-dns=false</code>).</summary>
           <br>
-          Встроенная связка <code>Supergateway</code> и <b>Tailscale Funnel</b> пробрасывает локальные STDIO-серверы наружу по <code>Streamable HTTP</code> без проброса портов на роутере и без вмешательства в системный DNS Windows (<code>accept-dns=false</code>). Если Tailscale уже был установлен на ПК, Bridge бережно сохраняет ваши настройки.
+          Built-in <code>Supergateway</code> and <b>Tailscale Funnel</b> expose local STDIO servers over <code>Streamable HTTP</code> without router port forwarding and without modifying Windows DNS settings (<code>accept-dns=false</code>). Pre-existing Tailscale installations and preferences are preserved untouched.
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary>Нативное <b>WPF-приложение</b> со сворачиванием в системный трей. При выключении сервера Bridge останавливает его управляемое дерево процессов, чтобы сервер не продолжал работать в фоне и расходовать память.</summary>
+          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Process &amp; RAM Control — No Zombie Processes</strong><br>A <b>lightweight native tray app</b>. When a server is stopped or Bridge exits, the Windows <b>Job Object</b> kills the entire child-process tree — no orphaned <code>node.exe</code> or <code>python.exe</code> left running in memory.</summary>
           <br>
-          Управляемые дочерние процессы привязываются к системному <b>Windows Job Object</b> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Дополнительная очистка дерева потомков (<code>Toolhelp</code>) и проверка TCP-портов по WMI при запуске помогают завершать процессы Bridge и предотвращать появление бесхозных <code>node.exe</code> или <code>python.exe</code>.
+          Managed child processes are assigned to a <b>Windows Job Object</b> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Additional descendant cleanup (<code>Toolhelp</code>) and startup WMI/TCP checks help terminate Bridge-managed process trees and prevent orphaned <code>node.exe</code> or <code>python.exe</code> processes.
         </details>
       </td>
     </tr>
   </tbody>
   <thead>
     <tr>
-      <th width="500" align="left">Песочница проверки, карантин и авто-ожидание</th>
-      <th width="500" align="left">Безопасность папок и всё в комплекте</th>
+      <th width="500" align="left">Verification Sandbox, Quarantine &amp; Auto-Wait</th>
+      <th width="500" align="left">Live Folder Security &amp; Everything Included</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary>Ошибка или неверная настройка отдельного сервера не должна нарушать работу всего шлюза. Проблемные сервисы изолируются в <code>QUARANTINE</code>, а локальные плагины могут ожидать запуска нужной программы.</summary>
+          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Verification Sandbox, Quarantine &amp; Auto-Wait</strong><br>Local plugins sleep in <code>WAITING</code> until their target app starts (e.g. an IDE, Blender/Unity, or a database); failing servers move to <code>QUARANTINE</code> after a 4-stage verification.</summary>
           <br>
-          Перед подключением сервер проходит 4-этапную проверку (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Встроенные сокет-хуки автоматически определяют, стучится ли STDIO-сервер в локальный порт программы (например, 3D-редактора, IDE или БД) или во внешний API, переводя сервер в <code>WAITING</code>, пока программа закрыта.
+          New servers pass through a 4-stage verification pipeline (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Lightweight socket hooks automatically detect whether a STDIO server connects to a local application port (e.g., a 3D editor, IDE, or local DB) or a remote API, keeping the server in <code>WAITING</code> while the target app is closed.
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary>Управляйте доступом ИИ к папкам обычными галочками прямо на лету. <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code> и <code>Tailscale</code> уже встроены в установщик — ничего докачивать вручную не нужно.</summary>
+          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Live Folder Security &amp; Everything Included</strong><br>Control folder access on the fly with checkboxes (<code>roots-filter</code>), automatically redact secrets as <code>[REDACTED]</code>, and get <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> bundled in the installer.</summary>
           <br>
-          Фильтр <code>roots-filter</code> принудительно отсекает клиентские <code>roots</code> при <code>initialize</code>, поэтому удалённый клиент не может сам расширить себе доступ к дискам. Внешние серверы требуют явного подтверждения HTTPS-домена, а токены и ключи автоматически скрываются (<code>[REDACTED]</code>) в логах.
+          The internal <code>roots-filter</code> strips client-supplied <code>roots</code> capabilities on <code>initialize</code> so remote clients cannot override your local folder allow-list. Remote servers require explicit per-origin HTTPS trust approval, and API keys or Bearer tokens are automatically redacted (<code>[REDACTED]</code>) in logs.
         </details>
       </td>
     </tr>
@@ -115,13 +115,13 @@
 <table>
   <thead>
     <tr>
-      <th width="1000" align="left">Демонстрация: как отключение лишних MCP на лету экономит токены</th>
+      <th width="1000" align="left">Live Demo: Saving Context Tokens by Disabling Unused MCP Servers on the Fly</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="1000">
-        Когда вы отключаете неиспользуемые серверы прямо во время диалога, их инструменты сразу перестают приходить в чат <b>без перезагрузки страницы в браузере</b>, что кратно снижает расход токенов на контекст:<br><br>
+        When you dynamically disable unused MCP servers in <b>MCP Bridge</b> right during an active chat, their tools immediately stop being sent to the dialogue <b>without reloading the browser page</b> — drastically reducing context token consumption:<br><br>
         <video src="https://github.com/user-attachments/assets/6b1b49db-0a66-40c0-ac24-ed31efa85cad" width="974" style="max-width: 100%; height: auto; display: block;" controls muted playsinline></video>
       </td>
     </tr>
@@ -129,17 +129,17 @@
 </table>
 
 <br>
-<p><a href="docs/donate.md"><img src="docs/images/coffee-ru.svg" width="100%" alt="На кофе разработчику"></a></p>
+<p><a href="docs/donate.md"><img src="docs/images/coffee-en.svg" width="100%" alt="Buy the developer a coffee"></a></p>
 <br>
 
 <!-- ===================================================================== -->
-<!-- 02. ПЕРВОНАЧАЛЬНАЯ НАСТРОЙКА                                          -->
+<!-- 02. INITIAL SETUP & CONNECTION                                        -->
 <!-- ===================================================================== -->
 
 <a id="sec-settings"></a>
-<p><a href="#sec-settings"><img src="docs/images/sec-02-ru.svg" width="100%" alt="02 Первоначальная настройка и подключение"></a></p>
+<p><a href="#sec-settings"><img src="docs/images/sec-02-en.svg" width="100%" alt="02 Initial Setup & Connection"></a></p>
 
-<p>Откройте вкладку <b>Settings</b> — здесь настраивается доступ к папкам, внешний туннель и находятся готовые ссылки для подключения ИИ:</p>
+<p>Open the <b>Settings</b> tab — here you configure folder access, the public tunnel, and copy the connection URLs for your AI client:</p>
 
 <p><img src="docs/images/Settings.png" width="100%" alt="Settings"></p>
 
@@ -154,13 +154,13 @@
   <tbody>
     <tr>
       <td width="333" valign="top">
-        Папки, к которым разрешён доступ для встроенного <b>Filesystem MCP</b>. Снимите галочку — доступ для ИИ закроется мгновенно без перезапуска шлюза.
+        Directories accessible to the built-in <b>Filesystem MCP</b>. Uncheck any folder to revoke AI access immediately without restarting the gateway.
       </td>
       <td width="333" valign="top">
-        Включение публичного HTTPS-туннеля через <b>Tailscale Funnel</b>. Нужен только для веб-приложений ИИ. Для программ на вашем ПК включать его не нужно.
+        Enables the public HTTPS tunnel via <b>Tailscale Funnel</b>. Required only for web-based AI apps. Local desktop clients on your PC work without it.
       </td>
       <td width="334" valign="top">
-        Готовые адреса шлюза. Нажмите <b>Copy URL</b> напротив нужного адреса и вставьте его в настройки своего AI-клиента.
+        Ready-to-use gateway endpoints. Click <b>Copy URL</b> next to the address you need and paste it into your AI client settings.
       </td>
     </tr>
   </tbody>
@@ -176,10 +176,10 @@
   <tbody>
     <tr>
       <td width="500" valign="top">
-        Для программ, установленных на вашем ПК (IDE, десктопные клиенты, локальные агенты). Укажите этот адрес как <code>Streamable HTTP</code> в настройках MCP вашей программы.
+        For applications installed on your PC (IDEs, desktop AI clients, local agents). Add a <code>Streamable HTTP</code> connection in your app's MCP settings and paste this URL.
       </td>
       <td width="500" valign="top">
-        Для веб-приложений ИИ с поддержкой MCP. В разных сервисах этот раздел называется по-разному — <i>коннекторы, плагины, интеграции</i> или подключается через расширения: просто вставьте туда этот адрес.
+        For web AI applications that support MCP. Depending on the service, this section may be called <i>connectors, plugins, integrations</i>, or connected via third-party extensions — simply paste the copied URL there.
       </td>
     </tr>
   </tbody>
@@ -188,52 +188,52 @@
 <br>
 
 <!-- ===================================================================== -->
-<!-- 03. АВТОРИЗАЦИЯ TAILSCALE                                             -->
+<!-- 03. TAILSCALE AUTHORIZATION                                           -->
 <!-- ===================================================================== -->
 
 <a id="sec-tailscale"></a>
-<p><a href="#sec-tailscale"><img src="docs/images/sec-03-ru.svg" width="100%" alt="03 Авторизация Tailscale"></a></p>
+<p><a href="#sec-tailscale"><img src="docs/images/sec-03-en.svg" width="100%" alt="03 Tailscale Authorization"></a></p>
 
-<p>При первом нажатии кнопки <b>Connect</b> в блоке <i>Online access</i> нужно пройти три экрана по очереди:</p>
+<p>When clicking <b>Connect</b> under <i>Online access</i> for the first time, complete these three screens in order:</p>
 
 <table>
   <thead>
     <tr>
-      <th width="333" align="left">ШАГ 1 · Welcome to Tailscale</th>
-      <th width="333" align="left">ШАГ 2 · Авторизация и Connect</th>
-      <th width="334" align="left">ШАГ 3 · Start using Funnel</th>
+      <th width="333" align="left">STEP 1 · Welcome to Tailscale</th>
+      <th width="333" align="left">STEP 2 · Sign In & Connect</th>
+      <th width="334" align="left">STEP 3 · Start using Funnel</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="333" valign="top">
         <img src="docs/images/Tailscale_Welcome.png" width="100%" alt="Tailscale Welcome"><br><br>
-        Откроется окно приложения Tailscale. Нажмите кнопку <b>Get Started</b>.
+        The Tailscale application window will open. Click <b>Get Started</b>.
       </td>
       <td width="333" valign="top">
         <img src="docs/images/Tailscale_Device_Connect.png" width="100%" alt="Tailscale Device Connect"><br><br>
-        В браузере откроется форма входа — <b>авторизуйтесь</b>, после чего в окне <i>Connect device</i> нажмите <b>Connect</b>.
+        A login page will open in your browser — <b>sign in to your account</b>, then click <b>Connect</b> on the <i>Connect device</i> screen.
       </td>
       <td width="334" valign="top">
         <img src="docs/images/Tailscale_Funnel.png" width="100%" alt="Tailscale Funnel"><br><br>
-        Откроется страница <b>Start using Funnel</b>. Прокрутите вниз, нажмите <b>Enable Funnel</b> и дождитесь подключения.
+        The <b>Start using Funnel</b> page will open automatically. Scroll down, click <b>Enable Funnel</b>, and wait for the connection to finish.
       </td>
     </tr>
   </tbody>
 </table>
 
-<p><img src="docs/images/tailscale-note-ru.svg" width="100%" alt="Важное примечание по авторизации Tailscale"></p>
+<p><img src="docs/images/tailscale-note-en.svg" width="100%" alt="Tailscale authorization note"></p>
 
 <br>
 
 <!-- ===================================================================== -->
-<!-- 04. ГЛАВНЫЙ ЭКРАН (DASHBOARD)                                         -->
+<!-- 04. MAIN SCREEN (DASHBOARD)                                           -->
 <!-- ===================================================================== -->
 
 <a id="sec-dashboard"></a>
-<p><a href="#sec-dashboard"><img src="docs/images/sec-04-ru.svg" width="100%" alt="04 Главный экран (Dashboard)"></a></p>
+<p><a href="#sec-dashboard"><img src="docs/images/sec-04-en.svg" width="100%" alt="04 Main Screen (Dashboard)"></a></p>
 
-<p>На вкладке <b>Dashboard</b> отображается сводка по шлюзу и список включённых серверов. Выключенные серверы (<code>DISABLED</code>) в списке <i>MCP Services Status</i> скрыты — они находятся во вкладке <i>MCP Services</i>.</p>
+<p>The <b>Dashboard</b> tab shows the gateway overview and currently enabled servers. Disabled servers (<code>DISABLED</code>) are hidden from the <i>MCP Services Status</i> table to keep it clean — they are visible in the <i>MCP Services</i> tab.</p>
 
 <p><img src="docs/images/Main.png" width="100%" alt="Dashboard"></p>
 
@@ -248,10 +248,10 @@
   </thead>
   <tbody>
     <tr>
-      <td width="250" valign="top">Сервер подключён, проверен и передаёт свои инструменты в диалог.</td>
-      <td width="250" valign="top">Ожидание запуска или ответа целевой локальной программы / endpoint'а.</td>
-      <td width="250" valign="top">Ошибка запуска или протокола MCP. Сервер изолирован и не мешает остальным.</td>
-      <td width="250" valign="top">Сервер выключен вручную (отображается только во вкладке <i>MCP Services</i>).</td>
+      <td width="250" valign="top">The server is connected, verified, and exposing its tools to the chat.</td>
+      <td width="250" valign="top">Waiting for a local application or endpoint to become available (e.g., an IDE, 3D editor, or local service).</td>
+      <td width="250" valign="top">Startup or MCP protocol error. The server is isolated so other services keep working.</td>
+      <td width="250" valign="top">Manually disabled by the user (shown only in the <i>MCP Services</i> tab).</td>
     </tr>
   </tbody>
 </table>
@@ -259,24 +259,24 @@
 <br>
 
 <!-- ===================================================================== -->
-<!-- 05. УПРАВЛЕНИЕ СЕРВЕРАМИ И ПРЕСЕТАМИ                                  -->
+<!-- 05. MANAGING MCP SERVERS & PRESETS                                    -->
 <!-- ===================================================================== -->
 
 <a id="sec-servers"></a>
-<p><a href="#sec-servers"><img src="docs/images/sec-05-ru.svg" width="100%" alt="05 Управление MCP-серверами и пресетами"></a></p>
+<p><a href="#sec-servers"><img src="docs/images/sec-05-en.svg" width="100%" alt="05 Managing MCP Servers & Presets"></a></p>
 
 <p><img src="docs/images/MSP_Servises.png" width="100%" alt="MCP Services"></p>
 
 <table>
   <thead>
     <tr>
-      <th width="1000" align="left">Как работает переключение серверов в реальном времени</th>
+      <th width="1000" align="left">How Real-Time Server Switching Works</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="1000">
-        Вы можете включать и выключать любые серверы прямо во время активного разговора с ИИ. В каждый момент времени в диалоге доступны <b>только инструменты тех серверов, которые включены прямо сейчас</b>. При этом <b>не нужно перезагружать страницу в браузере</b>, перезапускать локальный клиент или вручную обновлять список инструментов в настройках ИИ — шлюз передаёт изменения автоматически.
+        You can enable or disable any servers right during an active conversation with the AI. At any given moment, <b>only the tools belonging to currently enabled servers</b> are available in the dialogue. You <b>do not need to reload the browser page</b>, restart your local client, or manually refresh the tool list in your AI settings — the gateway updates the available tools automatically.
       </td>
     </tr>
   </tbody>
@@ -285,21 +285,21 @@
 <table>
   <thead>
     <tr>
-      <th width="333" align="left">Server Presets (Пресеты)</th>
-      <th width="333" align="left">Включение (ON) и Tools</th>
-      <th width="334" align="left">Редактирование и удаление</th>
+      <th width="333" align="left">Server Presets</th>
+      <th width="333" align="left">Enable (ON) & Tools</th>
+      <th width="334" align="left">Edit & Remove</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="333" valign="top">
-        Отметьте нужную комбинацию серверов для конкретной задачи и нажмите <b>+ Save Preset</b>. Переключайте готовые профили в 1 клик прямо во время работы.
+        Click <b>Save Preset</b> to save the currently enabled combination of servers. Switch between saved profiles in 1 click without interrupting your session.
       </td>
       <td width="333" valign="top">
-        Галочка <b>ON</b> подключает сервер к диалогу, а при выключении Bridge останавливает его управляемое дерево процессов через Windows Job Objects, освобождая используемую ими память. Плашка <code>Tools: N</code> показывает число доступных инструментов.
+        The <b>ON</b> checkbox makes a server available to the chat. When disabled, Bridge stops its managed process tree through Windows Job Objects, releasing the memory used by those processes. <code>Tools: N</code> shows the number of available tools.
       </td>
       <td width="334" valign="top">
-        Кнопка <b>✎</b> открывает JSON-конфигурацию выбранного сервера для правки параметров, а <b>✕</b> удаляет сервер из списка.
+        The <b>✎</b> button opens the JSON configuration editor for the selected server, and <b>✕</b> removes the server from the list.
       </td>
     </tr>
   </tbody>
@@ -308,13 +308,13 @@
 <table>
   <thead>
     <tr>
-      <th width="1000" align="left">Как это устроено под капотом: архитектура двух мета-инструментов (<code>all_tools</code> и <code>call_tool</code>)</th>
+      <th width="1000" align="left">Under the Hood: 2-Meta-Tool Architecture (<code>all_tools</code> &amp; <code>call_tool</code>)</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="1000">
-        <b>MCP Bridge</b> использует подход <b>Model-Directed Tool Discovery (MTD)</b> — обнаружение инструментов под управлением модели. На <code>:8004/mcp</code> внешний шлюз публикует только 2 мета-инструмента: <code>all_tools</code> и <code>call_tool</code>. В отличие от семантического Smart Routing, где внешний алгоритм пытается угадать нужные инструменты по близости слов, в MTD модель по необходимости запрашивает слепок каталога через <code>all_tools</code> (из кэша внутреннего Poll Manager с отслеживанием <code>catalog_revision</code>), сама выбирает подходящий инструмент и вызывает его через <code>call_tool</code> с проверкой аргументов по JSON Schema. Это исключает зависимость от того, как конкретный AI-клиент обрабатывает <code>notifications/tools/list_changed</code> и кэширует <code>tools/list</code>.
+        <b>MCP Bridge</b> uses <b>Model-Directed Tool Discovery (MTD)</b>: a model-directed way to discover and invoke tools. The external gateway at <code>:8004/mcp</code> exposes only 2 meta-tools: <code>all_tools</code> and <code>call_tool</code>. Unlike semantic Smart Routing — where an external mechanism guesses relevant tools by keyword similarity — with MTD the model requests the live catalogue snapshot through <code>all_tools</code> (served from the internal Poll Manager cache with <code>catalog_revision</code> tracking), selects the exact tool it needs, and invokes it via <code>call_tool</code> with JSON Schema validation. This also eliminates reliance on how individual AI clients handle <code>notifications/tools/list_changed</code> or cache <code>tools/list</code>.
       </td>
     </tr>
   </tbody>
@@ -323,34 +323,34 @@
 <br>
 
 <!-- ===================================================================== -->
-<!-- 06. ДОБАВЛЕНИЕ MCP-СЕРВЕРА                                            -->
+<!-- 06. ADDING AN MCP SERVER                                              -->
 <!-- ===================================================================== -->
 
 <a id="sec-add"></a>
-<p><a href="#sec-add"><img src="docs/images/sec-06-ru.svg" width="100%" alt="06 Добавление MCP-сервера"></a></p>
+<p><a href="#sec-add"><img src="docs/images/sec-06-en.svg" width="100%" alt="06 Adding an MCP Server"></a></p>
 
-<p>Нажмите <b>+ Add Server</b> во вкладке <i>MCP Services</i>, чтобы подключить новый локальный или удалённый сервер:</p>
+<p>Click <b>+ Add Server</b> in the <i>MCP Services</i> tab to add a new local or remote server:</p>
 
 <p><img src="docs/images/Add_MCP.png" width="100%" alt="Add MCP Server"></p>
 
 <table>
   <thead>
     <tr>
-      <th width="333" align="left">1. Вставка JSON</th>
-      <th width="333" align="left">2. Проверить и добавить</th>
-      <th width="334" align="left">3. Сохранить без проверки</th>
+      <th width="333" align="left">1. Paste JSON</th>
+      <th width="333" align="left">2. Verify & Add</th>
+      <th width="334" align="left">3. Save Without Check</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="333" valign="top">
-        Скопируйте готовый блок <code>mcpServers</code> из документации нужного сервера и нажмите <b>Вставить из буфера</b> (или отредактируйте JSON вручную).
+        Copy a standard <code>mcpServers</code> block from the server's documentation and click <b>Paste from Clipboard</b> (or edit the JSON manually).
       </td>
       <td width="333" valign="top">
-        Нажмите <b>Проверить и добавить</b> — Bridge протестирует запуск, проверит список инструментов и сразу подключит сервер к шлюзу.
+        Click <b>Verify & Add</b> — Bridge will test the startup, discover its tools, and immediately attach the server to the gateway.
       </td>
       <td width="334" valign="top">
-        Если сервер зависит от внешней программы, которая сейчас закрыта, нажмите <b>Сохранить без проверки</b> — он добавится в режиме <code>WAITING</code>.
+        If the server depends on an external app that is currently closed, click <b>Save Without Check</b> — it will be added in <code>WAITING</code> mode.
       </td>
     </tr>
   </tbody>
@@ -359,44 +359,44 @@
 <br>
 
 <!-- ===================================================================== -->
-<!-- 07. БЕЗОПАСНОСТЬ И ОТВЕТСТВЕННОСТЬ ПОЛЬЗОВАТЕЛЯ                       -->
+<!-- 07. SECURITY & USER RESPONSIBILITY                                    -->
 <!-- ===================================================================== -->
 
 <a id="sec-security"></a>
-<p><a href="#sec-security"><img src="docs/images/sec-07-ru.svg" width="100%" alt="07 Безопасность и ответственность пользователя"></a></p>
+<p><a href="#sec-security"><img src="docs/images/sec-07-en.svg" width="100%" alt="07 Security & User Responsibility"></a></p>
 
-<p><img src="docs/images/disclaimer-ru.svg" width="100%" alt="Отказ от ответственности"></p>
+<p><img src="docs/images/disclaimer-en.svg" width="100%" alt="Disclaimer"></p>
 
 <table>
   <thead>
     <tr>
-      <th width="500" align="left">1. Полный доступ к разрешённым папкам</th>
-      <th width="500" align="left">2. Запуск сторонних STDIO-процессов</th>
+      <th width="500" align="left">1. Full Access to Allowed Folders</th>
+      <th width="500" align="left">2. Running Third-Party STDIO Processes</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
-        Встроенный <code>Filesystem MCP</code> даёт ИИ право читать, изменять и удалять любые файлы внутри отмеченных папок в <b>Allowed Folders</b>. Никогда не открывайте доступ к системным дискам целиком (<code>C:\</code>), папкам с паролями, криптокошельками или SSH-ключами.
+        The built-in <code>Filesystem MCP</code> grants the AI permission to read, modify, and delete files inside checked directories in <b>Allowed Folders</b>. Never expose entire system drives (<code>C:\</code>) or folders containing passwords, wallets, or SSH keys.
       </td>
       <td width="500" valign="top">
-        Любой добавленный вами консольный сервер (<code>npx</code>, <code>uvx</code>, <code>python</code>, <code>node</code>, <code>.exe</code>) выполняется на вашем ПК с правами вашей учётной записи Windows. Добавляйте только те серверы и пакеты, источнику которых вы полностью доверяете.
+        Any CLI server you add (<code>npx</code>, <code>uvx</code>, <code>python</code>, <code>node</code>, <code>.exe</code>) runs on your PC under your Windows user account. Only add servers and packages from sources you completely trust.
       </td>
     </tr>
   </tbody>
   <thead>
     <tr>
-      <th width="500" align="left">3. Публичная ссылка Tailscale Funnel</th>
-      <th width="500" align="left">4. Хранение ключей и токенов</th>
+      <th width="500" align="left">3. Public Tailscale Funnel URL</th>
+      <th width="500" align="left">4. Local Storage of Keys & Tokens</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
-        При включённом туннеле ваш <code>PUBLIC URL</code> доступен из интернета любому, кто узнает этот адрес. Не публикуйте эту ссылку в открытом доступе, не светите её на скриншотах и отключайте туннель кнопкой <b>Disconnect</b>, когда он вам не нужен.
+        When the tunnel is enabled, your <code>PUBLIC URL</code> is reachable from the internet by anyone who knows the address. Never share this URL publicly or expose it in screenshots, and click <b>Disconnect</b> when you no longer need remote access.
       </td>
       <td width="500" valign="top">
-        Указанные вами переменные окружения (<code>env</code>) и HTTP-заголовки авторизации (<code>Authorization</code> / API-ключи) сохраняются локально в открытом виде в файле <code>Config/settings.json</code>. Не передавайте этот файл посторонним.
+        Configured environment variables (<code>env</code>) and HTTP authorization headers (<code>Authorization</code> / API keys) are stored locally in plain text inside <code>Config/settings.json</code>. Do not share this file with others.
       </td>
     </tr>
   </tbody>
@@ -405,11 +405,12 @@
 <br>
 
 <div align="center">
-  <p><a href="#top"><img src="https://img.shields.io/badge/-↑%20Вернуться%20наверх-181A1D?style=for-the-badge" alt="Наверх"></a></p>
+  <p><a href="#top"><img src="https://img.shields.io/badge/-↑%20Back%20to%20Top-181A1D?style=for-the-badge" alt="Back to Top"></a></p>
   <sub>
-    <b>Системные требования:</b> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
-    <a href="SECURITY.md">Безопасность</a> · <a href="THIRD_PARTY_NOTICES.md">Сторонние компоненты</a>
+    <b>System Requirements:</b> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
+    <a href="SECURITY.md">Security</a> · <a href="THIRD_PARTY_NOTICES.md">Third-Party Notices</a>
   </sub>
 </div>
 
 </div>
+
