@@ -42,35 +42,16 @@
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>Zero-Tax Hot-Swap: Token Saving &amp; Live Switching</ins></b><br><br><small>Instead of loading 50–150 heavy tool schemas into every prompt, the gateway exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) — cutting the token tax to zero. Enable or disable servers and presets mid-conversation, with no chat-page reload.</small></summary>
-          <small><br>
-          In standard clients, tool schemas from every connected server remain in context even when idle. MCP Bridge exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) upfront, and whenever you uncheck an unused server in the app window, its schemas are immediately excluded from the gateway catalogue — without restarting the chat or losing conversation history.</small>
+          <summary><b><ins>Zero-Tax Hot-Swap: Token Saving &amp; Live Switching</ins></b><br><br><sub>Instead of loading 50–150 heavy tool schemas into every prompt, the gateway exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) — cutting the token tax to zero. Enable or disable servers and presets mid-conversation, with no chat-page reload.</sub></summary>
+          <sub><br>
+          In standard clients, tool schemas from every connected server remain in context even when idle. MCP Bridge exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) upfront, and whenever you uncheck an unused server in the app window, its schemas are immediately excluded from the gateway catalogue — without restarting the chat or losing conversation history.</sub>
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>One Connection, 1-Click Presets &amp; Smart Import</ins></b><br><br><small>Connect your AI client once, switch ready-made server presets in 1 click, and smart-import clipboard content with automatic recognition of <code>mcpServers</code> JSON, CLI commands, and URLs.</small></summary>
-          <small><br>
-          Group servers into task-specific Server Presets and switch workflows in 1 click without dropping active sessions. When adding a new server, smart clipboard import automatically parses <code>mcpServers</code> JSON blocks, CLI commands, or URLs.</small>
-        </details>
-      </td>
-    </tr>
-  </tbody>
-  
-  <tbody>
-    <tr>
-      <td width="500" valign="top">
-        <details>
-          <summary><b><ins>Local STDIO Servers for Browser AI</ins></b><br><br><small>Bridge combines all your local console servers (<code>npx</code>, <code>uvx</code>, <code>python</code>) into one protected <code>HTTPS</code> link for Browser AI using built-in <code>Supergateway</code> + <code>Tailscale Funnel</code> — no router port forwarding and no changes to system DNS (<code>accept-dns=false</code>).</small></summary>
-          <small><br>
-          Built-in <code>Supergateway</code> and <code>Tailscale Funnel</code> expose local STDIO servers over <code>Streamable HTTP</code> without router port forwarding and without modifying Windows DNS settings (<code>accept-dns=false</code>). Pre-existing Tailscale installations and preferences are preserved untouched.</small>
-        </details>
-      </td>
-      <td width="500" valign="top">
-        <details>
-          <summary><b><ins>Process &amp; RAM Control — No Zombie Processes</ins></b><br><br><small>A lightweight native tray app. When a server is stopped or Bridge exits, the Windows <code>Job Object</code> kills the entire child-process tree — no orphaned <code>node.exe</code> or <code>python.exe</code> left running in memory.</small></summary>
-          <small><br>
-          Managed child processes are assigned to a <code>Windows Job Object</code> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Additional descendant cleanup (<code>Toolhelp</code>) and startup WMI/TCP checks help terminate Bridge-managed process trees and prevent orphaned <code>node.exe</code> or <code>python.exe</code> processes.</small>
+          <summary><b><ins>One Connection, 1-Click Presets &amp; Smart Import</ins></b><br><br><sub>Connect your AI client once, switch ready-made server presets in 1 click, and smart-import clipboard content with automatic recognition of <code>mcpServers</code> JSON, CLI commands, and URLs.</sub></summary>
+          <sub><br>
+          Group servers into task-specific Server Presets and switch workflows in 1 click without dropping active sessions. When adding a new server, smart clipboard import automatically parses <code>mcpServers</code> JSON blocks, CLI commands, or URLs.</sub>
         </details>
       </td>
     </tr>
@@ -80,16 +61,35 @@
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>Verification Sandbox, Quarantine &amp; Auto-Wait</ins></b><br><br><small>Local plugins sleep in <code>WAITING</code> until their target app starts (e.g. an IDE, Blender/Unity, or a database); failing servers move to <code>QUARANTINE</code> after a 4-stage verification.</small></summary>
-          <small><br>
-          New servers pass through a 4-stage verification pipeline (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Lightweight socket hooks automatically detect whether a STDIO server connects to a local application port (e.g., a 3D editor, IDE, or local DB) or a remote API, keeping the server in <code>WAITING</code> while the target app is closed.</small>
+          <summary><b><ins>Local STDIO Servers for Browser AI</ins></b><br><br><sub>Bridge combines all your local console servers (<code>npx</code>, <code>uvx</code>, <code>python</code>) into one protected <code>HTTPS</code> link for Browser AI using built-in <code>Supergateway</code> + <code>Tailscale Funnel</code> — no router port forwarding and no changes to system DNS (<code>accept-dns=false</code>).</sub></summary>
+          <sub><br>
+          Built-in <code>Supergateway</code> and <code>Tailscale Funnel</code> expose local STDIO servers over <code>Streamable HTTP</code> without router port forwarding and without modifying Windows DNS settings (<code>accept-dns=false</code>). Pre-existing Tailscale installations and preferences are preserved untouched.</sub>
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>Live Folder Security &amp; Everything Included</ins></b><br><br><small>Control folder access on the fly with checkboxes (<code>roots-filter</code>), automatically redact secrets as <code>[REDACTED]</code>, and get <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> bundled in the installer.</small></summary>
-          <small><br>
-          The internal <code>roots-filter</code> strips client-supplied <code>roots</code> capabilities on <code>initialize</code> so remote clients cannot override your local folder allow-list. Remote servers require explicit per-origin HTTPS trust approval, and API keys or Bearer tokens are automatically redacted (<code>[REDACTED]</code>) in logs.</small>
+          <summary><b><ins>Process &amp; RAM Control — No Zombie Processes</ins></b><br><br><sub>A lightweight native tray app. When a server is stopped or Bridge exits, the Windows <code>Job Object</code> kills the entire child-process tree — no orphaned <code>node.exe</code> or <code>python.exe</code> left running in memory.</sub></summary>
+          <sub><br>
+          Managed child processes are assigned to a <code>Windows Job Object</code> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Additional descendant cleanup (<code>Toolhelp</code>) and startup WMI/TCP checks help terminate Bridge-managed process trees and prevent orphaned <code>node.exe</code> or <code>python.exe</code> processes.</sub>
+        </details>
+      </td>
+    </tr>
+  </tbody>
+  
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
+        <details>
+          <summary><b><ins>Verification Sandbox, Quarantine &amp; Auto-Wait</ins></b><br><br><sub>Local plugins sleep in <code>WAITING</code> until their target app starts (e.g. an IDE, Blender/Unity, or a database); failing servers move to <code>QUARANTINE</code> after a 4-stage verification.</sub></summary>
+          <sub><br>
+          New servers pass through a 4-stage verification pipeline (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Lightweight socket hooks automatically detect whether a STDIO server connects to a local application port (e.g., a 3D editor, IDE, or local DB) or a remote API, keeping the server in <code>WAITING</code> while the target app is closed.</sub>
+        </details>
+      </td>
+      <td width="500" valign="top">
+        <details>
+          <summary><b><ins>Live Folder Security &amp; Everything Included</ins></b><br><br><sub>Control folder access on the fly with checkboxes (<code>roots-filter</code>), automatically redact secrets as <code>[REDACTED]</code>, and get <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> bundled in the installer.</sub></summary>
+          <sub><br>
+          The internal <code>roots-filter</code> strips client-supplied <code>roots</code> capabilities on <code>initialize</code> so remote clients cannot override your local folder allow-list. Remote servers require explicit per-origin HTTPS trust approval, and API keys or Bearer tokens are automatically redacted (<code>[REDACTED]</code>) in logs.</sub>
         </details>
       </td>
     </tr>

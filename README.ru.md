@@ -42,35 +42,16 @@
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>Zero-Tax Hot-Swap: экономия токенов и переключение на лету</ins></b><br><br><small>Вместо загрузки 50–150 тяжёлых схем инструментов в каждый промпт шлюз публикует только 2 лёгких мета-инструмента (<code>all_tools</code> и <code>call_tool</code>), обнуляя «налог на токены» (Zero-Tax). Включайте и выключайте серверы и пресеты прямо посреди диалога — без перезагрузки страницы чата (Hot-Swap).</small></summary>
-          <small><br>
-          В обычных клиентах описания всех подключённых инструментов висят в контексте постоянно, даже когда сервер не используется. В MCP Bridge шлюз публикует наружу только 2 лёгких мета-инструмента (<code>all_tools</code> и <code>call_tool</code>), а при выключении ненужного сервера в окне программы его схемы мгновенно исключаются из выдачи каталога — без перезапуска чата и без потери истории диалога.</small>
+          <summary><b><ins>Zero-Tax Hot-Swap: экономия токенов и переключение на лету</ins></b><br><br><sub>Вместо загрузки 50–150 тяжёлых схем инструментов в каждый промпт шлюз публикует только 2 лёгких мета-инструмента (<code>all_tools</code> и <code>call_tool</code>), обнуляя «налог на токены» (Zero-Tax). Включайте и выключайте серверы и пресеты прямо посреди диалога — без перезагрузки страницы чата (Hot-Swap).</sub></summary>
+          <sub><br>
+          В обычных клиентах описания всех подключённых инструментов висят в контексте постоянно, даже когда сервер не используется. В MCP Bridge шлюз публикует наружу только 2 лёгких мета-инструмента (<code>all_tools</code> и <code>call_tool</code>), а при выключении ненужного сервера в окне программы его схемы мгновенно исключаются из выдачи каталога — без перезапуска чата и без потери истории диалога.</sub>
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>Одно подключение, пресеты в 1 клик и умный импорт</ins></b><br><br><small>Подключите AI-клиент один раз, переключайте готовые пресеты серверов в 1 клик, а умный импорт из буфера обмена сам распознаёт JSON <code>mcpServers</code>, CLI-команды и URL.</small></summary>
-          <small><br>
-          Собирайте готовые профили серверов (Server Presets) под разные задачи и переключайте их одним кликом без разрыва сессии. При добавлении нового сервера умный импорт сам распознаёт блоки <code>mcpServers</code>, команды CLI или URL из буфера обмена.</small>
-        </details>
-      </td>
-    </tr>
-  </tbody>
-  
-  <tbody>
-    <tr>
-      <td width="500" valign="top">
-        <details>
-          <summary><b><ins>Локальные STDIO-серверы в браузерном ИИ (Web)</ins></b><br><br><small>Bridge объединяет все локальные консольные серверы (<code>npx</code>, <code>uvx</code>, <code>python</code>) в единую защищённую <code>HTTPS</code>-ссылку для браузерного ИИ через встроенные <code>Supergateway</code> + <code>Tailscale Funnel</code> — без проброса портов на роутере и без изменения системного DNS (<code>accept-dns=false</code>).</small></summary>
-          <small><br>
-          Встроенная связка <code>Supergateway</code> и <code>Tailscale Funnel</code> пробрасывает локальные STDIO-серверы наружу по <code>Streamable HTTP</code> без проброса портов на роутере и без вмешательства в системный DNS Windows (<code>accept-dns=false</code>). Если Tailscale уже был установлен на ПК, Bridge бережно сохраняет ваши настройки.</small>
-        </details>
-      </td>
-      <td width="500" valign="top">
-        <details>
-          <summary><b><ins>Контроль памяти и фоновых процессов — без зомби-процессов</ins></b><br><br><small>Лёгкое нативное приложение со сворачиванием в трей. При выключении сервера или выходе из Bridge системный <code>Windows Job Object</code> гарантированно завершает всё дерево дочерних процессов — в памяти не остаются зависшие <code>node.exe</code> и <code>python.exe</code>.</small></summary>
-          <small><br>
-          Управляемые дочерние процессы привязываются к системному <code>Windows Job Object</code> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Дополнительная очистка дерева потомков (<code>Toolhelp</code>) и проверка TCP-портов по WMI при запуске помогают завершать процессы Bridge и предотвращать появление бесхозных <code>node.exe</code> или <code>python.exe</code>.</small>
+          <summary><b><ins>Одно подключение, пресеты в 1 клик и умный импорт</ins></b><br><br><sub>Подключите AI-клиент один раз, переключайте готовые пресеты серверов в 1 клик, а умный импорт из буфера обмена сам распознаёт JSON <code>mcpServers</code>, CLI-команды и URL.</sub></summary>
+          <sub><br>
+          Собирайте готовые профили серверов (Server Presets) под разные задачи и переключайте их одним кликом без разрыва сессии. При добавлении нового сервера умный импорт сам распознаёт блоки <code>mcpServers</code>, команды CLI или URL из буфера обмена.</sub>
         </details>
       </td>
     </tr>
@@ -80,16 +61,35 @@
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>Песочница проверки, карантин и авто-ожидание</ins></b><br><br><small>Локальные плагины переходят в спящий режим <code>WAITING</code> до запуска целевой программы (например, IDE, Blender/Unity или СУБД), а сбойные серверы изолируются в <code>QUARANTINE</code> после 4-этапной проверки.</small></summary>
-          <small><br>
-          Перед подключением сервер проходит 4-этапную проверку (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Встроенные сокет-хуки автоматически определяют, стучится ли STDIO-сервер в локальный порт программы (например, 3D-редактора, IDE или БД) или во внешний API, переводя сервер в <code>WAITING</code>, пока программа закрыта.</small>
+          <summary><b><ins>Локальные STDIO-серверы в браузерном ИИ (Web)</ins></b><br><br><sub>Bridge объединяет все локальные консольные серверы (<code>npx</code>, <code>uvx</code>, <code>python</code>) в единую защищённую <code>HTTPS</code>-ссылку для браузерного ИИ через встроенные <code>Supergateway</code> + <code>Tailscale Funnel</code> — без проброса портов на роутере и без изменения системного DNS (<code>accept-dns=false</code>).</sub></summary>
+          <sub><br>
+          Встроенная связка <code>Supergateway</code> и <code>Tailscale Funnel</code> пробрасывает локальные STDIO-серверы наружу по <code>Streamable HTTP</code> без проброса портов на роутере и без вмешательства в системный DNS Windows (<code>accept-dns=false</code>). Если Tailscale уже был установлен на ПК, Bridge бережно сохраняет ваши настройки.</sub>
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary><b><ins>Безопасность папок и всё включено</ins></b><br><br><small>Управляйте доступом к папкам галочками на лету (<code>roots-filter</code>), автоматически скрывайте секреты как <code>[REDACTED]</code>, а <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code> и <code>Tailscale</code> уже получите в комплекте с установщиком.</small></summary>
-          <small><br>
-          Фильтр <code>roots-filter</code> принудительно отсекает клиентские <code>roots</code> при <code>initialize</code>, поэтому удалённый клиент не может сам расширить себе доступ к дискам. Внешние серверы требуют явного подтверждения HTTPS-домена, а токены и ключи автоматически скрываются (<code>[REDACTED]</code>) в логах.</small>
+          <summary><b><ins>Контроль памяти и фоновых процессов — без зомби-процессов</ins></b><br><br><sub>Лёгкое нативное приложение со сворачиванием в трей. При выключении сервера или выходе из Bridge системный <code>Windows Job Object</code> гарантированно завершает всё дерево дочерних процессов — в памяти не остаются зависшие <code>node.exe</code> и <code>python.exe</code>.</sub></summary>
+          <sub><br>
+          Управляемые дочерние процессы привязываются к системному <code>Windows Job Object</code> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Дополнительная очистка дерева потомков (<code>Toolhelp</code>) и проверка TCP-портов по WMI при запуске помогают завершать процессы Bridge и предотвращать появление бесхозных <code>node.exe</code> или <code>python.exe</code>.</sub>
+        </details>
+      </td>
+    </tr>
+  </tbody>
+  
+  <tbody>
+    <tr>
+      <td width="500" valign="top">
+        <details>
+          <summary><b><ins>Песочница проверки, карантин и авто-ожидание</ins></b><br><br><sub>Локальные плагины переходят в спящий режим <code>WAITING</code> до запуска целевой программы (например, IDE, Blender/Unity или СУБД), а сбойные серверы изолируются в <code>QUARANTINE</code> после 4-этапной проверки.</sub></summary>
+          <sub><br>
+          Перед подключением сервер проходит 4-этапную проверку (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Встроенные сокет-хуки автоматически определяют, стучится ли STDIO-сервер в локальный порт программы (например, 3D-редактора, IDE или БД) или во внешний API, переводя сервер в <code>WAITING</code>, пока программа закрыта.</sub>
+        </details>
+      </td>
+      <td width="500" valign="top">
+        <details>
+          <summary><b><ins>Безопасность папок и всё включено</ins></b><br><br><sub>Управляйте доступом к папкам галочками на лету (<code>roots-filter</code>), автоматически скрывайте секреты как <code>[REDACTED]</code>, а <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code> и <code>Tailscale</code> уже получите в комплекте с установщиком.</sub></summary>
+          <sub><br>
+          Фильтр <code>roots-filter</code> принудительно отсекает клиентские <code>roots</code> при <code>initialize</code>, поэтому удалённый клиент не может сам расширить себе доступ к дискам. Внешние серверы требуют явного подтверждения HTTPS-домена, а токены и ключи автоматически скрываются (<code>[REDACTED]</code>) в логах.</sub>
         </details>
       </td>
     </tr>
