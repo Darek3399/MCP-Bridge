@@ -37,74 +37,59 @@
 <p><a href="#sec-why"><img src="docs/images/sec-01-en.svg" width="100%" alt="01 Why MCP Bridge"></a></p>
 
 <table>
-  <thead>
-    <tr>
-      <th width="500" align="left">Token Savings &amp; Real-Time Switching</th>
-      <th width="500" align="left">Single Connection &amp; 1-Click Presets</th>
-    </tr>
-  </thead>
+  
   <tbody>
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Zero-Tax Hot-Swap: Token Saving &amp; Live Switching</strong><br>Instead of loading 50–150 heavy tool schemas into every prompt, the gateway exposes only <b>2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>)</b> — cutting the token tax to zero. Enable or disable servers and presets mid-conversation, with no chat-page reload.</summary>
-          <br>
-          In standard clients, tool schemas from every connected server remain in context even when idle. <b>MCP Bridge</b> exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) upfront, and whenever you uncheck an unused server in the app window, its schemas are immediately excluded from the gateway catalogue — without restarting the chat or losing conversation history.
+          <summary><b><ins>Zero-Tax Hot-Swap: Token Saving &amp; Live Switching</ins></b><br><br><small>Instead of loading 50–150 heavy tool schemas into every prompt, the gateway exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) — cutting the token tax to zero. Enable or disable servers and presets mid-conversation, with no chat-page reload.</small></summary>
+          <small><br>
+          In standard clients, tool schemas from every connected server remain in context even when idle. MCP Bridge exposes only 2 lightweight meta-tools (<code>all_tools</code> and <code>call_tool</code>) upfront, and whenever you uncheck an unused server in the app window, its schemas are immediately excluded from the gateway catalogue — without restarting the chat or losing conversation history.</small>
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>One Connection, 1-Click Presets &amp; Smart Import</strong><br>Connect your AI client <b>once</b>, switch ready-made server presets in <b>1 click</b>, and smart-import clipboard content with automatic recognition of <code>mcpServers</code> JSON, CLI commands, and URLs.</summary>
-          <br>
-          Group servers into task-specific <b>Server Presets</b> and switch workflows in 1 click without dropping active sessions. When adding a new server, smart clipboard import automatically parses <code>mcpServers</code> JSON blocks, CLI commands, or URLs.
+          <summary><b><ins>One Connection, 1-Click Presets &amp; Smart Import</ins></b><br><br><small>Connect your AI client once, switch ready-made server presets in 1 click, and smart-import clipboard content with automatic recognition of <code>mcpServers</code> JSON, CLI commands, and URLs.</small></summary>
+          <small><br>
+          Group servers into task-specific Server Presets and switch workflows in 1 click without dropping active sessions. When adding a new server, smart clipboard import automatically parses <code>mcpServers</code> JSON blocks, CLI commands, or URLs.</small>
         </details>
       </td>
     </tr>
   </tbody>
-  <thead>
-    <tr>
-      <th width="500" align="left">Local STDIO Servers in Web AI Apps</th>
-      <th width="500" align="left">Managed Server Process &amp; RAM Control</th>
-    </tr>
-  </thead>
+  
   <tbody>
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Local STDIO Servers for Browser AI</strong><br>Bridge combines all your local console servers (<code>npx</code>, <code>uvx</code>, <code>python</code>) into one protected <b>HTTPS link</b> for Browser AI using built-in <code>Supergateway</code> + <b>Tailscale Funnel</b> — <b>no router port forwarding and no changes to system DNS</b> (<code>accept-dns=false</code>).</summary>
-          <br>
-          Built-in <code>Supergateway</code> and <b>Tailscale Funnel</b> expose local STDIO servers over <code>Streamable HTTP</code> without router port forwarding and without modifying Windows DNS settings (<code>accept-dns=false</code>). Pre-existing Tailscale installations and preferences are preserved untouched.
+          <summary><b><ins>Local STDIO Servers for Browser AI</ins></b><br><br><small>Bridge combines all your local console servers (<code>npx</code>, <code>uvx</code>, <code>python</code>) into one protected <code>HTTPS</code> link for Browser AI using built-in <code>Supergateway</code> + <code>Tailscale Funnel</code> — no router port forwarding and no changes to system DNS (<code>accept-dns=false</code>).</small></summary>
+          <small><br>
+          Built-in <code>Supergateway</code> and <code>Tailscale Funnel</code> expose local STDIO servers over <code>Streamable HTTP</code> without router port forwarding and without modifying Windows DNS settings (<code>accept-dns=false</code>). Pre-existing Tailscale installations and preferences are preserved untouched.</small>
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Process &amp; RAM Control — No Zombie Processes</strong><br>A <b>lightweight native tray app</b>. When a server is stopped or Bridge exits, the Windows <b>Job Object</b> kills the entire child-process tree — no orphaned <code>node.exe</code> or <code>python.exe</code> left running in memory.</summary>
-          <br>
-          Managed child processes are assigned to a <b>Windows Job Object</b> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Additional descendant cleanup (<code>Toolhelp</code>) and startup WMI/TCP checks help terminate Bridge-managed process trees and prevent orphaned <code>node.exe</code> or <code>python.exe</code> processes.
+          <summary><b><ins>Process &amp; RAM Control — No Zombie Processes</ins></b><br><br><small>A lightweight native tray app. When a server is stopped or Bridge exits, the Windows <code>Job Object</code> kills the entire child-process tree — no orphaned <code>node.exe</code> or <code>python.exe</code> left running in memory.</small></summary>
+          <small><br>
+          Managed child processes are assigned to a <code>Windows Job Object</code> (<code>JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE</code>). Additional descendant cleanup (<code>Toolhelp</code>) and startup WMI/TCP checks help terminate Bridge-managed process trees and prevent orphaned <code>node.exe</code> or <code>python.exe</code> processes.</small>
         </details>
       </td>
     </tr>
   </tbody>
-  <thead>
-    <tr>
-      <th width="500" align="left">Verification Sandbox, Quarantine &amp; Auto-Wait</th>
-      <th width="500" align="left">Live Folder Security &amp; Everything Included</th>
-    </tr>
-  </thead>
+  
   <tbody>
     <tr>
       <td width="500" valign="top">
         <details>
-          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Verification Sandbox, Quarantine &amp; Auto-Wait</strong><br>Local plugins sleep in <code>WAITING</code> until their target app starts (e.g. an IDE, Blender/Unity, or a database); failing servers move to <code>QUARANTINE</code> after a 4-stage verification.</summary>
-          <br>
-          New servers pass through a 4-stage verification pipeline (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Lightweight socket hooks automatically detect whether a STDIO server connects to a local application port (e.g., a 3D editor, IDE, or local DB) or a remote API, keeping the server in <code>WAITING</code> while the target app is closed.
+          <summary><b><ins>Verification Sandbox, Quarantine &amp; Auto-Wait</ins></b><br><br><small>Local plugins sleep in <code>WAITING</code> until their target app starts (e.g. an IDE, Blender/Unity, or a database); failing servers move to <code>QUARANTINE</code> after a 4-stage verification.</small></summary>
+          <small><br>
+          New servers pass through a 4-stage verification pipeline (<code>Pre-flight</code> → <code>Transport</code> → <code>Initialize</code> → <code>Tools</code>). Lightweight socket hooks automatically detect whether a STDIO server connects to a local application port (e.g., a 3D editor, IDE, or local DB) or a remote API, keeping the server in <code>WAITING</code> while the target app is closed.</small>
         </details>
       </td>
       <td width="500" valign="top">
         <details>
-          <summary> <img src="docs/images/expand-arrow.svg" width="16" height="16" align="absmiddle" alt="Expand"> <strong>Live Folder Security &amp; Everything Included</strong><br>Control folder access on the fly with checkboxes (<code>roots-filter</code>), automatically redact secrets as <code>[REDACTED]</code>, and get <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> bundled in the installer.</summary>
-          <br>
-          The internal <code>roots-filter</code> strips client-supplied <code>roots</code> capabilities on <code>initialize</code> so remote clients cannot override your local folder allow-list. Remote servers require explicit per-origin HTTPS trust approval, and API keys or Bearer tokens are automatically redacted (<code>[REDACTED]</code>) in logs.
+          <summary><b><ins>Live Folder Security &amp; Everything Included</ins></b><br><br><small>Control folder access on the fly with checkboxes (<code>roots-filter</code>), automatically redact secrets as <code>[REDACTED]</code>, and get <code>Node.js</code>, <code>uv</code>, <code>Filesystem MCP</code>, and <code>Tailscale</code> bundled in the installer.</small></summary>
+          <small><br>
+          The internal <code>roots-filter</code> strips client-supplied <code>roots</code> capabilities on <code>initialize</code> so remote clients cannot override your local folder allow-list. Remote servers require explicit per-origin HTTPS trust approval, and API keys or Bearer tokens are automatically redacted (<code>[REDACTED]</code>) in logs.</small>
         </details>
       </td>
     </tr>
@@ -115,7 +100,7 @@
 <table>
   <thead>
     <tr>
-      <th width="1000" align="left">Live Demo: Saving Context Tokens by Disabling Unused MCP Servers on the Fly</th>
+      <th width="1000" align="left"><h3>Live Demo: Saving Context Tokens by Disabling Unused MCP Servers on the Fly</h3></th>
     </tr>
   </thead>
   <tbody>
@@ -146,21 +131,21 @@
 <table>
   <thead>
     <tr>
-      <th width="333" align="left">1. Allowed Folders</th>
-      <th width="333" align="left">2. Online access</th>
-      <th width="334" align="left">3. Connection URLs</th>
+      <th width="333" align="left"><h3>1. Allowed Folders</h3></th>
+      <th width="333" align="left"><h3>2. Online access</h3></th>
+      <th width="334" align="left"><h3>3. Connection URLs</h3></th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="333" valign="top">
-        Directories accessible to the built-in <b>Filesystem MCP</b>. Uncheck any folder to revoke AI access immediately without restarting the gateway.
+        Directories accessible to the built-in <code>Filesystem MCP</code>. Uncheck any folder to revoke AI access immediately without restarting the gateway.
       </td>
       <td width="333" valign="top">
-        Enables the public HTTPS tunnel via <b>Tailscale Funnel</b>. Required only for web-based AI apps. Local desktop clients on your PC work without it.
+        Enables the public HTTPS tunnel via <code>Tailscale Funnel</code>. Required only for web-based AI apps. Local desktop clients on your PC work without it.
       </td>
       <td width="334" valign="top">
-        Ready-to-use gateway endpoints. Click <b>Copy URL</b> next to the address you need and paste it into your AI client settings.
+        Ready-to-use gateway endpoints. Click <code>Copy URL</code> next to the address you need and paste it into your AI client settings.
       </td>
     </tr>
   </tbody>
@@ -169,8 +154,8 @@
 <table>
   <thead>
     <tr>
-      <th width="500" align="left">LOCAL URL — <code>http://127.0.0.1:8004/mcp</code></th>
-      <th width="500" align="left">PUBLIC URL — <code>https://&lt;device&gt;.&lt;tailnet&gt;.ts.net/mcp</code></th>
+      <th width="500" align="left"><h3>LOCAL URL — <code>http://127.0.0.1:8004/mcp</code></h3></th>
+      <th width="500" align="left"><h3>PUBLIC URL — <code>https://&lt;device&gt;.&lt;tailnet&gt;.ts.net/mcp</code></h3></th>
     </tr>
   </thead>
   <tbody>
@@ -194,29 +179,29 @@
 <a id="sec-tailscale"></a>
 <p><a href="#sec-tailscale"><img src="docs/images/sec-03-en.svg" width="100%" alt="03 Tailscale Authorization"></a></p>
 
-<p>When clicking <b>Connect</b> under <i>Online access</i> for the first time, complete these three screens in order:</p>
+<p>When clicking <code>Connect</code> under <i>Online access</i> for the first time, complete these three screens in order:</p>
 
 <table>
   <thead>
     <tr>
-      <th width="333" align="left">STEP 1 · Welcome to Tailscale</th>
-      <th width="333" align="left">STEP 2 · Sign In & Connect</th>
-      <th width="334" align="left">STEP 3 · Start using Funnel</th>
+      <th width="333" align="left"><h3>STEP 1 · Welcome to Tailscale</h3></th>
+      <th width="333" align="left"><h3>STEP 2 · Sign In & Connect</h3></th>
+      <th width="334" align="left"><h3>STEP 3 · Start using Funnel</h3></th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="333" valign="top">
         <img src="docs/images/Tailscale_Welcome.png" width="100%" alt="Tailscale Welcome"><br><br>
-        The Tailscale application window will open. Click <b>Get Started</b>.
+        The Tailscale application window will open. Click <code>Get Started</code>.
       </td>
       <td width="333" valign="top">
         <img src="docs/images/Tailscale_Device_Connect.png" width="100%" alt="Tailscale Device Connect"><br><br>
-        A login page will open in your browser — <b>sign in to your account</b>, then click <b>Connect</b> on the <i>Connect device</i> screen.
+        A login page will open in your browser — <b>sign in to your account</b>, then click <code>Connect</code> on the <i>Connect device</i> screen.
       </td>
       <td width="334" valign="top">
         <img src="docs/images/Tailscale_Funnel.png" width="100%" alt="Tailscale Funnel"><br><br>
-        The <b>Start using Funnel</b> page will open automatically. Scroll down, click <b>Enable Funnel</b>, and wait for the connection to finish.
+        The <code>Start using Funnel</code> page will open automatically. Scroll down, click <code>Enable Funnel</code>, and wait for the connection to finish.
       </td>
     </tr>
   </tbody>
@@ -233,7 +218,7 @@
 <a id="sec-dashboard"></a>
 <p><a href="#sec-dashboard"><img src="docs/images/sec-04-en.svg" width="100%" alt="04 Main Screen (Dashboard)"></a></p>
 
-<p>The <b>Dashboard</b> tab shows the gateway overview and currently enabled servers. Disabled servers (<code>DISABLED</code>) are hidden from the <i>MCP Services Status</i> table to keep it clean — they are visible in the <i>MCP Services</i> tab.</p>
+<p>The <code>Dashboard</code> tab shows the gateway overview and currently enabled servers. Disabled servers (<code>DISABLED</code>) are hidden from the <i>MCP Services Status</i> table to keep it clean — they are visible in the <i>MCP Services</i> tab.</p>
 
 <p><img src="docs/images/Main.png" width="100%" alt="Dashboard"></p>
 
@@ -270,7 +255,7 @@
 <table>
   <thead>
     <tr>
-      <th width="1000" align="left">How Real-Time Server Switching Works</th>
+      <th width="1000" align="left"><h3>How Real-Time Server Switching Works</h3></th>
     </tr>
   </thead>
   <tbody>
@@ -285,18 +270,18 @@
 <table>
   <thead>
     <tr>
-      <th width="333" align="left">Server Presets</th>
-      <th width="333" align="left">Enable (ON) & Tools</th>
-      <th width="334" align="left">Edit & Remove</th>
+      <th width="333" align="left"><h3>Server Presets</h3></th>
+      <th width="333" align="left"><h3>Enable (ON) & Tools</h3></th>
+      <th width="334" align="left"><h3>Edit & Remove</h3></th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="333" valign="top">
-        Click <b>Save Preset</b> to save the currently enabled combination of servers. Switch between saved profiles in 1 click without interrupting your session.
+        Click <code>Save Preset</code> to save the currently enabled combination of servers. Switch between saved profiles in 1 click without interrupting your session.
       </td>
       <td width="333" valign="top">
-        The <b>ON</b> checkbox makes a server available to the chat. When disabled, Bridge stops its managed process tree through Windows Job Objects, releasing the memory used by those processes. <code>Tools: N</code> shows the number of available tools.
+        The <code>ON</code> checkbox makes a server available to the chat. When disabled, Bridge stops its managed process tree through Windows Job Objects, releasing the memory used by those processes. <code>Tools: N</code> shows the number of available tools.
       </td>
       <td width="334" valign="top">
         The <b>✎</b> button opens the JSON configuration editor for the selected server, and <b>✕</b> removes the server from the list.
@@ -308,7 +293,7 @@
 <table>
   <thead>
     <tr>
-      <th width="1000" align="left">Under the Hood: 2-Meta-Tool Architecture (<code>all_tools</code> &amp; <code>call_tool</code>)</th>
+      <th width="1000" align="left"><h3>Under the Hood: 2-Meta-Tool Architecture (<code>all_tools</code> &amp; <code>call_tool</code>)</h3></th>
     </tr>
   </thead>
   <tbody>
@@ -329,28 +314,28 @@
 <a id="sec-add"></a>
 <p><a href="#sec-add"><img src="docs/images/sec-06-en.svg" width="100%" alt="06 Adding an MCP Server"></a></p>
 
-<p>Click <b>+ Add Server</b> in the <i>MCP Services</i> tab to add a new local or remote server:</p>
+<p>Click <code>+ Add Server</code> in the <i>MCP Services</i> tab to add a new local or remote server:</p>
 
 <p><img src="docs/images/Add_MCP.png" width="100%" alt="Add MCP Server"></p>
 
 <table>
   <thead>
     <tr>
-      <th width="333" align="left">1. Paste JSON</th>
-      <th width="333" align="left">2. Verify & Add</th>
-      <th width="334" align="left">3. Save Without Check</th>
+      <th width="333" align="left"><h3>1. Paste JSON</h3></th>
+      <th width="333" align="left"><h3>2. Verify & Add</h3></th>
+      <th width="334" align="left"><h3>3. Save Without Check</h3></th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="333" valign="top">
-        Copy a standard <code>mcpServers</code> block from the server's documentation and click <b>Paste from Clipboard</b> (or edit the JSON manually).
+        Copy a standard <code>mcpServers</code> block from the server's documentation and click <code>Paste from Clipboard</code> (or edit the JSON manually).
       </td>
       <td width="333" valign="top">
         Click <b>Verify & Add</b> — Bridge will test the startup, discover its tools, and immediately attach the server to the gateway.
       </td>
       <td width="334" valign="top">
-        If the server depends on an external app that is currently closed, click <b>Save Without Check</b> — it will be added in <code>WAITING</code> mode.
+        If the server depends on an external app that is currently closed, click <code>Save Without Check</code> — it will be added in <code>WAITING</code> mode.
       </td>
     </tr>
   </tbody>
@@ -370,14 +355,14 @@
 <table>
   <thead>
     <tr>
-      <th width="500" align="left">1. Full Access to Allowed Folders</th>
-      <th width="500" align="left">2. Running Third-Party STDIO Processes</th>
+      <th width="500" align="left"><h3>1. Full Access to Allowed Folders</h3></th>
+      <th width="500" align="left"><h3>2. Running Third-Party STDIO Processes</h3></th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
-        The built-in <code>Filesystem MCP</code> grants the AI permission to read, modify, and delete files inside checked directories in <b>Allowed Folders</b>. Never expose entire system drives (<code>C:\</code>) or folders containing passwords, wallets, or SSH keys.
+        The built-in <code>Filesystem MCP</code> grants the AI permission to read, modify, and delete files inside checked directories in <code>Allowed Folders</code>. Never expose entire system drives (<code>C:\</code>) or folders containing passwords, wallets, or SSH keys.
       </td>
       <td width="500" valign="top">
         Any CLI server you add (<code>npx</code>, <code>uvx</code>, <code>python</code>, <code>node</code>, <code>.exe</code>) runs on your PC under your Windows user account. Only add servers and packages from sources you completely trust.
@@ -386,14 +371,14 @@
   </tbody>
   <thead>
     <tr>
-      <th width="500" align="left">3. Public Tailscale Funnel URL</th>
-      <th width="500" align="left">4. Local Storage of Keys & Tokens</th>
+      <th width="500" align="left"><h3>3. Public Tailscale Funnel URL</h3></th>
+      <th width="500" align="left"><h3>4. Local Storage of Keys & Tokens</h3></th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td width="500" valign="top">
-        When the tunnel is enabled, your <code>PUBLIC URL</code> is reachable from the internet by anyone who knows the address. Never share this URL publicly or expose it in screenshots, and click <b>Disconnect</b> when you no longer need remote access.
+        When the tunnel is enabled, your <code>PUBLIC URL</code> is reachable from the internet by anyone who knows the address. Never share this URL publicly or expose it in screenshots, and click <code>Disconnect</code> when you no longer need remote access.
       </td>
       <td width="500" valign="top">
         Configured environment variables (<code>env</code>) and HTTP authorization headers (<code>Authorization</code> / API keys) are stored locally in plain text inside <code>Config/settings.json</code>. Do not share this file with others.
@@ -407,7 +392,7 @@
 <div align="center">
   <p><a href="#top"><img src="https://img.shields.io/badge/-↑%20Back%20to%20Top-181A1D?style=for-the-badge" alt="Back to Top"></a></p>
   <sub>
-    <b>System Requirements:</b> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
+    <h3>System Requirements</h3> Windows 10 x64 (1903+) / Windows 11 x64 · .NET Framework 4.8<br>
     <a href="SECURITY.md">Security</a> · <a href="THIRD_PARTY_NOTICES.md">Third-Party Notices</a>
   </sub>
 </div>
