@@ -2,6 +2,10 @@
 
 <a id="top"></a>
 
+<div align="left">
+  <a href="https://mcpservers.org/servers/darek3399/mcp-bridge"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org"></a>
+</div>
+
 <div align="right">
   <a href="README.ru.md"><img src="https://img.shields.io/badge/-Русский-22252A?style=for-the-badge" alt="Русский"></a>&nbsp;&nbsp;<a href="README.md"><img src="https://img.shields.io/badge/-English-15322F?style=for-the-badge" alt="English"></a>
 </div>
@@ -14,7 +18,7 @@
     Connect all your local MCP servers to any <b>Browser AI or Desktop client</b> via a single link — powered by <b>Zero-Tax Hot-Swap</b> architecture and managed from one window.
   </p>
   <p>
-    <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇-Download%20Installer%20(Windows%20x64)-15322F?style=for-the-badge&labelColor=181A1D" alt="Download Installer"></a>&nbsp;&nbsp;<a href="https://mcpservers.org/servers/darek3399/mcp-bridge"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org"></a>
+    <a href="../../releases/latest"><img src="https://img.shields.io/badge/⬇-Download%20Installer%20(Windows%20x64)-15322F?style=for-the-badge&labelColor=181A1D" alt="Download Installer"></a>
   </p>
   <p>
     <a href="#sec-why"><img src="https://img.shields.io/badge/01-Why%20MCP%20Bridge-22252A?style=for-the-badge&labelColor=15322F" alt="01 Why MCP Bridge"></a>&nbsp;
