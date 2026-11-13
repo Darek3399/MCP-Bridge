@@ -1,167 +1,205 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 680" width="100%" height="100%">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
+  <title id="title">How MCP Bridge Works</title>
+  <desc id="desc">Architecture diagram showing browser and desktop AI clients connecting through one MCP Bridge hub to local and cloud MCP servers.</desc>
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0D1117"/>
-      <stop offset="100%" stop-color="#111720"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#141719"/>
+      <stop offset="1" stop-color="#101214"/>
     </linearGradient>
-    <linearGradient id="bridgeBg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#122321"/>
-      <stop offset="100%" stop-color="#151A21"/>
+    <linearGradient id="hubFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2221"/>
+      <stop offset="1" stop-color="#171C1D"/>
     </linearGradient>
-    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10B981"/>
+    <linearGradient id="gatewayFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2B28"/>
+      <stop offset="1" stop-color="#192320"/>
+    </linearGradient>
+    <linearGradient id="hotSwapFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22272A"/>
+      <stop offset="1" stop-color="#1D2225"/>
+    </linearGradient>
+    <linearGradient id="guardFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A261D"/>
+      <stop offset="1" stop-color="#211F1A"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#FFFFFF" stroke-opacity=".025" stroke-width="1"/>
+    </pattern>
+    <marker id="arrowMint" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#75CDB1"/>
     </marker>
-    <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#60A5FA"/>
+    <marker id="arrowSlate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#8C9AA0"/>
     </marker>
-    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F59E0B"/>
-    </marker>
+    <clipPath id="browserCardClip"><rect x="64" y="238" width="300" height="186" rx="9"/></clipPath>
+    <clipPath id="desktopCardClip"><rect x="64" y="500" width="300" height="186" rx="9"/></clipPath>
+    <clipPath id="hubCardClip"><rect x="435" y="226" width="730" height="476" rx="12"/></clipPath>
+    <clipPath id="localToolsCardClip"><rect x="1226" y="238" width="310" height="186" rx="9"/></clipPath>
+    <clipPath id="httpCloudCardClip"><rect x="1226" y="500" width="310" height="186" rx="9"/></clipPath>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .title { font-size: 31px; font-weight: 750; letter-spacing: .2px; fill: #F2F4F3; }
+      .zone { font-size: 12px; font-weight: 750; letter-spacing: 1.8px; fill: #AAB2B6; }
+      .zoneNo { fill: #75CDB1; }
+      .cardTitle { font-size: 22px; font-weight: 700; fill: #F1F3F2; }
+      .cardSub { font-size: 14px; font-weight: 450; fill: #A6AFB3; }
+      .transport { font-size: 11px; font-weight: 750; letter-spacing: 1.05px; }
+      .hubTitle { font-size: 21px; font-weight: 720; fill: #F3F5F4; }
+      .hubMeta { font-size: 11px; font-weight: 700; letter-spacing: 1.55px; fill: #8E9B98; }
+      .stepNo { font-size: 12px; font-weight: 750; letter-spacing: .6px; }
+      .stepTitle { font-size: 20px; font-weight: 720; fill: #F3F4F3; }
+      .feature { font-size: 14px; font-weight: 700; }
+      .detail { font-size: 13px; font-weight: 450; fill: #AAB2B5; }
+      .micro { font-size: 10px; font-weight: 750; letter-spacing: 1.4px; fill: #778187; }
+    </style>
   </defs>
 
-  <!-- ФОН -->
-  <rect width="1280" height="680" rx="16" fill="url(#bg)" stroke="#2A313C" stroke-width="2"/>
+  <rect width="1600" height="720" fill="url(#bg)"/>
+  <rect width="1600" height="720" fill="url(#grid)"/>
+  <rect x="18" y="18" width="1564" height="684" rx="8" fill="none" stroke="#343A3F" stroke-width="1"/>
 
-  <!-- ВЕРХНИЙ ЗАГОЛОВОК -->
-  <text x="640" y="42" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="22" font-weight="800" letter-spacing="0.5">HOW MCP BRIDGE WORKS (ZERO-TAX HOT-SWAP PIPELINE)</text>
+  <text x="64" y="98" class="title" style="font-size:34px">HOW <tspan fill="#75CDB1">MCP BRIDGE</tspan> WORKS</text>
+  <line x1="64" y1="134" x2="1536" y2="134" stroke="#343A3F" stroke-width="1"/>
 
-  <!-- ==================== 1. ЛЕВАЯ КОЛОНКА: ВХОД (СЕРВЕРЫ) ==================== -->
-  <text x="145" y="88" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700" letter-spacing="1">1. MANY SERVERS (INPUT)</text>
+  <g id="architecture" transform="translate(0 -32)">
+    <text x="64" y="207" class="zone"><tspan class="zoneNo">01</tspan><tspan dx="10">AI CLIENTS</tspan></text>
+    <text x="435" y="207" class="zone"><tspan class="zoneNo">02</tspan><tspan dx="10">MCP BRIDGE HUB</tspan></text>
+    <text x="1226" y="207" class="zone"><tspan class="zoneNo">03</tspan><tspan dx="10">MCP SERVERS</tspan></text>
 
-  <!-- Сервер 1 -->
-  <rect x="30" y="105" width="230" height="90" rx="10" fill="#1C2128" stroke="#374151" stroke-width="1.5"/>
-  <text x="145" y="138" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Local STDIO (npx)</text>
-  <text x="145" y="162" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="13">e.g. GitHub MCP (46 tools)</text>
-  <text x="145" y="182" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12">Node.js bundled</text>
+    <g id="browser-ai">
+      <rect x="64" y="238" width="300" height="186" rx="9" fill="#1B2022"/>
+      <rect x="64" y="238" width="7" height="186" fill="#75CDB1" clip-path="url(#browserCardClip)"/>
+      <rect x="64" y="238" width="300" height="186" rx="9" fill="none" stroke="#38413F" stroke-width="1.2"/>
+      <rect x="88" y="260" width="122" height="25" rx="4" fill="#15322F"/>
+      <text x="149" y="277" text-anchor="middle" class="transport" fill="#9ADCC7">HTTPS TUNNEL</text>
+      <g transform="translate(308 262)" fill="none" stroke="#75CDB1" stroke-width="1.5" opacity=".9">
+        <rect x="-17" y="-11" width="34" height="24" rx="3"/>
+        <line x1="-17" y1="-4" x2="17" y2="-4"/>
+        <circle cx="-11" cy="-7.5" r="1" fill="#75CDB1" stroke="none"/>
+        <circle cx="-6" cy="-7.5" r="1" fill="#75CDB1" stroke="none"/>
+      </g>
+      <text x="88" y="336" class="cardTitle">Browser AI</text>
+      <text x="88" y="367" class="cardSub">ChatGPT  ·  Claude Web</text>
+      <line x1="88" y1="391" x2="340" y2="391" stroke="#343C3F"/>
+      <text x="88" y="410" class="micro">REMOTE CLIENTS</text>
+    </g>
 
-  <!-- Сервер 2 -->
-  <rect x="30" y="215" width="230" height="90" rx="10" fill="#1C2128" stroke="#374151" stroke-width="1.5"/>
-  <text x="145" y="248" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Local STDIO (uvx / py)</text>
-  <text x="145" y="272" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="13">e.g. Blender, IDE, DB</text>
-  <text x="145" y="292" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12">uv &amp; FS MCP bundled</text>
+    <g id="desktop-ides">
+      <rect x="64" y="500" width="300" height="186" rx="9" fill="#1B2022"/>
+      <rect x="64" y="500" width="7" height="186" fill="#8C9AA0" clip-path="url(#desktopCardClip)"/>
+      <rect x="64" y="500" width="300" height="186" rx="9" fill="none" stroke="#38413F" stroke-width="1.2"/>
+      <rect x="88" y="522" width="104" height="25" rx="4" fill="#252B2E" stroke="#465158" stroke-width=".8"/>
+      <text x="140" y="539" text-anchor="middle" class="transport" fill="#C1C9CC">LOCAL PORT</text>
+      <g transform="translate(308 525)" fill="none" stroke="#9CAAB0" stroke-width="1.5" opacity=".9">
+        <rect x="-17" y="-12" width="34" height="23" rx="2.5"/>
+        <path d="M-7 16H7M0 11V16"/>
+      </g>
+      <text x="88" y="598" class="cardTitle">Desktop &amp; IDEs</text>
+      <text x="88" y="629" class="cardSub">Claude  ·  Cursor  ·  Codex</text>
+      <line x1="88" y1="653" x2="340" y2="653" stroke="#343C3F"/>
+      <text x="88" y="672" class="micro">LOCAL CLIENTS</text>
+    </g>
 
-  <!-- Сервер 3 -->
-  <rect x="30" y="325" width="230" height="90" rx="10" fill="#1C2128" stroke="#374151" stroke-width="1.5"/>
-  <text x="145" y="358" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Remote HTTP Servers</text>
-  <text x="145" y="382" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="13">Streamable HTTP / SSE</text>
-  <text x="145" y="402" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12">1-Click Clipboard Import</text>
+    <g id="mcp-bridge-hub">
+      <rect x="435" y="226" width="730" height="476" rx="12" fill="url(#hubFill)"/>
+      <rect x="435" y="226" width="730" height="8" fill="#75CDB1" opacity=".82" clip-path="url(#hubCardClip)"/>
+      <rect x="435" y="226" width="730" height="476" rx="12" fill="none" stroke="#3E6258" stroke-width="1.3"/>
+      <text x="468" y="272" class="hubTitle">MCP Bridge</text>
+      <text x="468" y="296" class="hubMeta">UNIFIED ROUTING LAYER</text>
+      <g transform="translate(998 251)">
+        <rect width="132" height="27" rx="4" fill="#15322F" stroke="#315B50" stroke-width=".8"/>
+        <circle cx="14" cy="13.5" r="3" fill="#75CDB1"/>
+        <text x="28" y="18" class="transport" fill="#9ADCC7">ONE ENDPOINT</text>
+      </g>
+      <line x1="468" y1="315" x2="1132" y2="315" stroke="#35413F" stroke-width="1"/>
 
-  <!-- Плашка проблемы без Bridge -->
-  <rect x="30" y="435" width="230" height="68" rx="8" fill="#2A1619" stroke="#EF4444" stroke-width="1.2"/>
-  <text x="145" y="460" text-anchor="middle" fill="#F87171" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700">Without Bridge:</text>
-  <text x="145" y="480" text-anchor="middle" fill="#FCA5A5" font-family="Consolas, monospace" font-size="12">150+ schemas = 60k+ tokens</text>
-  <text x="145" y="496" text-anchor="middle" fill="#FCA5A5" font-family="Consolas, monospace" font-size="12">+ Zombie node.exe in RAM</text>
+      <g id="zero-tax-gateway">
+        <rect x="468" y="344" width="204" height="312" rx="7" fill="url(#gatewayFill)" stroke="#35584E" stroke-width="1"/>
+        <rect x="488" y="364" width="36" height="30" rx="4" fill="#15322F" stroke="#3F7665" stroke-width=".8"/>
+        <text x="506" y="384" text-anchor="middle" class="stepNo" fill="#9ADCC7">01</text>
+        <text x="488" y="435" class="stepTitle">Zero-Tax</text>
+        <text x="488" y="461" class="stepTitle">Gateway</text>
+        <line x1="488" y1="483" x2="652" y2="483" stroke="#3D6559" stroke-width="1.2"/>
+        <text x="488" y="521" class="feature" fill="#9ADCC7">Only 2 tools</text>
+        <text x="488" y="552" class="detail">Saves ~95% of</text>
+        <text x="488" y="572" class="detail">prompt tokens</text>
+        <text x="488" y="626" class="micro">LEAN TOOL CATALOGUE</text>
+      </g>
 
-  <!-- СТРЕЛКИ СЛИЯНИЯ: ОТ 3 СЕРВЕРОВ В ЯДРО BRIDGE -->
-  <path d="M 260 150 L 295 150 L 295 260" fill="none" stroke="#10B981" stroke-width="3"/>
-  <path d="M 260 370 L 295 370 L 295 260" fill="none" stroke="#10B981" stroke-width="3"/>
-  <line x1="260" y1="260" x2="332" y2="260" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+      <g id="live-hot-swap">
+        <rect x="698" y="344" width="204" height="312" rx="7" fill="url(#hotSwapFill)" stroke="#3B474B" stroke-width="1"/>
+        <rect x="718" y="364" width="36" height="30" rx="4" fill="#252B2E" stroke="#526168" stroke-width=".8"/>
+        <text x="736" y="384" text-anchor="middle" class="stepNo" fill="#C1C9CC">02</text>
+        <text x="718" y="435" class="stepTitle">Live</text>
+        <text x="718" y="461" class="stepTitle">Hot-Swap</text>
+        <line x1="718" y1="483" x2="882" y2="483" stroke="#4A565B" stroke-width="1.2"/>
+        <text x="718" y="521" class="feature" fill="#C1C9CC">1-click presets</text>
+        <text x="718" y="552" class="detail">Switch mid-chat</text>
+        <text x="718" y="572" class="detail">with no page reload</text>
+        <text x="718" y="626" class="micro">LIVE SERVER CONTROL</text>
+      </g>
 
-  <!-- ==================== 2. ЦЕНТР: ЯДРО MCP BRIDGE ==================== -->
-  <rect x="340" y="70" width="560" height="435" rx="14" fill="url(#bridgeBg)" stroke="#10B981" stroke-width="2.5"/>
-  <rect x="340" y="70" width="560" height="44" rx="14" fill="#15322F"/>
-  <text x="620" y="98" text-anchor="middle" fill="#34D399" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="800" letter-spacing="0.8">2. MCP BRIDGE CORE (WINDOWS NATIVE HUB)</text>
+      <g id="folder-ram-guard">
+        <rect x="928" y="344" width="204" height="312" rx="7" fill="url(#guardFill)" stroke="#6A542D" stroke-width="1"/>
+        <rect x="948" y="364" width="36" height="30" rx="4" fill="#332915" stroke="#806633" stroke-width=".8"/>
+        <text x="966" y="384" text-anchor="middle" class="stepNo" fill="#E0BB72">03</text>
+        <text x="948" y="435" class="stepTitle">Folder &amp;</text>
+        <text x="948" y="461" class="stepTitle">RAM Guard</text>
+        <line x1="948" y1="483" x2="1112" y2="483" stroke="#6A542D" stroke-width="1.2"/>
+        <text x="948" y="521" class="feature" fill="#E0BB72">Safe control</text>
+        <text x="948" y="552" class="detail">Folder rules &amp;</text>
+        <text x="948" y="572" class="detail">zero RAM leaks</text>
+        <text x="948" y="626" class="micro">ACCESS + PROCESS GUARD</text>
+      </g>
 
-  <!-- ШАГ 2.1: OS SANDBOX -->
-  <rect x="360" y="132" width="155" height="305" rx="10" fill="#1C2229" stroke="#343D48" stroke-width="1.5"/>
-  <rect x="375" y="146" width="125" height="24" rx="5" fill="#15322F"/>
-  <text x="437" y="163" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">STEP A · GUARD</text>
-  <text x="437" y="194" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">OS Sandbox</text>
+      <path d="M676 500H694" fill="none" stroke="#75CDB1" stroke-width="2" stroke-linecap="round" marker-end="url(#arrowMint)"/>
+      <path d="M906 500H924" fill="none" stroke="#75CDB1" stroke-width="2" stroke-linecap="round" marker-end="url(#arrowMint)"/>
+    </g>
 
-  <rect x="372" y="212" width="131" height="48" rx="6" fill="#14181D" stroke="#2D353F"/>
-  <text x="437" y="232" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12.5" font-weight="700">Job Object</text>
-  <text x="437" y="250" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Kills node.exe tree</text>
+    <path d="M364 331H388C399 331 408 340 408 351V462" fill="none" stroke="#75CDB1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M364 593H388C399 593 408 584 408 573V462" fill="none" stroke="#8C9AA0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="408" cy="462" r="4" fill="#75CDB1"/>
+    <path d="M408 462H435" fill="none" stroke="#75CDB1" stroke-width="2.4" stroke-linecap="round" marker-end="url(#arrowMint)"/>
+    <g transform="translate(320 445)">
+      <rect x="0" y="-15" width="58" height="22" rx="4" fill="#15322F" stroke="#315B50" stroke-width=".8"/>
+      <text x="29" y="0" text-anchor="middle" class="transport" fill="#9ADCC7">1 LINK</text>
+    </g>
 
-  <rect x="372" y="268" width="131" height="48" rx="6" fill="#14181D" stroke="#F59E0B" stroke-width="1"/>
-  <text x="437" y="288" text-anchor="middle" fill="#FBBF24" font-family="Consolas, monospace" font-size="12.5" font-weight="700">WAITING Mode</text>
-  <text x="437" y="306" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Sleeps till app starts</text>
+    <path d="M1165 462H1188" fill="none" stroke="#75CDB1" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M1188 462V351C1188 340 1197 331 1208 331H1226" fill="none" stroke="#75CDB1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowMint)"/>
+    <path d="M1188 462V573C1188 584 1197 593 1208 593H1226" fill="none" stroke="#8C9AA0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowSlate)"/>
+    <circle cx="1188" cy="462" r="4.4" fill="#75CDB1" stroke="#171C1D" stroke-width="1.2"/>
 
-  <rect x="372" y="324" width="131" height="48" rx="6" fill="#14181D" stroke="#EF4444" stroke-width="1"/>
-  <text x="437" y="344" text-anchor="middle" fill="#F87171" font-family="Consolas, monospace" font-size="12.5" font-weight="700">QUARANTINE</text>
-  <text x="437" y="362" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Isolates broken MCP</text>
+    <g id="local-tools">
+      <rect x="1226" y="238" width="310" height="186" rx="9" fill="#1B2022"/>
+      <rect x="1226" y="238" width="7" height="186" fill="#75CDB1" clip-path="url(#localToolsCardClip)"/>
+      <rect x="1226" y="238" width="310" height="186" rx="9" fill="none" stroke="#38413F" stroke-width="1.2"/>
+      <rect x="1250" y="260" width="142" height="25" rx="4" fill="#15322F"/>
+      <text x="1321" y="277" text-anchor="middle" class="transport" fill="#9ADCC7">AUTO STDIO → HTTP</text>
+      <g transform="translate(1481 272)" fill="none" stroke="#75CDB1" stroke-width="1.5" opacity=".9">
+        <rect x="-13" y="-13" width="26" height="26" rx="4"/>
+        <path d="M-7 -5H7M-7 0H7M-7 5H3"/>
+      </g>
+      <text x="1250" y="336" class="cardTitle">Local Tools</text>
+      <text x="1250" y="367" class="cardSub">GitHub  ·  Blender  ·  CLI</text>
+      <line x1="1250" y1="391" x2="1512" y2="391" stroke="#343C3F"/>
+      <text x="1250" y="410" class="micro">LOCAL STDIO SERVERS</text>
+    </g>
 
-  <rect x="372" y="380" width="131" height="44" rx="6" fill="#14181D" stroke="#2D353F"/>
-  <text x="437" y="400" text-anchor="middle" fill="#E5E7EB" font-family="Consolas, monospace" font-size="12" font-weight="700">roots-filter</text>
-  <text x="437" y="416" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11">Live folder security</text>
-
-  <!-- Стрелка Шаг A -> Шаг B -->
-  <line x1="515" y1="284" x2="540" y2="284" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
-
-  <!-- ШАГ 2.2: HOT-SWAP PRESETS -->
-  <rect x="546" y="132" width="155" height="305" rx="10" fill="#1C2229" stroke="#343D48" stroke-width="1.5"/>
-  <rect x="561" y="146" width="125" height="24" rx="5" fill="#15322F"/>
-  <text x="623" y="163" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">STEP B · FILTER</text>
-  <text x="623" y="194" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Hot-Swap</text>
-
-  <rect x="558" y="215" width="131" height="62" rx="6" fill="#15322F" stroke="#10B981"/>
-  <text x="623" y="240" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="13.5" font-weight="700">1-Click Presets</text>
-  <text x="623" y="260" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="11.5">Coding / 3D / Web</text>
-
-  <rect x="558" y="289" width="131" height="62" rx="6" fill="#14181D" stroke="#2D353F"/>
-  <text x="623" y="314" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="13.5" font-weight="700">Live Toggles</text>
-  <text x="623" y="334" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Turn servers ON/OFF</text>
-
-  <rect x="558" y="363" width="131" height="60" rx="6" fill="#14181D" stroke="#2D353F"/>
-  <text x="623" y="388" text-anchor="middle" fill="#34D399" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700">No Page Reload</text>
-  <text x="623" y="408" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="11.5">Switch mid-dialogue</text>
-
-  <!-- Стрелка Шаг B -> Шаг C -->
-  <line x1="701" y1="284" x2="726" y2="284" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
-
-  <!-- ШАГ 2.3: ZERO-TAX FACADE (2 META-TOOLS) -->
-  <rect x="732" y="132" width="150" height="305" rx="10" fill="#132A26" stroke="#10B981" stroke-width="2"/>
-  <rect x="745" y="146" width="124" height="24" rx="5" fill="#0D1F1C"/>
-  <text x="807" y="163" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">STEP C · OUTPUT</text>
-  <text x="807" y="194" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Zero-Tax</text>
-  <text x="807" y="216" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="12">Exposes ONLY 2 tools:</text>
-
-  <rect x="746" y="232" width="122" height="72" rx="8" fill="#0F201E" stroke="#34D399" stroke-width="1.5"/>
-  <text x="807" y="262" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="16" font-weight="700">all_tools</text>
-  <text x="807" y="286" text-anchor="middle" fill="#E5E7EB" font-family="Segoe UI, Inter, sans-serif" font-size="12">Fetches catalog</text>
-
-  <rect x="746" y="316" width="122" height="72" rx="8" fill="#0F201E" stroke="#34D399" stroke-width="1.5"/>
-  <text x="807" y="346" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="16" font-weight="700">call_tool</text>
-  <text x="807" y="370" text-anchor="middle" fill="#E5E7EB" font-family="Segoe UI, Inter, sans-serif" font-size="12">Runs tool by ID</text>
-
-  <text x="807" y="418" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12.5" font-weight="700">~0 Turn-0 Tokens!</text>
-
-  <!-- Нижняя плашка внутри ядра -->
-  <rect x="360" y="450" width="522" height="38" rx="8" fill="#14181E" stroke="#2A313C"/>
-  <text x="621" y="474" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="13">All-in-One Installer: <tspan fill="#34D399" font-weight="700">Node.js • uv • Filesystem MCP • Tailscale</tspan> + Auto <tspan fill="#FBBF24" font-family="Consolas, monospace">[REDACTED]</tspan> Logs</text>
-
-  <!-- ==================== ОТДЕЛЬНОЕ ОБЛАЧКО СНИЗУ: COMING SOON ==================== -->
-  <line x1="623" y1="437" x2="623" y2="532" stroke="#F59E0B" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#arrowAmber)"/>
-  <rect x="370" y="540" width="500" height="114" rx="14" fill="#211D15" stroke="#F59E0B" stroke-width="2" stroke-dasharray="8,5"/>
-  <rect x="390" y="554" width="145" height="24" rx="12" fill="#3B2A14" stroke="#F59E0B"/>
-  <text x="462" y="570" text-anchor="middle" fill="#FBBF24" font-family="Consolas, monospace" font-size="12" font-weight="700">⚡ COMING SOON</text>
-  <text x="550" y="571" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="16" font-weight="700">Per-Tool Toggle Inside Any Server</text>
-  <text x="620" y="604" text-anchor="middle" fill="#E5E7EB" font-family="Segoe UI, Inter, sans-serif" font-size="13.5">Mute individual tools instead of disabling the whole server.</text>
-  <text x="620" y="630" text-anchor="middle" fill="#FBBF24" font-family="Consolas, monospace" font-size="13" font-weight="700">Example: GitHub MCP (46 tools) ➔ Mute 40 unused, keep only 6 active</text>
-
-  <!-- ==================== СТРЕЛКИ ВЫХОДА ИЗ ШАГА C НАПРАВО ==================== -->
-  <path d="M 882 284 L 930 284 L 930 195 L 968 195" fill="none" stroke="#10B981" stroke-width="3" marker-end="url(#arrowGreen)"/>
-  <path d="M 882 284 L 930 284 L 930 405 L 968 405" fill="none" stroke="#60A5FA" stroke-width="3" marker-end="url(#arrowBlue)"/>
-
-  <!-- ==================== 3. ПРАВАЯ КОЛОНКА: ВЫХОД В КЛИЕНТЫ ==================== -->
-  <text x="1115" y="88" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="13" font-weight="700" letter-spacing="1">3. ONE LINK FOR AI (OUTPUT)</text>
-
-  <!-- Выход 1: Браузерный ИИ -->
-  <rect x="976" y="105" width="274" height="185" rx="12" fill="#182224" stroke="#10B981" stroke-width="2"/>
-  <rect x="994" y="121" width="238" height="26" rx="6" fill="#15322F"/>
-  <text x="1113" y="139" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12.5" font-weight="700">BROWSER &amp; WEB AI (HTTPS)</text>
-  <text x="1113" y="174" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="17" font-weight="700">1-Click Web Bridge</text>
-  <text x="1113" y="198" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="13">Supergateway + Tailscale Funnel</text>
-  <text x="1113" y="220" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">✓ Never breaks Windows DNS</text>
-  <text x="1113" y="240" text-anchor="middle" fill="#34D399" font-family="Consolas, monospace" font-size="12" font-weight="700">✓ No router port forwarding</text>
-  <text x="1113" y="270" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12.5" font-weight="600">Claude Web • ChatGPT • OpenWebUI</text>
-
-  <!-- Выход 2: Десктопный ИИ -->
-  <rect x="976" y="315" width="274" height="185" rx="12" fill="#181E27" stroke="#60A5FA" stroke-width="2"/>
-  <rect x="994" y="331" width="238" height="26" rx="6" fill="#1E293B"/>
-  <text x="1113" y="349" text-anchor="middle" fill="#93C5FD" font-family="Consolas, monospace" font-size="12.5" font-weight="700">DESKTOP &amp; IDE AI (LOCAL)</text>
-  <text x="1113" y="384" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Inter, sans-serif" font-size="17" font-weight="700">Single Local Endpoint</text>
-  <text x="1113" y="408" text-anchor="middle" fill="#93C5FD" font-family="Consolas, monospace" font-size="13">http://localhost:&lt;port&gt;/mcp</text>
-  <text x="1113" y="430" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="12.5">✓ Connect once, no JSON editing</text>
-  <text x="1113" y="450" text-anchor="middle" fill="#D1D5DB" font-family="Segoe UI, Inter, sans-serif" font-size="12.5">✓ 1 shared process for all tabs</text>
-  <text x="1113" y="480" text-anchor="middle" fill="#9CA3AF" font-family="Segoe UI, Inter, sans-serif" font-size="12.5" font-weight="600">Claude • Cursor • OpenCode • Codex</text>
+    <g id="http-cloud">
+      <rect x="1226" y="500" width="310" height="186" rx="9" fill="#1B2022"/>
+      <rect x="1226" y="500" width="7" height="186" fill="#8C9AA0" clip-path="url(#httpCloudCardClip)"/>
+      <rect x="1226" y="500" width="310" height="186" rx="9" fill="none" stroke="#38413F" stroke-width="1.2"/>
+      <rect x="1250" y="522" width="108" height="25" rx="4" fill="#252B2E" stroke="#465158" stroke-width=".8"/>
+      <text x="1304" y="539" text-anchor="middle" class="transport" fill="#C1C9CC">DIRECT HTTP</text>
+      <g transform="translate(1481 534)" fill="none" stroke="#9CAAB0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" opacity=".95">
+        <path d="M-12 7H10.5C15.2 7 18 3.8 18 0C18 -3.8 14.9 -6.8 10.9 -6.8C9.4 -12.1 4.7 -15 -0.3 -13.6C-4.5 -12.5 -7.2 -9.1 -7.2 -5.3C-11.7 -5.7 -15  -2.6 -15 1C-15 4.4 -13.7 7 -12 7Z"/>
+      </g>
+      <text x="1250" y="598" class="cardTitle">HTTP &amp; Cloud</text>
+      <text x="1250" y="629" class="cardSub">IDE Plugins  ·  Web APIs</text>
+      <line x1="1250" y1="653" x2="1512" y2="653" stroke="#343C3F"/>
+      <text x="1250" y="672" class="micro">REMOTE / HTTP SERVICES</text>
+    </g>
+  </g>
 </svg>
