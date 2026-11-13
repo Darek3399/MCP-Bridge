@@ -1,6 +1,7 @@
 <Application x:Class="McpBridge.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:services="clr-namespace:McpBridge.Services">
     <Application.Resources>
         <!-- ПАЛИТРА BATTERX: МАТОВЫЙ ГРАФИТ + НЕОНОВЫЙ ЦИАН -->
         <Color x:Key="WindowBackgroundColor">#181A1D</Color>
@@ -46,6 +47,16 @@
         <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,0">
             <GradientStop Color="#1F3836" Offset="0" />
             <GradientStop Color="#172B2A" Offset="1" />
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="SecondaryButtonGradient" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#292D34" Offset="0" />
+            <GradientStop Color="#1B1E23" Offset="1" />
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="SecondaryButtonHoverGradient" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#323740" Offset="0" />
+            <GradientStop Color="#23272D" Offset="1" />
         </LinearGradientBrush>
 
         <LinearGradientBrush x:Key="PanelGradient" StartPoint="0,0" EndPoint="0,1">
@@ -160,15 +171,15 @@
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
-            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+            <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
         </Style>
 
         <!-- КНОПКИ -->
         <Style TargetType="Button">
-            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
-            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+            <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Foreground" Value="#D6DCE2" />
             <Setter Property="Background" Value="#1B1E22" />
@@ -186,9 +197,24 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="2">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Margin="{TemplateBinding Padding}" />
+                            <Grid Margin="{TemplateBinding Padding}">
+                                <TextBlock Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static services:StringOnlyConverter.Instance}}"
+                                           FontWeight="SemiBold"
+                                           Padding="0,0,0,2"
+                                           Visibility="Hidden"
+                                           IsHitTestVisible="False"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center">
+                                    <ContentPresenter.Resources>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Padding" Value="0,0,0,2" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                        </Style>
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -222,27 +248,29 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{x:Static Brushes.Transparent}" />
             <Setter Property="Foreground" Value="#8A929A" />
-            <Setter Property="Padding" Value="18,14" />
+            <Setter Property="Padding" Value="18,13,18,15" />
             <Setter Property="Margin" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid SnapsToDevicePixels="True">
-                            <Border x:Name="NavBorder"
-                                    Background="#272B31"
-                                    BorderBrush="#15171A"
-                                    BorderThickness="0,0,0,1">
+                        <Border x:Name="NavBorder"
+                                Background="#272B31"
+                                BorderBrush="#15171A"
+                                BorderThickness="0,0,0,1"
+                                SnapsToDevicePixels="True">
+                            <Grid>
                                 <ContentPresenter Margin="{TemplateBinding Padding}"
                                                   HorizontalAlignment="Stretch"
                                                   VerticalAlignment="Center" />
-                            </Border>
-                            <Border x:Name="ActiveIndicator"
-                                    Width="3"
-                                    HorizontalAlignment="Right"
-                                    Background="#2CE5D0"
-                                    Visibility="Visible" />
-                        </Grid>
+                                <Border x:Name="ActiveIndicator"
+                                        Width="3"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Stretch"
+                                        Background="#2CE5D0"
+                                        Visibility="Visible" />
+                            </Grid>
+                        </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="BorderBrush" Value="{x:Static Brushes.Transparent}">
                                 <Setter TargetName="NavBorder" Property="Background" Value="#1E2125" />
@@ -271,6 +299,7 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="2" />
             <Setter Property="Padding" Value="18,16" />
+            <Setter Property="ClipToBounds" Value="True" />
         </Style>
 
         <!-- KPI-КАРТОЧКА С НИЖНЕЙ БИРЮЗОВОЙ ЛИНИЕЙ 2PX -->
@@ -295,8 +324,8 @@
 
         <!-- ПОЛЯ ВВОДА И СПИСКИ -->
         <Style TargetType="TextBox">
-            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
-            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+            <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="Background" Value="#181A1E" />
@@ -350,8 +379,8 @@
 
         <!-- КАСТОМНЫЙ ЧЕКБОКС -->
         <Style TargetType="CheckBox">
-            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
-            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+            <Setter Property="TextOptions.TextRenderingMode" Value="Auto" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />

@@ -5,9 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -233,6 +235,42 @@ public sealed class AppUpdateService
         }
     }
 
+    private const uint ProcessQueryLimitedInformation = 0x1000;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool QueryFullProcessImageName(
+        IntPtr hProcess,
+        int dwFlags,
+        StringBuilder lpExeName,
+        ref int lpdwSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    private static string? TryGetProcessExecutablePath(int processId)
+    {
+        var handle = OpenProcess(ProcessQueryLimitedInformation, false, processId);
+        if (handle == IntPtr.Zero)
+            return null;
+
+        try
+        {
+            var capacity = 1024;
+            var builder = new StringBuilder(capacity);
+            if (QueryFullProcessImageName(handle, 0, builder, ref capacity))
+                return builder.ToString();
+        }
+        finally
+        {
+            CloseHandle(handle);
+        }
+
+        return null;
+    }
+
     private static bool IsUpdaterProcessRunning()
     {
         var updatesDirectory = Path.GetFullPath(AppPaths.UpdatesDirectory)
@@ -244,16 +282,23 @@ public sealed class AppUpdateService
             using (process)
             {
                 string processName;
-                try { processName = process.ProcessName; }
-                catch { continue; }
+                int processId;
+                try
+                {
+                    processName = process.ProcessName;
+                    processId = process.Id;
+                }
+                catch
+                {
+                    continue;
+                }
 
-                if (!processName.StartsWith("MCPBridge.Updater", StringComparison.OrdinalIgnoreCase) &&
-                    !processName.StartsWith("MCPBridge-Setup-", StringComparison.OrdinalIgnoreCase))
+                if (!processName.StartsWith("MCPBridge.Updater", StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 try
                 {
-                    var executablePath = process.MainModule?.FileName;
+                    var executablePath = TryGetProcessExecutablePath(processId) ?? process.MainModule?.FileName;
                     if (string.IsNullOrWhiteSpace(executablePath))
                         continue;
 
@@ -262,11 +307,7 @@ public sealed class AppUpdateService
                         fullPath.StartsWith(updatesDirectory, StringComparison.OrdinalIgnoreCase))
                         return true;
                 }
-                catch
-                {
-                    // Fail closed when a matching updater process exists but its image path cannot be read.
-                    return true;
-                }
+                catch { }
             }
         }
 

@@ -43,8 +43,8 @@ public sealed class DependencyStatusView : UserControl
         FontSize = 12;
         UseLayoutRounding = true;
         SnapsToDevicePixels = true;
-        SetValue(TextOptions.TextFormattingModeProperty, TextFormattingMode.Ideal);
-        SetValue(TextOptions.TextRenderingModeProperty, TextRenderingMode.ClearType);
+        SetValue(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display);
+        SetValue(TextOptions.TextRenderingModeProperty, TextRenderingMode.Auto);
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -123,8 +123,8 @@ public sealed class DependencyStatusView : UserControl
             EnableRowVirtualization = true
         };
 
-        _grid.SetValue(TextOptions.TextFormattingModeProperty, TextFormattingMode.Ideal);
-        _grid.SetValue(TextOptions.TextRenderingModeProperty, TextRenderingMode.ClearType);
+        _grid.SetValue(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display);
+        _grid.SetValue(TextOptions.TextRenderingModeProperty, TextRenderingMode.Auto);
         ScrollViewer.SetCanContentScroll(_grid, true);
         ScrollViewer.SetHorizontalScrollBarVisibility(_grid, ScrollBarVisibility.Auto);
         ScrollViewer.SetVerticalScrollBarVisibility(_grid, ScrollBarVisibility.Auto);
@@ -154,7 +154,7 @@ public sealed class DependencyStatusView : UserControl
             ClipToBounds = true,
             Child = _grid
         };
-        ApplySharedCardStyle(tableCard, new Thickness(1));
+        ApplySharedCardStyle(tableCard, new Thickness(2));
         Grid.SetRow(tableCard, 1);
         root.Children.Add(tableCard);
 
@@ -280,8 +280,8 @@ public sealed class DependencyStatusView : UserControl
         textStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty, Brush("#D6DCE2")));
         textStyle.Setters.Add(new Setter(TextBlock.FontFamilyProperty, new FontFamily("Segoe UI")));
         textStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 12.0));
-        textStyle.Setters.Add(new Setter(TextOptions.TextFormattingModeProperty, TextFormattingMode.Ideal));
-        textStyle.Setters.Add(new Setter(TextOptions.TextRenderingModeProperty, TextRenderingMode.ClearType));
+        textStyle.Setters.Add(new Setter(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display));
+        textStyle.Setters.Add(new Setter(TextOptions.TextRenderingModeProperty, TextRenderingMode.Auto));
         textStyle.Setters.Add(new Setter(UIElement.SnapsToDevicePixelsProperty, true));
         textStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
         textStyle.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap));
@@ -360,8 +360,8 @@ public sealed class DependencyStatusView : UserControl
         style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Left));
         style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
         style.Setters.Add(new Setter(Control.FocusVisualStyleProperty, null));
-        style.Setters.Add(new Setter(TextOptions.TextFormattingModeProperty, TextFormattingMode.Ideal));
-        style.Setters.Add(new Setter(TextOptions.TextRenderingModeProperty, TextRenderingMode.ClearType));
+        style.Setters.Add(new Setter(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display));
+        style.Setters.Add(new Setter(TextOptions.TextRenderingModeProperty, TextRenderingMode.Auto));
         style.Setters.Add(new Setter(UIElement.SnapsToDevicePixelsProperty, true));
 
         var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
@@ -435,8 +435,8 @@ public sealed class DependencyStatusView : UserControl
         style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(10, 7, 10, 7)));
         style.Setters.Add(new Setter(Control.FontFamilyProperty, new FontFamily("Segoe UI")));
         style.Setters.Add(new Setter(Control.FontSizeProperty, 11.0));
-        style.Setters.Add(new Setter(TextOptions.TextFormattingModeProperty, TextFormattingMode.Ideal));
-        style.Setters.Add(new Setter(TextOptions.TextRenderingModeProperty, TextRenderingMode.ClearType));
+        style.Setters.Add(new Setter(TextOptions.TextFormattingModeProperty, TextFormattingMode.Display));
+        style.Setters.Add(new Setter(TextOptions.TextRenderingModeProperty, TextRenderingMode.Auto));
         style.Setters.Add(new Setter(FrameworkElement.MaxWidthProperty, 480.0));
         style.Setters.Add(new Setter(System.Windows.Controls.ToolTip.HasDropShadowProperty, true));
 

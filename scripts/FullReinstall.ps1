@@ -48,8 +48,11 @@ function Remove-RegisteredNodeMsiProducts {
     $products = @(Get-RegisteredNodeMsiProducts)
     $msiExec = Join-Path $env:SystemRoot 'System32\msiexec.exe'
 
+    $logsDir = Join-Path $AppDirectory 'Logs'
+    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+
     foreach ($product in $products) {
-        $logPath = Join-Path $env:TEMP ('MCPBridge-node-msi-uninstall-' + ([Guid]::NewGuid().ToString('N')) + '.log')
+        $logPath = Join-Path $logsDir ('node-msi-uninstall-' + ([Guid]::NewGuid().ToString('N')) + '.log')
         $arguments = '/x "' + $product.ProductCode + '" /qn /norestart /L*v "' + $logPath + '"'
         $process = Start-Process -FilePath $msiExec -ArgumentList $arguments -PassThru -Wait -WindowStyle Hidden
 
@@ -96,7 +99,7 @@ try {
     # Keep user configuration (including the persistent Tunnel ID) and logs.
     # Every application/dependency/adapter file is repopulated from this installer.
     foreach ($item in (Get-ChildItem -LiteralPath $resolvedAppDirectory -Force)) {
-        if ($item.Name -in @('Config', 'Logs')) { continue }
+        if ($item.Name -in @('Config', 'Logs', 'Updates')) { continue }
         Remove-Item -LiteralPath $item.FullName -Recurse -Force
     }
 

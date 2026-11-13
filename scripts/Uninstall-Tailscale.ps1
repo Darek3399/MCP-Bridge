@@ -173,6 +173,25 @@ if ($installedByBridge) {
         throw "Не удалось удалить Tailscale MSI. Код: $($msi.ExitCode)"
     }
     Remove-Item -LiteralPath $managedMsiPath -Force -ErrorAction SilentlyContinue
+
+    $removeTailscaleKey = $false
+    try {
+        $keyFlag = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\MCPBridge' -Name 'UninstallRemoveTailscaleKey' -ErrorAction Stop
+        $removeTailscaleKey = [string]$keyFlag -eq '1'
+    }
+    catch { }
+
+    if ($removeTailscaleKey) {
+        foreach ($tsDir in @(
+            (Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'Tailscale'),
+            (Join-Path $env:LOCALAPPDATA 'Tailscale'),
+            (Join-Path $env:APPDATA 'Tailscale')
+        )) {
+            if (-not [string]::IsNullOrWhiteSpace($tsDir) -and (Test-Path -LiteralPath $tsDir)) {
+                Remove-Item -LiteralPath $tsDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
 }
 else {
     $previousAcceptDns = [regex]::Match($stateText, '(?m)^PreviousAcceptDns=(true|false)$').Groups[1].Value
@@ -201,6 +220,10 @@ else {
 
         Start-Service -Name 'Tailscale'
         (Get-Service -Name 'Tailscale').WaitForStatus('Running', [TimeSpan]::FromSeconds(45))
+
+        if ($bridgeAppliedSettings) {
+            try { & $cliPath funnel --https=443 --set-path=/mcp off 2>$null | Out-Null } catch { }
+        }
 
         if ($previousAcceptDns) {
             & $cliPath set ('--accept-dns=' + $previousAcceptDns)

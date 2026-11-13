@@ -1294,7 +1294,7 @@ internal sealed class TailscaleService : IDisposable
         bool requestElevation = true,
         CancellationToken cancellationToken = default)
     {
-        var scriptDirectory = Path.Combine(Path.GetTempPath(), "MCPBridge", "Scripts");
+        var scriptDirectory = Path.Combine(AppPaths.ConfigDirectory, "Temp");
         Directory.CreateDirectory(scriptDirectory);
         var helperId = Guid.NewGuid().ToString("N");
         var scriptPath = Path.Combine(scriptDirectory, "TailscaleSetup-" + helperId + ".ps1");
@@ -1320,8 +1320,9 @@ internal sealed class TailscaleService : IDisposable
         {
             if (embeddedScript == null)
                 throw new FileNotFoundException("В сборке MCPBridge отсутствует EmbeddedResource TailscaleSetup.ps1.");
-            using var scriptFile = new FileStream(scriptPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
-            embeddedScript.CopyTo(scriptFile);
+            using var reader = new StreamReader(embeddedScript, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            var scriptContent = reader.ReadToEnd().TrimStart('\uFEFF');
+            File.WriteAllText(scriptPath, scriptContent, new UTF8Encoding(true));
         }
 
         if (!File.Exists(msiPath))
@@ -1349,7 +1350,9 @@ internal sealed class TailscaleService : IDisposable
                 // The non-elevated helper must be a fully detached hidden process.
                 // CreateNoWindow is effective only with UseShellExecute=false.
                 CreateNoWindow = !requestElevation,
-                WindowStyle = ProcessWindowStyle.Hidden
+                WindowStyle = ProcessWindowStyle.Hidden,
+                RedirectStandardOutput = !requestElevation,
+                RedirectStandardError = !requestElevation
             };
 
             // ShellExecute("runas") can wait for the UAC dialog. Never call it
@@ -1402,6 +1405,9 @@ internal sealed class TailscaleService : IDisposable
             if (process == null)
                 throw new InvalidOperationException("Не удалось запустить сценарий настройки Tailscale с правами администратора.");
 
+            var stdoutTask = !requestElevation ? process.StandardOutput.ReadToEndAsync() : Task.FromResult(string.Empty);
+            var stderrTask = !requestElevation ? process.StandardError.ReadToEndAsync() : Task.FromResult(string.Empty);
+
             var helperDeadline = DateTime.UtcNow.AddSeconds(75);
             try
             {
@@ -1431,6 +1437,17 @@ internal sealed class TailscaleService : IDisposable
                 throw new System.TimeoutException("Сценарий настройки Tailscale превысил 75 секунд.");
             }
 
+            var consoleOutput = string.Empty;
+            if (!requestElevation)
+            {
+                try
+                {
+                    await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+                    consoleOutput = (stdoutTask.Result + Environment.NewLine + stderrTask.Result).Trim();
+                }
+                catch { }
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             var values = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var output = string.Empty;
@@ -1445,6 +1462,9 @@ internal sealed class TailscaleService : IDisposable
                     values[line.Substring(0, separator).Trim()] = line.Substring(separator + 1).Trim();
                 }
             }
+
+            if (string.IsNullOrWhiteSpace(output) && !string.IsNullOrWhiteSpace(consoleOutput))
+                output = consoleOutput;
 
             return new SetupHelperResult(process.ExitCode, values, output);
         }

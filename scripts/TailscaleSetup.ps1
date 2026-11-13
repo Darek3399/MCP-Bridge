@@ -474,8 +474,10 @@ function Test-FunnelCapability([string]$Cli) {
     }
 
     $id = [Guid]::NewGuid().ToString('N')
-    $stdoutPath = Join-Path $env:TEMP ('MCPBridge-FunnelProbe-' + $id + '-funnel.out')
-    $stderrPath = Join-Path $env:TEMP ('MCPBridge-FunnelProbe-' + $id + '-funnel.err')
+    $probeTempDir = Split-Path -Parent $OutputFile
+    if ([string]::IsNullOrWhiteSpace($probeTempDir)) { $probeTempDir = $env:TEMP }
+    $stdoutPath = Join-Path $probeTempDir ('MCPBridge-FunnelProbe-' + $id + '-funnel.out')
+    $stderrPath = Join-Path $probeTempDir ('MCPBridge-FunnelProbe-' + $id + '-funnel.err')
     $probePath = '/mcpbridge-test-' + $id.Substring(0, 8)
 
     $funnelProcess = $null
@@ -804,7 +806,9 @@ try {
 
         if (-not $wasInstalled) {
             Copy-Item -LiteralPath $MsiPath -Destination $managedMsiPath -Force
-            $logPath = Join-Path $env:TEMP 'MCPBridge-tailscale-msi.log'
+            $logsDir = Join-Path (Split-Path -Parent (Split-Path -Parent $StateFile)) 'Logs'
+            New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+            $logPath = Join-Path $logsDir 'tailscale-msi.log'
             $arguments = '/i "' + $MsiPath + '" /qn /norestart TS_NOLAUNCH=1 INSTALLDIR="' + $installDirectory + '" /L*v "' + $logPath + '"'
             $msi = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\msiexec.exe') -ArgumentList $arguments -PassThru -Wait -WindowStyle Hidden
             if ($msi.ExitCode -notin @(0, 3010, 1641)) {
@@ -856,7 +860,9 @@ try {
                 Copy-Item -LiteralPath $MsiPath -Destination $managedMsiPath -Force
             }
 
-            $repairLogPath = Join-Path $env:TEMP 'MCPBridge-tailscale-msi-repair.log'
+            $logsDir = Join-Path (Split-Path -Parent (Split-Path -Parent $StateFile)) 'Logs'
+            New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+            $repairLogPath = Join-Path $logsDir 'tailscale-msi-repair.log'
             $repairArguments = '/i "' + $MsiPath + '" REINSTALL=ALL REINSTALLMODE=vomus TS_NOLAUNCH=1 /qn /norestart /L*v "' + $repairLogPath + '"'
             $repair = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\msiexec.exe') -ArgumentList $repairArguments -PassThru -Wait -WindowStyle Hidden
             if ($repair.ExitCode -notin @(0, 3010, 1641)) {

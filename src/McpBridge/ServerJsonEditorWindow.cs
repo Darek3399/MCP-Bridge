@@ -89,6 +89,7 @@ public sealed class ServerJsonEditorWindow : Window
             CaptionHeight = 52,
             ResizeBorderThickness = new Thickness(8),
             GlassFrameThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(0),
             UseAeroCaptionButtons = false
         };
         WindowChrome.SetWindowChrome(this, chrome);
@@ -454,7 +455,15 @@ public sealed class ServerJsonEditorWindow : Window
         Grid.SetRow(buttonGrid, 2);
         outerGrid.Children.Add(buttonGrid);
 
-        Content = rootGrid;
+        var windowOuterBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(24, 26, 29)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(17, 19, 21)),
+            BorderThickness = new Thickness(1),
+            Child = rootGrid
+        };
+        WindowChromeHelper.Configure(this, windowOuterBorder, rootGrid, 5.0);
+        Content = windowOuterBorder;
         InitializeEditorDocument(initialJson);
     }
 
@@ -826,6 +835,11 @@ public sealed class ServerJsonEditorWindow : Window
                 throw new FormatException(I18n.Tr(
                     "Filesystem MCP уже встроен в систему. Настройте разрешённые папки в существующем Filesystem MCP вместо повторного добавления.",
                     "Filesystem MCP is already built in. Configure allowed folders in the existing Filesystem MCP instead of adding it again."));
+
+            if (string.Equals(candidate.Id, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
+                throw new FormatException(I18n.Tr(
+                    "Сервер с идентификатором unreal уже существует. Отредактируйте существующий сервер или укажите другое имя.",
+                    "A server with ID 'unreal' already exists. Edit the existing server or choose a different name."));
 
             try
             {
@@ -1208,6 +1222,7 @@ public sealed class ServerJsonEditorWindow : Window
             CaptionHeight = 40,
             ResizeBorderThickness = new Thickness(0),
             GlassFrameThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(0),
             UseAeroCaptionButtons = false
         };
         WindowChrome.SetWindowChrome(dialog, chrome);
@@ -1272,7 +1287,8 @@ public sealed class ServerJsonEditorWindow : Window
 
         root.Children.Add(btnPanel);
         
-        var outerBorder = new Border { BorderBrush = new SolidColorBrush(Color.FromRgb(49, 54, 61)), BorderThickness = new Thickness(1), Child = root };
+        var outerBorder = new Border { Background = new SolidColorBrush(Color.FromRgb(24, 26, 29)), BorderBrush = new SolidColorBrush(Color.FromRgb(49, 54, 61)), BorderThickness = new Thickness(1), Child = root };
+        WindowChromeHelper.Configure(dialog, outerBorder, root, 5.0);
         dialog.Content = outerBorder;
         
         dialog.ShowDialog();

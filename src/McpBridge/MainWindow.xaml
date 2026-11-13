@@ -3,12 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:services="clr-namespace:McpBridge.Services"
         Title="MCP Bridge" Height="860" Width="1360" MinHeight="640" MinWidth="980" WindowStyle="None" ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen" Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource TextPrimaryBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True"
-        TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" Closing="Window_Closing">
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Auto" Closing="Window_Closing">
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="52" ResizeBorderThickness="8" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+        <shell:WindowChrome CaptionHeight="52" ResizeBorderThickness="8" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
@@ -161,8 +162,8 @@
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="#111315" BorderThickness="1">
-        <Grid>
+    <Border x:Name="MainWindowBorder" Background="{StaticResource WindowBackgroundBrush}" BorderBrush="#111315" BorderThickness="1">
+        <Grid x:Name="MainWindowRootGrid">
             <Grid.RowDefinitions>
                 <RowDefinition Height="52"/>
                 <RowDefinition Height="*"/>
@@ -180,12 +181,12 @@
 
                     <!-- ЧИСТЫЙ ЗНАЧОК >< БЕЗ ФОНА И ОБВОДКИ (1 В 1 КАК СЛЕВА ВНИЗУ) -->
                     <Border Grid.Column="0" BorderBrush="#15171A" BorderThickness="0,0,1,0" Padding="18,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,-2,0,0">
                             <Path Data="M 2,4 L 8,10 L 2,16 M 18,4 L 12,10 L 18,16"
                                   Stroke="#2CE5D0" StrokeThickness="1.8" Width="18" Height="16" Stretch="Uniform"
                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock VerticalAlignment="Center" FontSize="19">
+                            <TextBlock VerticalAlignment="Center" FontSize="19" Padding="0,0,0,2" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="Auto">
                                 <Run Text="mcp" Foreground="#B8C0C8" FontWeight="Light"/><Run Text="Bridge" Foreground="#FFFFFF" FontWeight="SemiBold"/>
                             </TextBlock>
                         </StackPanel>
@@ -291,17 +292,16 @@
                         <!-- НИЖНЯЯ ПАНЕЛЬ: ОБНОВЛЕНИЕ, ВЕРСИЯ И GITHUB -->
                         <StackPanel Grid.Row="1" VerticalAlignment="Bottom">
                             <Button x:Name="SidebarUpdateButton"
-                                    Content="Обновить"
                                     Visibility="Collapsed"
                                     Height="61"
                                     HorizontalAlignment="Stretch"
                                     Background="#2CE5D0"
-                                    Foreground="#101719"
+                                    Foreground="#303A3C"
                                     BorderBrush="#15171A"
                                     BorderThickness="0,0,0,1"
                                     FontWeight="SemiBold"
-                                    FontSize="13"
-                                    Padding="18,14"
+                                    FontSize="15"
+                                    Padding="0"
                                     Cursor="Hand"
                                     Click="SidebarUpdate_Click"
                                     ToolTipService.IsEnabled="False">
@@ -310,8 +310,8 @@
                                         <Border Background="{TemplateBinding Background}"
                                                 BorderBrush="{TemplateBinding BorderBrush}"
                                                 BorderThickness="{TemplateBinding BorderThickness}">
-                                            <ContentPresenter HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"
+                                            <ContentPresenter HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Stretch"
                                                               Margin="{TemplateBinding Padding}"/>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -322,11 +322,37 @@
                                                 <Setter Property="Opacity" Value="0.82"/>
                                             </Trigger>
                                             <Trigger Property="IsEnabled" Value="False">
-                                                <Setter Property="Opacity" Value="0.55"/>
+                                                <Setter Property="Opacity" Value="0.72"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </Button.Template>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="3"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock x:Name="SidebarUpdateButtonText"
+                                               Grid.Row="0"
+                                               Text="Обновить"
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               Foreground="#303A3C"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <ProgressBar x:Name="SidebarUpdateProgressBar"
+                                                 Grid.Row="1"
+                                                 Height="3"
+                                                 Minimum="0"
+                                                 Maximum="100"
+                                                 Value="0"
+                                                 Background="#84EDE2"
+                                                 Foreground="#303A3C"
+                                                 BorderThickness="0"
+                                                 IsHitTestVisible="False"
+                                                 Visibility="Collapsed"/>
+                                </Grid>
                             </Button>
 
                             <Border Background="#1A1C20" Padding="14,8">
@@ -404,7 +430,7 @@
                                                 </Border>
                                                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                     <TextBlock x:Name="Kpi1TitleText" Text="Активные сервисы" FontSize="11" Foreground="#7A828C" HorizontalAlignment="Right"/>
-                                                    <TextBlock x:Name="DashboardServiceCount" Text="0 / 0" FontSize="23" FontWeight="Light" Foreground="#F2F5F8" HorizontalAlignment="Right" Margin="0,2,0,1"/>
+                                                    <TextBlock x:Name="DashboardServiceCount" Text="0 / 0" FontSize="23" FontWeight="Light" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="Auto" Foreground="#F2F5F8" HorizontalAlignment="Right" Margin="0,2,0,1"/>
                                                     <TextBlock x:Name="Kpi1SubText" Text="Динамический шлюз" FontSize="10" Foreground="#586069" HorizontalAlignment="Right"/>
                                                 </StackPanel>
                                             </Grid>
@@ -432,7 +458,7 @@
                                                 </Border>
                                                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                     <TextBlock x:Name="Kpi3TitleText" Text="Онлайн-подключение" FontSize="11" Foreground="#7A828C" HorizontalAlignment="Right"/>
-                                                    <TextBlock x:Name="DashboardPublicUrlState" Text="Не активен" FontSize="16" FontWeight="Light" Foreground="#F2F5F8" HorizontalAlignment="Right" Margin="0,3,0,2"/>
+                                                    <TextBlock x:Name="DashboardPublicUrlState" Text="Не активен" FontSize="16" FontWeight="Light" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="Auto" Foreground="#F2F5F8" HorizontalAlignment="Right" Margin="0,3,0,2"/>
                                                     <TextBlock x:Name="Kpi3SubText" Text="Tailscale Funnel" FontSize="10" Foreground="#2CE5D0" HorizontalAlignment="Right"/>
                                                 </StackPanel>
                                             </Grid>
@@ -471,8 +497,8 @@
                                                                     <TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedTextStyle}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
                                                                 </StackPanel>
                                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                    <Border Background="{Binding BadgeBackground}" BorderBrush="{Binding BadgeBorder}" BorderThickness="1" CornerRadius="2" Padding="8,3" Margin="0,0,12,0" VerticalAlignment="Center">
-                                                                        <TextBlock Text="{Binding BadgeText}" FontSize="10" FontWeight="SemiBold" Foreground="{Binding BadgeForeground}"/>
+                                                                    <Border Background="{Binding BadgeBackground}" BorderBrush="{Binding BadgeBorder}" BorderThickness="1" CornerRadius="2" UseLayoutRounding="False" Padding="8,3" Margin="0,0,12,0" VerticalAlignment="Center">
+                                                                        <TextBlock Text="{Binding BadgeText}" FontSize="10" FontWeight="SemiBold" Padding="0,0,0,1" Foreground="{Binding BadgeForeground}"/>
                                                                     </Border>
                                                                     <TextBlock Text="{Binding DisplayStatusText}" Foreground="{Binding BadgeForeground}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                                 </StackPanel>
@@ -543,8 +569,8 @@
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                                                <Button x:Name="SavePresetBtn" Content="＋ Сохранить пресет" Click="SavePreset_Click" Margin="0,0,8,0" Padding="12,7,12,9"/>
-                                                <Button x:Name="AddServerBtn" Content="＋ Добавить сервер" Click="AddCustomServer_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="14,7,14,9"/>
+                                                <Button x:Name="SavePresetBtn" Content="＋ Сохранить пресет" Click="SavePreset_Click" Margin="0,0,8,0" Padding="12,8"/>
+                                                <Button x:Name="AddServerBtn" Content="＋ Добавить сервер" Click="AddCustomServer_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="14,8"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -606,8 +632,8 @@
                                                                                 <ToolTip Style="{StaticResource McpTableCellToolTipStyle}" Content="{Binding Name}"/>
                                                                             </TextBlock.ToolTip>
                                                                         </TextBlock>
-                                                                        <Border Grid.Column="1" Background="{Binding BadgeBackground}" BorderBrush="{Binding BadgeBorder}" BorderThickness="1" CornerRadius="2" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                                            <TextBlock Text="{Binding BadgeText}" FontSize="9.5" FontWeight="SemiBold" Foreground="{Binding BadgeForeground}"/>
+                                                                        <Border Grid.Column="1" Background="{Binding BadgeBackground}" BorderBrush="{Binding BadgeBorder}" BorderThickness="1" CornerRadius="2" UseLayoutRounding="False" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                                            <TextBlock Text="{Binding BadgeText}" FontSize="9.5" FontWeight="SemiBold" Padding="0,0,0,1" Foreground="{Binding BadgeForeground}"/>
                                                                         </Border>
                                                                     </Grid>
                                                                     <TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedTextStyle}" Margin="0,2,0,0"
@@ -720,13 +746,13 @@
                                     <StackPanel Grid.Column="0">
                                         <TextBlock x:Name="SettingsNavigationTitleText" Text="SETTINGS" FontSize="10" FontWeight="Bold" Foreground="#68707A" Margin="12,2,0,10"/>
                                         <Button x:Name="TechnicalSettingsNavButton" Style="{StaticResource SidebarButtonStyle}" Click="TechnicalSettingsNav_Click" BorderBrush="#2CE5D0">
-                                            <TextBlock x:Name="TechnicalSettingsNavText" Text="Технические настройки и подключения" TextWrapping="Wrap" FontSize="12.5" FontWeight="SemiBold" Foreground="#F2F5F8"/>
+                                            <TextBlock x:Name="TechnicalSettingsNavText" Text="Технические настройки и подключения" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#F2F5F8"/>
                                         </Button>
                                         <Button x:Name="InterfaceSettingsNavButton" Style="{StaticResource SidebarButtonStyle}" Click="InterfaceSettingsNav_Click">
-                                            <TextBlock x:Name="InterfaceSettingsNavText" Text="Интерфейс и приложение" TextWrapping="Wrap" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
+                                            <TextBlock x:Name="InterfaceSettingsNavText" Text="Интерфейс и приложение" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
                                         </Button>
                                         <Button x:Name="ComponentsSettingsNavButton" Style="{StaticResource SidebarButtonStyle}" Click="ComponentsSettingsNav_Click">
-                                            <TextBlock x:Name="ComponentsSettingsNavText" Text="Компоненты" TextWrapping="Wrap" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
+                                            <TextBlock x:Name="ComponentsSettingsNavText" Text="Компоненты" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
                                         </Button>
                                     </StackPanel>
 
@@ -762,8 +788,8 @@
                                                                 <Grid>
                                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                                                     <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" Click="RootToggle_Click" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                                    <TextBlock Grid.Column="1" Text="{Binding Path}" Foreground="{Binding PathForeground}" FontFamily="Consolas" FontSize="11.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                                                                    <TextBlock Grid.Column="2" Text="{Binding StatusLabel}" FontSize="10" Foreground="{Binding StatusForeground}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding Path}" Foreground="{Binding PathForeground}" FontFamily="Consolas" FontSize="11.5" VerticalAlignment="Center" Padding="0,0,0,3" TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Column="2" Text="{Binding StatusLabel}" FontSize="10" Foreground="{Binding StatusForeground}" VerticalAlignment="Center" Padding="0,0,0,2.5" Margin="8,0,0,0"/>
                                                                 </Grid>
                                                             </Border>
                                                         </DataTemplate>
@@ -789,7 +815,8 @@
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock x:Name="TunnelSettingsTitleText" Text="Tailscale" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
                                                     <Button x:Name="TailscaleCheckButton" Grid.Column="1" Content="Подключить" Click="TailscaleCheck_Click"
-                                                            Style="{StaticResource PrimaryButtonStyle}" Padding="12,5" FontSize="11" Margin="0,0,8,0"/>
+                                                            ToolTipService.IsEnabled="False"
+                                                            Style="{StaticResource PrimaryButtonStyle}" Padding="12,6" FontSize="11" Margin="0,0,8,0"/>
                                                     <Button x:Name="TailscaleHelpButton" Grid.Column="2" Content="?" Style="{StaticResource HelpIconButtonStyle}"
                                                             ToolTipService.InitialShowDelay="300" ToolTipService.ShowDuration="30000">
                                                         <Button.ToolTip>

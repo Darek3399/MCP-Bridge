@@ -250,18 +250,23 @@ function parseSseOrJson(text) {
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     try { return JSON.parse(trimmed); } catch (_) {}
   }
-  const lines = trimmed.split(/\r?\n/);
-  let lastData = null;
-  for (const line of lines) {
-    if (line.toLowerCase().startsWith('data:')) {
-      const candidate = line.slice(5).trim();
-      if (candidate) lastData = candidate;
+  const blocks = trimmed.split(/(?:\r?\n){2,}/);
+  let lastParsed = null;
+  for (const block of blocks) {
+    const dataLines = [];
+    for (const line of block.split(/\r?\n/)) {
+      if (line.toLowerCase().startsWith('data:')) {
+        dataLines.push(line.slice(5).trimStart());
+      }
+    }
+    if (dataLines.length > 0) {
+      const candidate = dataLines.join('\n').trim();
+      if (candidate) {
+        try { lastParsed = JSON.parse(candidate); } catch (_) {}
+      }
     }
   }
-  if (lastData) {
-    try { return JSON.parse(lastData); } catch (_) {}
-  }
-  return null;
+  return lastParsed;
 }
 
 function getHttpTransport(targetUrl) {
@@ -313,7 +318,7 @@ function createModernRequestPayload(rpcPayload) {
   return { ...rpcPayload, params };
 }
 
-function sendStreamableHttpRpcSingle(upstream, rpcPayload, stallTimeoutMs = 15000, modern = false, extraHeaders = null, legacyProtocolVersion = null, routeMode = 'direct', onReqCreated = null) {
+function sendStreamableHttpRpcSingle(upstream, rpcPayload, stallTimeoutMs = 15000, modern = false, extraHeaders = null, legacyProtocolVersion = null, routeMode = 'direct', onReqCreated = null, shouldAbort = null) {
   const expectedSessionEpoch = getUpstreamSessionEpoch(upstream.id);
   return new Promise((resolve) => {
     let targetUrl;
@@ -391,9 +396,20 @@ function sendStreamableHttpRpcSingle(upstream, rpcPayload, stallTimeoutMs = 1500
     }
 
     req = transport.request(reqOptions, (res) => {
+      if (typeof shouldAbort === 'function' && shouldAbort()) {
+        clearWatchdog();
+        try { res.destroy(); } catch (_) {}
+        try { req.destroy(); } catch (_) {}
+        if (!resolved) {
+          resolved = true;
+          resolve({ ok: false, status: 0, error: 'Route check superseded by winning route.' });
+        }
+        return;
+      }
       markActivity();
       const newSession = res.headers['mcp-session-id'];
-      if (!modern && newSession && isUpstreamSessionEpochCurrent(upstream.id, expectedSessionEpoch))
+      if (!modern && newSession && isUpstreamSessionEpochCurrent(upstream.id, expectedSessionEpoch) &&
+          !(typeof shouldAbort === 'function' && shouldAbort()))
         upstreamSessions.set(String(upstream.id), String(newSession));
 
       const isSse = String(res.headers['content-type'] || '').toLowerCase().includes('text/event-stream');
@@ -504,13 +520,28 @@ async function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 1500
   const routeModes = ['direct', 'proxy'];
   const activeReqs = [];
   let lastFail = null;
+  let routeSettled = false;
 
   const racePromises = routeModes.map(mode =>
     sendStreamableHttpRpcSingle(
       upstream, rpcPayload, stallTimeoutMs, modern, extraHeaders, legacyProtocolVersion, mode,
-      req => activeReqs.push({ mode, req })
+      req => {
+        if (routeSettled) {
+          try { req.destroy(); } catch (_) {}
+          return;
+        }
+        activeReqs.push({ mode, req });
+      },
+      () => routeSettled
     ).then(res => {
-      if (res.ok && !(res.data && res.data.error)) {
+      if (!routeSettled && res.ok && !(res.data && res.data.error)) {
+        routeSettled = true;
+        pinnedRouteByServer.set(key, mode);
+        for (const item of activeReqs) {
+          if (item.mode !== mode) {
+            try { item.req.destroy(); } catch (_) {}
+          }
+        }
         return { mode, res };
       }
       lastFail = res;
@@ -520,12 +551,6 @@ async function sendStreamableHttpRpc(upstream, rpcPayload, stallTimeoutMs = 1500
 
   try {
     const winner = await Promise.any(racePromises);
-    pinnedRouteByServer.set(key, winner.mode);
-    for (const item of activeReqs) {
-      if (item.mode !== winner.mode) {
-        try { item.req.destroy(); } catch (_) {}
-      }
-    }
     return winner.res;
   } catch (_) {
     return lastFail || { ok: false, status: 0, error: 'All transport routes failed.' };
@@ -1142,7 +1167,10 @@ async function callUpstreamWithAutoInit(
 
 
 
-  if (!res.ok || (res.data && res.data.error)) {
+  const isToolCallTimeout = rpcPayload && rpcPayload.method === 'tools/call' &&
+    !res.ok && /stalled|timed out/i.test(String(res.error || ''));
+
+  if ((!res.ok || (res.data && res.data.error)) && !isToolCallTimeout) {
     invalidateUpstreamSession(
       upstream,
       'Upstream session expired or timed out; re-initializing session.',
@@ -1698,7 +1726,7 @@ function promoteUpstreamConnectionState(previous, current) {
   upstreamSessionEpochs.set(newId, promotedSessionEpoch);
 }
 
-function resetUpstreamConnectionState(previous, reason) {
+function resetUpstreamConnectionState(previous, reason, removeFromToolsCache = false) {
   if (!previous || !previous.id) return;
   const key = String(previous.id);
   const oldSession = upstreamSessions.get(key);
@@ -1713,7 +1741,19 @@ function resetUpstreamConnectionState(previous, reason) {
   upstreamSessions.delete(key);
   upstreamTransportModes.delete(key);
   clearUpstreamFailure(key);
+  stdioLastRevalidatedAt.delete(key);
   // preserve stdioKnownToolsByServer across session resets
+  if (removeFromToolsCache) {
+    let cacheModified = stdioKnownToolsByServer.delete(key);
+    if (previous.name) {
+      const sanitizedName = String(previous.name).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^[_-]+|[_-]+$/g, '');
+      const stillUsed = upstreams.some(u => u && String(u.id) !== key && u.name &&
+        String(u.name).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/^[_-]+|[_-]+$/g, '') === sanitizedName);
+      if (sanitizedName && !stillUsed && stdioKnownToolsByServer.delete(sanitizedName))
+        cacheModified = true;
+    }
+    if (cacheModified) saveStdioToolsCache();
+  }
   for (const [name, route] of toolRouteMap) {
     if (route && route.upstream && String(route.upstream.id) === key)
       toolRouteMap.delete(name);
@@ -1731,7 +1771,8 @@ pollManager = new McpPollManager({
     }
     resetUpstreamConnectionState(
       change.previous,
-      'Upstream configuration changed.'
+      'Upstream configuration changed.',
+      Boolean(change.removed)
     );
   }
 });

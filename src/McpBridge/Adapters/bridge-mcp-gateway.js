@@ -10,7 +10,7 @@ const { ToolCatalogManager } = require('./bridge-catalog-manager');
 const { BridgeToolDispatcher } = require('./bridge-tool-dispatcher');
 
 const MODERN_PROTOCOL_VERSION = '2026-07-28';
-const LEGACY_PROTOCOL_VERSIONS = new Set(['2025-11-25', '2025-06-18', '2025-03-26']);
+const LEGACY_PROTOCOL_VERSIONS = new Set(['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05']);
 const SERVER_INFO = { name: 'MCP Bridge Gateway', version: '0.9.1' };
 const MAX_BODY_BYTES = 64 * 1024 * 1024;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -296,28 +296,24 @@ async function handleRpc(request, response, rpcMessage) {
     }
   }
 
-  if (!isModern && sessionId && !session && rpcMessage.method !== 'initialize') {
-    sendJson(response, 404, { error: 'Unknown or expired MCP session.' });
-    return;
+  let effectiveSession = session;
+  if (!isModern && !effectiveSession && rpcMessage.method !== 'initialize') {
+    const recoveredVersion = (requestedVersion && LEGACY_PROTOCOL_VERSIONS.has(requestedVersion))
+      ? requestedVersion
+      : '2025-06-18';
+    const recoveredId = sessionId || crypto.randomUUID();
+    effectiveSession = {
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      protocolVersion: recoveredVersion
+    };
+    sessions.set(recoveredId, effectiveSession);
   }
 
-  if (!isModern && session && requestedVersion &&
-      requestedVersion !== session.protocolVersion) {
-    sendJson(response, 400, rpcError(
-      rpcMessage.id,
-      -32600,
-      'MCP-Protocol-Version does not match the negotiated session version.'
-    ));
-    return;
-  }
-
-  if (!isModern && !session && rpcMessage.method !== 'initialize') {
-    sendJson(response, 400, rpcError(
-      rpcMessage.id,
-      -32600,
-      'Legacy MCP requests require an initialized session. Modern clients must send per-request _meta.'
-    ));
-    return;
+  if (!isModern && effectiveSession && requestedVersion &&
+      LEGACY_PROTOCOL_VERSIONS.has(requestedVersion) &&
+      requestedVersion !== effectiveSession.protocolVersion) {
+    effectiveSession.protocolVersion = requestedVersion;
   }
 
   if (!isModern && rpcMessage.id === undefined && rpcMessage.method === 'notifications/initialized') {
@@ -334,7 +330,7 @@ async function handleRpc(request, response, rpcMessage) {
 
   let result;
   let responseSessionId = isModern ? null : (sessionId || null);
-  let negotiatedLegacyVersion = session ? session.protocolVersion : null;
+  let negotiatedLegacyVersion = effectiveSession ? effectiveSession.protocolVersion : '2025-06-18';
 
   switch (rpcMessage.method) {
     case 'server/discover': {
@@ -387,16 +383,9 @@ async function handleRpc(request, response, rpcMessage) {
         return;
       }
 
-      const selectedVersion = requestedLegacyVersion || '2025-06-18';
-      if (!LEGACY_PROTOCOL_VERSIONS.has(selectedVersion)) {
-        sendJson(response, 400, rpcError(
-          rpcMessage.id,
-          -32602,
-          'Unsupported legacy protocol version.',
-          { supported: [...LEGACY_PROTOCOL_VERSIONS], requested: selectedVersion }
-        ));
-        return;
-      }
+      const selectedVersion = (requestedLegacyVersion && LEGACY_PROTOCOL_VERSIONS.has(requestedLegacyVersion))
+        ? requestedLegacyVersion
+        : '2025-06-18';
 
       negotiatedLegacyVersion = selectedVersion;
       responseSessionId = crypto.randomUUID();

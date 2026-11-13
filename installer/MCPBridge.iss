@@ -1,4 +1,4 @@
-﻿#define AppName "MCP Bridge"
+#define AppName "MCP Bridge"
 #ifndef AppVersion
   #error AppVersion must be supplied by Build-Installer.ps1 from Directory.Build.props
 #endif
@@ -34,7 +34,7 @@ WizardStyle=modern
 ShowLanguageDialog=yes
 UsePreviousLanguage=no
 DisableStartupPrompt=yes
-SetupLogging=yes
+SetupLogging=no
 CloseApplications=yes
 CloseApplicationsFilter=MCPBridge.exe
 RestartApplications=no
@@ -102,6 +102,24 @@ russian.ErrTailscaleProbeFailed=Не удалось проверить или п
 english.ErrTailscaleProbeFailed=Failed to verify or prepare Tailscale.
 russian.ErrDotNet=.NET Framework 4.8 не обнаружен. На Windows 10 1903+ и Windows 11 он входит в состав системы.
 english.ErrDotNet=.NET Framework 4.8 was not detected. It is included with Windows 10 1903+ and Windows 11.
+russian.UninstallOptionsTitle=Параметры удаления MCP Bridge
+english.UninstallOptionsTitle=MCP Bridge Uninstall Options
+russian.UninstallOptionsPrompt=Выберите, что нужно удалить вместе с программой:
+english.UninstallOptionsPrompt=Select what should be removed along with the application:
+russian.UninstallRemoveSettings=Удалить настройки программы (settings.json)
+english.UninstallRemoveSettings=Remove application settings (settings.json)
+russian.UninstallRemovePackages=Удалить скачанные пакеты MCP-серверов (ServerPackages)
+english.UninstallRemovePackages=Remove downloaded MCP server packages (ServerPackages)
+russian.UninstallRemoveLogs=Удалить логи работы программы (Logs)
+english.UninstallRemoveLogs=Remove application logs (Logs)
+russian.UninstallRemoveTailscaleKey=Удалить ключ и данные узла Tailscale (ProgramData\Tailscale)
+english.UninstallRemoveTailscaleKey=Remove Tailscale machine key and local data (ProgramData\Tailscale)
+russian.UninstallRemoveNodeJs=Удалить Node.js с компьютера
+english.UninstallRemoveNodeJs=Remove Node.js from this computer
+russian.UninstallBtnRemove=Удалить
+english.UninstallBtnRemove=Uninstall
+russian.UninstallBtnCancel=Отмена
+english.UninstallBtnCancel=Cancel
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -141,16 +159,15 @@ Source: "..\scripts\FullReinstall.ps1"; Flags: dontcopy
 Root: HKCR; Subkey: "*\shell\tailscale"; ValueType: string; ValueName: "LegacyDisable"; ValueData: ""; Flags: uninsdeletevalue
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApp}"; Flags: postinstall nowait skipifsilent runasoriginaluser; Check: ShouldLaunchManager
-
+Filename: "{app}\{#AppExeName}"; Parameters: "--postinstall-launch"; Description: "{cm:LaunchApp}"; Flags: postinstall nowait skipifsilent runasoriginaluser
 [Icons]
 Name: "{group}\MCP Bridge"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Resources\MCPBridge.ico"
 Name: "{autodesktop}\MCP Bridge"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Resources\MCPBridge.ico"; Tasks: desktopicon
 
 [UninstallRun]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\Scripts\Cleanup-Updates.ps1"" -UpdatesDirectory ""{app}\Updates"""; Flags: runhidden waituntilterminated; RunOnceId: "CleanupMCPBridgeUpdates"
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /T /IM MCPBridge.exe"; Flags: runhidden waituntilterminated; StatusMsg: "{cm:StoppingApp}"; RunOnceId: "StopMCPBridge"
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\Scripts\Uninstall-Tailscale.ps1"" -MsiPath ""{app}\Dependencies\tailscale-installed.msi"" -StateFile ""{app}\Config\tailscale-state.txt"""; Flags: runhidden waituntilterminated; RunOnceId: "StopAndUninstallTailscale"
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\Scripts\Cleanup-Updates.ps1"" -UpdatesDirectory ""{app}\Updates"""; Flags: runhidden waituntilterminated; RunOnceId: "CleanupMCPBridgeUpdates"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Dependencies\EmptyFilesystemRoot"
@@ -163,7 +180,6 @@ var
   ProbeFile: string;
   ProbeError: string;
   ProbeReady: Boolean;
-  NodeRestartRequired: Boolean;
   RebootRequired: Boolean;
   FullReinstallPrepared: Boolean;
 
@@ -287,18 +303,6 @@ begin
   Result := False;
   FullReinstallPrepared := False;
 
-  if OldUninstallString <> '' then
-  begin
-    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', '1');
-    if not Exec(OldUninstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
-    begin
-      RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
-      Result := CustomMessage('ErrUninstallOld');
-      Exit;
-    end;
-    RegDeleteValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress');
-    OldUninstallString := '';
-  end;
   if not IsFullReinstallSelected then
   begin
     Result := True;
@@ -341,7 +345,6 @@ begin
     if OutputLines[I] = 'RebootRequired=1' then
     begin
       RebootRequired := True;
-      NodeRestartRequired := True;
     end;
   end;
 
@@ -407,12 +410,11 @@ end;
 
 function GetPersistentLogPath(const FileName: String): String;
 var
-  TempDirectory: String;
+  LogsDirectory: String;
 begin
-  TempDirectory := GetEnv('TEMP');
-  if TempDirectory = '' then
-    TempDirectory := ExpandConstant('{tmp}');
-  Result := AddBackslash(TempDirectory) + FileName;
+  LogsDirectory := ExpandConstant('{app}\Logs');
+  ForceDirectories(LogsDirectory);
+  Result := AddBackslash(LogsDirectory) + FileName;
 end;
 
 procedure InstallMissingDependencies;
@@ -445,7 +447,6 @@ begin
 
     if (InstallerExitCode = 3010) or (InstallerExitCode = 1641) then
     begin
-      NodeRestartRequired := True;
       RebootRequired := True;
     end
     else if InstallerExitCode <> 0 then
@@ -469,11 +470,10 @@ var
 begin
   Result := '';
   NeedsRestart := False;
-  NodeRestartRequired := False;
   RebootRequired := False;
   FullReinstallPrepared := False;
 
-  if OldUninstallString <> '' then
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM MCPBridge.exe', '', SW_HIDE, ewWaitUntilTerminated, ExitCode);  if OldUninstallString <> '' then
   begin
     RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', '1');
     if not Exec(OldUninstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) or (ExitCode <> 0) then
@@ -517,11 +517,6 @@ end;
 function ShouldInstallSupergateway: Boolean;
 begin
   Result := ProbeReady and not ProbeFound('Supergateway');
-end;
-
-function ShouldLaunchManager: Boolean;
-begin
-  Result := not NodeRestartRequired;
 end;
 
 function NeedRestart: Boolean;
@@ -596,4 +591,181 @@ begin
     LanguageMarkerPath := ExpandConstant('{app}\Config\installer-language.txt');
     SaveStringToFile(LanguageMarkerPath, ActiveLanguage + #13#10, False);
   end;
+end;
+
+function InitializeUninstall: Boolean;
+var
+  UpgradeFlag: String;
+  BridgeInstalledTailscale: Boolean;
+  StateLines: TArrayOfString;
+  I: Integer;
+  Form: TSetupForm;
+  PromptLabel: TNewStaticText;
+  RemoveSettingsCheckBox: TNewCheckBox;
+  RemovePackagesCheckBox: TNewCheckBox;
+  RemoveLogsCheckBox: TNewCheckBox;
+  RemoveTailscaleKeyCheckBox: TNewCheckBox;
+  RemoveNodeJsCheckBox: TNewCheckBox;
+  OkButton: TNewButton;
+  CancelButton: TNewButton;
+  RemoveSettingsVal, RemovePackagesVal, RemoveLogsVal, RemoveTailscaleKeyVal, RemoveNodeJsVal: String;
+begin
+  Result := True;
+
+  if RegQueryStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', UpgradeFlag) and (UpgradeFlag = '1') then
+    Exit;
+
+  if UninstallSilent then
+    Exit;
+
+  BridgeInstalledTailscale := False;
+  if LoadStringsFromFile(ExpandConstant('{app}\Config\tailscale-state.txt'), StateLines) then
+  begin
+    for I := 0 to GetArrayLength(StateLines) - 1 do
+    begin
+      if Trim(StateLines[I]) = 'InstalledByMcpBridge=1' then
+      begin
+        BridgeInstalledTailscale := True;
+        Break;
+      end;
+    end;
+  end;
+
+#if Ver >= EncodeVer(6, 6, 0)
+  Form := CreateCustomForm(520, 268, False, False);
+#else
+  Form := CreateCustomForm;
+  Form.ClientWidth := ScaleX(520);
+  Form.ClientHeight := ScaleY(268);
+#endif
+  try
+    Form.Position := poScreenCenter;
+    Form.Caption := CustomMessage('UninstallOptionsTitle');
+
+    PromptLabel := TNewStaticText.Create(Form);
+    PromptLabel.Parent := Form;
+    PromptLabel.Left := ScaleX(18);
+    PromptLabel.Top := ScaleY(16);
+    PromptLabel.Width := Form.ClientWidth - ScaleX(36);
+    PromptLabel.AutoSize := True;
+    PromptLabel.Caption := CustomMessage('UninstallOptionsPrompt');
+
+    RemoveSettingsCheckBox := TNewCheckBox.Create(Form);
+    RemoveSettingsCheckBox.Parent := Form;
+    RemoveSettingsCheckBox.Left := ScaleX(18);
+    RemoveSettingsCheckBox.Top := ScaleY(46);
+    RemoveSettingsCheckBox.Width := Form.ClientWidth - ScaleX(36);
+    RemoveSettingsCheckBox.Height := ScaleY(20);
+    RemoveSettingsCheckBox.Caption := CustomMessage('UninstallRemoveSettings');
+    RemoveSettingsCheckBox.Checked := True;
+
+    RemovePackagesCheckBox := TNewCheckBox.Create(Form);
+    RemovePackagesCheckBox.Parent := Form;
+    RemovePackagesCheckBox.Left := ScaleX(18);
+    RemovePackagesCheckBox.Top := ScaleY(76);
+    RemovePackagesCheckBox.Width := Form.ClientWidth - ScaleX(36);
+    RemovePackagesCheckBox.Height := ScaleY(20);
+    RemovePackagesCheckBox.Caption := CustomMessage('UninstallRemovePackages');
+    RemovePackagesCheckBox.Checked := True;
+
+    RemoveLogsCheckBox := TNewCheckBox.Create(Form);
+    RemoveLogsCheckBox.Parent := Form;
+    RemoveLogsCheckBox.Left := ScaleX(18);
+    RemoveLogsCheckBox.Top := ScaleY(106);
+    RemoveLogsCheckBox.Width := Form.ClientWidth - ScaleX(36);
+    RemoveLogsCheckBox.Height := ScaleY(20);
+    RemoveLogsCheckBox.Caption := CustomMessage('UninstallRemoveLogs');
+    RemoveLogsCheckBox.Checked := True;
+
+    RemoveTailscaleKeyCheckBox := TNewCheckBox.Create(Form);
+    RemoveTailscaleKeyCheckBox.Parent := Form;
+    RemoveTailscaleKeyCheckBox.Left := ScaleX(18);
+    RemoveTailscaleKeyCheckBox.Top := ScaleY(136);
+    RemoveTailscaleKeyCheckBox.Width := Form.ClientWidth - ScaleX(36);
+    RemoveTailscaleKeyCheckBox.Height := ScaleY(20);
+    RemoveTailscaleKeyCheckBox.Caption := CustomMessage('UninstallRemoveTailscaleKey');
+    RemoveTailscaleKeyCheckBox.Enabled := BridgeInstalledTailscale;
+    RemoveTailscaleKeyCheckBox.Checked := BridgeInstalledTailscale;
+
+    RemoveNodeJsCheckBox := TNewCheckBox.Create(Form);
+    RemoveNodeJsCheckBox.Parent := Form;
+    RemoveNodeJsCheckBox.Left := ScaleX(18);
+    RemoveNodeJsCheckBox.Top := ScaleY(166);
+    RemoveNodeJsCheckBox.Width := Form.ClientWidth - ScaleX(36);
+    RemoveNodeJsCheckBox.Height := ScaleY(20);
+    RemoveNodeJsCheckBox.Caption := CustomMessage('UninstallRemoveNodeJs');
+    RemoveNodeJsCheckBox.Checked := False;
+
+    CancelButton := TNewButton.Create(Form);
+    CancelButton.Parent := Form;
+    CancelButton.Width := ScaleX(96);
+    CancelButton.Height := ScaleY(26);
+    CancelButton.Left := Form.ClientWidth - ScaleX(18) - CancelButton.Width;
+    CancelButton.Top := Form.ClientHeight - ScaleY(16) - CancelButton.Height;
+    CancelButton.Caption := CustomMessage('UninstallBtnCancel');
+    CancelButton.ModalResult := mrCancel;
+    CancelButton.Cancel := True;
+
+    OkButton := TNewButton.Create(Form);
+    OkButton.Parent := Form;
+    OkButton.Width := ScaleX(104);
+    OkButton.Height := ScaleY(26);
+    OkButton.Left := CancelButton.Left - ScaleX(8) - OkButton.Width;
+    OkButton.Top := CancelButton.Top;
+    OkButton.Caption := CustomMessage('UninstallBtnRemove');
+    OkButton.ModalResult := mrOk;
+    OkButton.Default := True;
+
+    if Form.ShowModal <> mrOk then
+    begin
+      Result := False;
+      Exit;
+    end;
+
+    if RemoveSettingsCheckBox.Checked then RemoveSettingsVal := '1' else RemoveSettingsVal := '0';
+    if RemovePackagesCheckBox.Checked then RemovePackagesVal := '1' else RemovePackagesVal := '0';
+    if RemoveLogsCheckBox.Checked then RemoveLogsVal := '1' else RemoveLogsVal := '0';
+    if RemoveTailscaleKeyCheckBox.Checked then RemoveTailscaleKeyVal := '1' else RemoveTailscaleKeyVal := '0';
+    if RemoveNodeJsCheckBox.Checked then RemoveNodeJsVal := '1' else RemoveNodeJsVal := '0';
+
+    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveSettings', RemoveSettingsVal);
+    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UninstallRemovePackages', RemovePackagesVal);
+    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveLogs', RemoveLogsVal);
+    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveTailscaleKey', RemoveTailscaleKeyVal);
+    RegWriteStringValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveNodeJs', RemoveNodeJsVal);
+  finally
+    Form.Free;
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  UpgradeFlag: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    if RegQueryStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', UpgradeFlag) and (UpgradeFlag = '1') then
+      Exit;
+
+    RegDeleteKeyIncludingSubkeys(HKLM, 'Software\MCPBridge');
+    RemoveDir(ExpandConstant('{app}\Config'));
+    RemoveDir(ExpandConstant('{app}\Dependencies'));
+    RemoveDir(ExpandConstant('{app}\Logs'));
+    RemoveDir(ExpandConstant('{app}'));
+  end;
+end;
+
+procedure DeinitializeUninstall;
+var
+  UpgradeFlag: String;
+begin
+  if RegQueryStringValue(HKLM, 'Software\MCPBridge', 'UpgradeInProgress', UpgradeFlag) and (UpgradeFlag = '1') then
+    Exit;
+
+  RegDeleteValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveSettings');
+  RegDeleteValue(HKLM, 'Software\MCPBridge', 'UninstallRemovePackages');
+  RegDeleteValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveLogs');
+  RegDeleteValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveTailscaleKey');
+  RegDeleteValue(HKLM, 'Software\MCPBridge', 'UninstallRemoveNodeJs');
+  RegDeleteKeyIfEmpty(HKLM, 'Software\MCPBridge');
 end;

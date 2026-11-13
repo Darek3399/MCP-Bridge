@@ -63,10 +63,50 @@ internal static class TcpPortInspector
                     }
                 }
                 if (anyWindow) return true;
+
+                if (string.IsNullOrWhiteSpace(portFile) && IsConsoleSubsystemProcess(proc))
+                    return true;
             }
             catch { }
         }
         return false;
+    }
+
+    private static bool IsConsoleSubsystemProcess(Process process)
+    {
+        try
+        {
+            var exePath = process.MainModule?.FileName;
+            if (string.IsNullOrWhiteSpace(exePath) || !System.IO.File.Exists(exePath))
+                return false;
+
+            using var stream = new System.IO.FileStream(
+                exePath!,
+                System.IO.FileMode.Open,
+                System.IO.FileAccess.Read,
+                System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete);
+            using var reader = new System.IO.BinaryReader(stream);
+
+            if (stream.Length < 64 || reader.ReadUInt16() != 0x5A4D)
+                return false;
+
+            stream.Seek(0x3C, System.IO.SeekOrigin.Begin);
+            var peOffset = reader.ReadInt32();
+            if (peOffset <= 0 || peOffset + 0x5C + 2 > stream.Length)
+                return false;
+
+            stream.Seek(peOffset, System.IO.SeekOrigin.Begin);
+            if (reader.ReadUInt32() != 0x00004550)
+                return false;
+
+            stream.Seek(peOffset + 24 + 68, System.IO.SeekOrigin.Begin);
+            var subsystem = reader.ReadUInt16();
+            return subsystem == 3; // IMAGE_SUBSYSTEM_WINDOWS_CUI
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static HashSet<int> GetListeningProcessIds(int port)

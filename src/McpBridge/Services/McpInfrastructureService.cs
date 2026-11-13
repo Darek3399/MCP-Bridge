@@ -331,7 +331,7 @@ public sealed class McpInfrastructureService : IDisposable
             if (!Directory.Exists(dir)) return false;
             if (File.Exists(Path.Combine(dir, ".ready"))) return true;
 
-            foreach (var sub in new[] { "uv-tools", "npm-cache", "npm-prefix", "uv-cache" })
+            foreach (var sub in new[] { "ut", "n", "np", "uc", "uv-tools", "npm-cache", "npm-prefix", "uv-cache" })
             {
                 var subPath = Path.Combine(dir, sub);
                 if (Directory.Exists(subPath) && Directory.EnumerateFileSystemEntries(subPath).Any())
@@ -376,21 +376,139 @@ public sealed class McpInfrastructureService : IDisposable
         }
         catch { }
 
+        try
+        {
+            var safeId = SettingsStore.SanitizeServerId(serverId!);
+            if (!string.IsNullOrWhiteSpace(safeId))
+            {
+                var netLog = Path.Combine(AppPaths.CustomGatewaysDirectory, "net-" + safeId + ".jsonl");
+                if (File.Exists(netLog)) File.Delete(netLog);
+            }
+        }
+        catch { }
+
         var pkgDir = AppPaths.GetServerPackageDirectory(serverId!);
         for (var attempt = 0; attempt < 4; attempt++)
         {
+            if (DeleteDirectoryForce(pkgDir))
+                break;
+            Thread.Sleep(150);
+        }
+    }
+
+    private static bool DeleteDirectoryForce(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return true;
+        try
+        {
+            if (!Directory.Exists(path)) return true;
+            Directory.Delete(path, true);
+            return !Directory.Exists(path);
+        }
+        catch
+        {
             try
             {
-                if (!Directory.Exists(pkgDir)) break;
-                Directory.Delete(pkgDir, true);
-                break;
+                var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var extended = fullPath.StartsWith(@"\\?\", StringComparison.Ordinal)
+                    ? fullPath
+                    : (fullPath.StartsWith(@"\\", StringComparison.Ordinal)
+                        ? @"\\?\UNC\" + fullPath.Substring(2)
+                        : @"\\?\" + fullPath);
+                DeleteExtendedDirectoryRecursive(extended);
+                return !Directory.Exists(path);
             }
             catch
             {
-                Thread.Sleep(150);
+                return !Directory.Exists(path);
             }
         }
     }
+
+    private static void DeleteExtendedDirectoryRecursive(string extendedDir)
+    {
+        var findHandle = FindFirstFileW(extendedDir + @"\*", out var findData);
+        if (findHandle != new IntPtr(-1))
+        {
+            try
+            {
+                do
+                {
+                    var entryName = findData.cFileName;
+                    if (string.IsNullOrEmpty(entryName) || entryName == "." || entryName == "..")
+                        continue;
+
+                    var childExtended = extendedDir + @"\" + entryName;
+                    var isDirectory = (findData.dwFileAttributes & 0x10u) != 0;
+                    var isReparsePoint = (findData.dwFileAttributes & 0x400u) != 0;
+                    var isReadOnly = (findData.dwFileAttributes & 0x01u) != 0;
+
+                    if (isReadOnly)
+                        SetFileAttributesW(childExtended, 0x80u);
+
+                    if (isDirectory && !isReparsePoint)
+                    {
+                        DeleteExtendedDirectoryRecursive(childExtended);
+                    }
+                    else if (isDirectory)
+                    {
+                        RemoveDirectoryW(childExtended);
+                    }
+                    else
+                    {
+                        DeleteFileW(childExtended);
+                    }
+                } while (FindNextFileW(findHandle, out findData));
+            }
+            finally
+            {
+                FindClose(findHandle);
+            }
+        }
+
+        SetFileAttributesW(extendedDir, 0x80u);
+        RemoveDirectoryW(extendedDir);
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private struct WIN32_FIND_DATA
+    {
+        public uint dwFileAttributes;
+        public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME ftLastAccessTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME ftLastWriteTime;
+        public uint nFileSizeHigh;
+        public uint nFileSizeLow;
+        public uint dwReserved0;
+        public uint dwReserved1;
+        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string? cFileName;
+        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 14)]
+        public string? cAlternateFileName;
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr FindFirstFileW(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool FindNextFileW(IntPtr hFindFile, out WIN32_FIND_DATA lpFindFileData);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool FindClose(IntPtr hFindFile);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool SetFileAttributesW(string lpFileName, uint dwFileAttributes);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool DeleteFileW(string lpFileName);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool RemoveDirectoryW(string lpPathName);
 
     public void CleanupOrphanedServerPackages(AppSettings? settings = null)
     {
@@ -413,20 +531,23 @@ public sealed class McpInfrastructureService : IDisposable
                     var name = Path.GetFileName(dir);
                     if (!activeIds.Contains(name))
                     {
-                        try { Directory.Delete(dir, true); } catch { }
+                        DeleteDirectoryForce(dir);
                     }
                 }
             }
 
             if (Directory.Exists(AppPaths.CustomGatewaysDirectory))
             {
-                foreach (var file in Directory.GetFiles(AppPaths.CustomGatewaysDirectory, "gateway-*.json"))
+                foreach (var file in Directory.GetFiles(AppPaths.CustomGatewaysDirectory, "*.json"))
                 {
                     var name = Path.GetFileNameWithoutExtension(file);
                     var id = name.StartsWith("gateway-", StringComparison.OrdinalIgnoreCase)
                         ? name.Substring("gateway-".Length)
-                        : name;
-                    if (!activeIds.Contains(SettingsStore.SanitizeServerId(id)))
+                        : name.StartsWith("verify-", StringComparison.OrdinalIgnoreCase)
+                            ? name.Substring("verify-".Length)
+                            : name;
+                    if (!activeIds.Contains(SettingsStore.SanitizeServerId(id)) &&
+                        !_customStdioRuntimes.Values.Any(r => r.EndpointUrl.IndexOf(id, StringComparison.OrdinalIgnoreCase) >= 0))
                     {
                         try { File.Delete(file); } catch { }
                     }
@@ -464,7 +585,17 @@ public sealed class McpInfrastructureService : IDisposable
             }
 
             // 1. Мгновенно настраиваем все HTTP-серверы (не требуют запуска локальных процессов)
-            await ReconcileUnrealServerAsync().ConfigureAwait(false);
+            if (_unrealCustom != null && !string.Equals(_unrealCustom.Transport, "http", StringComparison.OrdinalIgnoreCase))
+            {
+                _unrealCustom.Id = SettingsStore.BuiltInUnrealId;
+                _unrealCustom.Enabled = _unrealEnabled;
+                await ReconcileCustomStdioServerAsync(dependencies, _unrealCustom, string.Equals(forceRetryServerId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
+            }
+            else
+            {
+                await StopCustomStdioServerAsync(SettingsStore.BuiltInUnrealId).ConfigureAwait(false);
+                await ReconcileUnrealServerAsync().ConfigureAwait(false);
+            }
             foreach (var httpServer in _customServers.Where(s => string.Equals(s.Transport, "http", StringComparison.OrdinalIgnoreCase)))
             {
                 await StopCustomStdioServerAsync(httpServer.Id).ConfigureAwait(false);
@@ -2152,26 +2283,52 @@ public sealed class McpInfrastructureService : IDisposable
 
         if (!_unrealDeleted)
         {
-            var unrealUrl = _unrealCustom != null && !string.IsNullOrWhiteSpace(_unrealCustom.Url)
-                ? _unrealCustom.Url!
-                : UnrealEndpoint;
             var unrealName = _unrealCustom != null && !string.IsNullOrWhiteSpace(_unrealCustom.Name)
                 ? _unrealCustom.Name!
                 : "Unreal MCP";
+            var isUnrealStdio = _unrealCustom != null &&
+                !string.Equals(_unrealCustom.Transport, "http", StringComparison.OrdinalIgnoreCase);
 
-            if (!_unrealEnabled ||
-                _unrealCustom == null ||
-                string.IsNullOrWhiteSpace(_unrealCustom.Url) ||
-                McpRemoteEndpointTrust.IsTrusted(_unrealCustom, out _))
+            if (isUnrealStdio)
             {
-                AddUpstream(
-                    SettingsStore.BuiltInUnrealId,
-                    unrealName,
-                    unrealUrl,
-                    _unrealCustom?.Headers,
-                    "http",
-                    BuildHttpConfigurationFingerprint(unrealUrl, _unrealCustom?.Headers),
-                    _unrealEnabled);
+                if (!_unrealEnabled)
+                {
+                    var disabledUrl = _customStdioRuntimes.TryGetValue(SettingsStore.BuiltInUnrealId, out var disabledRuntime)
+                        ? disabledRuntime.EndpointUrl
+                        : string.Empty;
+                    AddUpstream(SettingsStore.BuiltInUnrealId, unrealName, disabledUrl, null, "stdio", BuildStdioFingerprint(_unrealCustom!), false);
+                }
+                else if (_customStdioRuntimes.TryGetValue(SettingsStore.BuiltInUnrealId, out var uRuntime) && !IsExited(uRuntime.Child.Process))
+                {
+                    var isLocalTargetOffline = CheckIfStdioLocalTargetOffline(SettingsStore.BuiltInUnrealId, out var detectedLocalScope);
+                    var scope = detectedLocalScope ? "local" : DetermineServerScope("stdio", null, _unrealCustom!.Command, _unrealCustom.Args, _unrealCustom.Env, null, _unrealCustom.AdditionalJson);
+                    AddUpstream(SettingsStore.BuiltInUnrealId, unrealName, uRuntime.EndpointUrl, null, "stdio", uRuntime.Fingerprint, true, false, scope, isLocalTargetOffline);
+                }
+                else
+                {
+                    AddUpstream(SettingsStore.BuiltInUnrealId, unrealName, string.Empty, null, "stdio", BuildStdioFingerprint(_unrealCustom!), true, true);
+                }
+            }
+            else
+            {
+                var unrealUrl = _unrealCustom != null && !string.IsNullOrWhiteSpace(_unrealCustom.Url)
+                    ? _unrealCustom.Url!
+                    : UnrealEndpoint;
+
+                if (!_unrealEnabled ||
+                    _unrealCustom == null ||
+                    string.IsNullOrWhiteSpace(_unrealCustom.Url) ||
+                    McpRemoteEndpointTrust.IsTrusted(_unrealCustom, out _))
+                {
+                    AddUpstream(
+                        SettingsStore.BuiltInUnrealId,
+                        unrealName,
+                        unrealUrl,
+                        _unrealCustom?.Headers,
+                        "http",
+                        BuildHttpConfigurationFingerprint(unrealUrl, _unrealCustom?.Headers),
+                        _unrealEnabled);
+                }
             }
         }
 
@@ -2761,12 +2918,18 @@ public sealed class McpInfrastructureService : IDisposable
         foreach (var rawArgument in arguments)
         {
             if (string.IsNullOrWhiteSpace(rawArgument)) continue;
-            var argument = Environment.ExpandEnvironmentVariables(rawArgument.Trim().Trim('"'));
+            var trimmedRaw = rawArgument.Trim();
+            var argument = Environment.ExpandEnvironmentVariables(trimmedRaw.Trim('"'));
+            var hasEqualsPath = false;
             var equalsIndex = argument.IndexOf('=');
             if (equalsIndex >= 0 && equalsIndex < argument.Length - 1)
+            {
                 argument = argument.Substring(equalsIndex + 1).Trim().Trim('"');
+                hasEqualsPath = true;
+            }
 
-            if (rawArgument.TrimStart().StartsWith("-", StringComparison.Ordinal) || rawArgument.TrimStart().StartsWith("/", StringComparison.Ordinal) || (!Path.IsPathRooted(argument) && !Directory.Exists(argument))) continue;
+            if ((!hasEqualsPath && (trimmedRaw.StartsWith("-", StringComparison.Ordinal) || trimmedRaw.StartsWith("/", StringComparison.Ordinal))) ||
+                (!Path.IsPathRooted(argument) && !Directory.Exists(argument))) continue;
             string normalized;
             try { normalized = SettingsStore.NormalizePath(argument); }
             catch { continue; }
@@ -3059,6 +3222,31 @@ public sealed class McpInfrastructureService : IDisposable
         result["NPM_CONFIG_UPDATE_NOTIFIER"] = "false";
         result["NPM_CONFIG_FUND"] = "false";
         result["NPM_CONFIG_AUDIT"] = "false";
+
+        if (!string.IsNullOrWhiteSpace(serverId))
+        {
+            var sharedDir = AppPaths.GetServerPackageDirectory("_shared");
+            var sharedPythonDir = Path.Combine(sharedDir, "uv-py");
+            var sharedPythonCacheDir = Path.Combine(sharedDir, "uv-pyc");
+            Directory.CreateDirectory(sharedPythonDir);
+            Directory.CreateDirectory(sharedPythonCacheDir);
+            if (!result.ContainsKey("UV_PYTHON_INSTALL_DIR")) result["UV_PYTHON_INSTALL_DIR"] = sharedPythonDir;
+            if (!result.ContainsKey("UV_PYTHON_CACHE_DIR")) result["UV_PYTHON_CACHE_DIR"] = sharedPythonCacheDir;
+
+            if (!string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase))
+            {
+                var pkgDir = AppPaths.GetServerPackageDirectory(serverId!);
+                Directory.CreateDirectory(pkgDir);
+                if (!result.ContainsKey("NPM_CONFIG_CACHE")) result["NPM_CONFIG_CACHE"] = Path.Combine(pkgDir, "n");
+                if (!result.ContainsKey("NPM_CONFIG_PREFIX")) result["NPM_CONFIG_PREFIX"] = Path.Combine(pkgDir, "np");
+                if (!result.ContainsKey("NPM_CONFIG_LOGS_DIR")) result["NPM_CONFIG_LOGS_DIR"] = Path.Combine(pkgDir, "nl");
+                if (!result.ContainsKey("NPM_CONFIG_TMP")) result["NPM_CONFIG_TMP"] = Path.Combine(pkgDir, "nt");
+                if (!result.ContainsKey("UV_CACHE_DIR")) result["UV_CACHE_DIR"] = Path.Combine(pkgDir, "uc");
+                if (!result.ContainsKey("UV_TOOL_DIR")) result["UV_TOOL_DIR"] = Path.Combine(pkgDir, "ut");
+                if (!result.ContainsKey("UV_TOOL_BIN_DIR")) result["UV_TOOL_BIN_DIR"] = Path.Combine(pkgDir, "ub");
+                if (!result.ContainsKey("PIP_CACHE_DIR")) result["PIP_CACHE_DIR"] = Path.Combine(pkgDir, "pc");
+            }
+        }
         return result;
     }
 

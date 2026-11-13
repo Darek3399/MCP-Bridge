@@ -62,6 +62,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        WindowChromeHelper.Configure(this, MainWindowBorder, MainWindowRootGrid, 5.0);
         InitializeAppVersion();
         SourceInitialized += MainWindow_SourceInitialized;
 
@@ -511,9 +512,7 @@ public partial class MainWindow : Window
                 "Важно: публичный URL доступен всем, кто его знает. Ограничьте разрешённые Filesystem roots только нужными папками.",
                 "Important: the public URL is accessible to anyone who knows it. Restrict allowed Filesystem roots to only the folders you need.");
         }
-        TailscaleCheckButton.ToolTip = I18n.Tr(
-            "Один сценарий: вход в Tailscale, подключение устройства, первоначальная настройка, отдельное разрешение Funnel и проверка публичного HTTPS. Потребуется подтверждение Windows.",
-            "One guided flow: sign in to Tailscale, connect the device, perform initial setup, approve Funnel if required, and verify public HTTPS. Windows approval is required.");
+        TailscaleCheckButton.ToolTip = null;
         LocalUrlEyebrowText.Text = I18n.Tr("ЛОКАЛЬНЫЙ URL", "LOCAL URL");
         CopyLocalUrlButton.Content = I18n.Tr("Копировать URL", "Copy URL");
         TunnelUrlEyebrowText.Text = I18n.Tr("ПУБЛИЧНЫЙ URL", "PUBLIC URL");
@@ -536,7 +535,13 @@ public partial class MainWindow : Window
         UpdatesCardTitleText.Text = I18n.Tr("Обновления", "Updates");
         CheckUpdatesOnStartupCheckBox.Content = I18n.Tr("Проверять обновления при запуске", "Check for updates at startup");
         CheckUpdatesButton.Content = I18n.Tr("Проверить обновления", "Check for updates");
-        SidebarUpdateButton.Content = I18n.Tr("Обновить", "Update");
+        SidebarUpdateButtonText.Text = _availableUpdate == null
+            ? I18n.Tr("Обновить", "Update")
+            : _updateInstallRunning
+                ? I18n.Tr("Скачивание обновления", "Downloading update")
+                : !string.IsNullOrWhiteSpace(_availableUpdate.LocalInstallerPath) && File.Exists(_availableUpdate.LocalInstallerPath)
+                    ? I18n.Tr("Установить", "Install update")
+                    : I18n.Tr("Скачать", "Download");
 
         if (_trayMenu.Items.Count >= 3)
         {
@@ -667,7 +672,10 @@ public partial class MainWindow : Window
 
         var dialog = new ServerJsonEditorWindow(_mcpInfrastructure) { Owner = this };
         if (dialog.ShowDialog() != true || dialog.ResultServers.Count == 0)
+        {
+            _mcpInfrastructure.CleanupOrphanedServerPackages(_settings);
             return;
+        }
 
         var addedCount = 0;
         foreach (var candidate in dialog.ResultServers)
@@ -853,7 +861,7 @@ public partial class MainWindow : Window
             ResizeMode = ResizeMode.NoResize,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Owner = this,
-            Background = new SolidColorBrush(Color.FromRgb(24, 26, 29)),
+            Background = new SolidColorBrush(Color.FromRgb(49, 54, 61)),
             Foreground = new SolidColorBrush(Color.FromRgb(234, 236, 239)),
             ShowInTaskbar = false
         };
@@ -863,6 +871,7 @@ public partial class MainWindow : Window
             CaptionHeight = 42,
             ResizeBorderThickness = new Thickness(0),
             GlassFrameThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(0),
             UseAeroCaptionButtons = false
         });
 
@@ -948,12 +957,15 @@ public partial class MainWindow : Window
         buttons.Children.Add(deleteButton);
         root.Children.Add(buttons);
 
-        dialog.Content = new Border
+        var outerBorder = new Border
         {
+            Background = new SolidColorBrush(Color.FromRgb(24, 26, 29)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(49, 54, 61)),
             BorderThickness = new Thickness(1),
             Child = root
         };
+        WindowChromeHelper.Configure(dialog, outerBorder, root, 5.0);
+        dialog.Content = outerBorder;
 
         return dialog.ShowDialog() == true;
     }
@@ -1606,6 +1618,10 @@ public partial class MainWindow : Window
         CheckUpdatesButton.IsEnabled = false;
         SetUpdateStatus(I18n.Tr("Проверка обновлений…", "Checking for updates…"));
         UpdateDownloadProgressBar.Visibility = Visibility.Collapsed;
+        UpdateDownloadProgressBar.IsIndeterminate = false;
+        SidebarUpdateProgressBar.Visibility = Visibility.Collapsed;
+        SidebarUpdateProgressBar.IsIndeterminate = false;
+        SidebarUpdateProgressBar.Value = 0;
 
         try
         {
@@ -1631,11 +1647,16 @@ public partial class MainWindow : Window
             }
 
             SidebarUpdateButton.Visibility = Visibility.Visible;
-            SidebarUpdateButton.Content = I18n.Tr("Обновить", "Update");
+            SidebarUpdateButton.IsEnabled = true;
+            SidebarUpdateButtonText.Text = I18n.Tr("Скачивание обновления", "Downloading update");
+            SidebarUpdateProgressBar.Visibility = Visibility.Visible;
+            SidebarUpdateProgressBar.Value = 0;
             SetUpdateStatus(I18n.Tr(
-                "Доступна новая версия: v" + update.VersionLabel,
-                "A new version is available: v" + update.VersionLabel));
-            await PromptAndInstallUpdateAsync();
+                "Доступна новая версия v" + update.VersionLabel + ". Скачивание обновления.",
+                "New version v" + update.VersionLabel + " is available. Downloading update."));
+
+            // Download and verify the installer first. The confirmation window is shown only afterwards.
+            await DownloadUpdateAsync(update);
         }
         catch (Exception exception)
         {
@@ -1652,30 +1673,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task PromptAndInstallUpdateAsync()
+    private async Task DownloadUpdateAsync(AppUpdateInfo update)
     {
-        if (_availableUpdate == null || _updateInstallRunning || _cleanupStarted || _cleanupCompleted)
-            return;
-
-        var update = _availableUpdate;
-        var confirmation = WpfMessageBox.Show(
-            this,
-            I18n.Tr(
-                "Доступна MCP Bridge v" + update.VersionLabel + ". Установить обновление сейчас?",
-                "MCP Bridge v" + update.VersionLabel + " is available. Install the update now?"),
-            I18n.Tr("Доступно обновление", "Update available"),
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (confirmation != MessageBoxResult.Yes)
-            return;
-
-        await DownloadAndStartUpdateAsync(update);
-    }
-
-    private async Task DownloadAndStartUpdateAsync(AppUpdateInfo update)
-    {
-        if (_updateInstallRunning)
+        if (_updateInstallRunning || _cleanupStarted || _cleanupCompleted)
             return;
 
         _updateInstallRunning = true;
@@ -1683,10 +1683,14 @@ public partial class MainWindow : Window
         SidebarUpdateButton.IsEnabled = false;
         UpdateDownloadProgressBar.Visibility = Visibility.Visible;
         UpdateDownloadProgressBar.Value = 0;
-        NavigateToPage(3);
-        SetSettingsSection(technical: false);
-        SetUpdateStatus(I18n.Tr("Загрузка обновления…", "Downloading update…"));
+        UpdateDownloadProgressBar.IsIndeterminate = false;
+        SidebarUpdateProgressBar.Visibility = Visibility.Visible;
+        SidebarUpdateProgressBar.Value = 0;
+        SidebarUpdateProgressBar.IsIndeterminate = false;
+        SidebarUpdateButtonText.Text = I18n.Tr("Скачивание обновления", "Downloading update");
+        SetUpdateStatus(I18n.Tr("Скачивание обновления", "Downloading update"));
 
+        string? installerPath = null;
         try
         {
             var progress = new Progress<UpdateDownloadProgress>(value =>
@@ -1694,13 +1698,19 @@ public partial class MainWindow : Window
                 if (value.Percentage.HasValue)
                 {
                     var percentage = value.Percentage.Value;
+                    UpdateDownloadProgressBar.IsIndeterminate = false;
+                    SidebarUpdateProgressBar.IsIndeterminate = false;
                     UpdateDownloadProgressBar.Value = percentage;
+                    SidebarUpdateProgressBar.Value = percentage;
+                    SidebarUpdateButtonText.Text = I18n.Tr("Скачивание обновления", "Downloading update");
                     SetUpdateStatus(I18n.Tr(
-                        "Загрузка обновления: " + percentage.ToString("0", CultureInfo.InvariantCulture) + "%",
+                        "Скачивание обновления: " + percentage.ToString("0", CultureInfo.InvariantCulture) + "%",
                         "Downloading update: " + percentage.ToString("0", CultureInfo.InvariantCulture) + "%"));
                 }
                 else
                 {
+                    UpdateDownloadProgressBar.IsIndeterminate = true;
+                    SidebarUpdateProgressBar.IsIndeterminate = true;
                     var megabytes = value.BytesReceived / (1024.0 * 1024.0);
                     SetUpdateStatus(I18n.Tr(
                         "Загружено: " + megabytes.ToString("0.0", CultureInfo.InvariantCulture) + " МБ",
@@ -1708,19 +1718,101 @@ public partial class MainWindow : Window
                 }
             });
 
-            var installerPath = await _appUpdateService.DownloadAndVerifyAsync(update, progress);
+            installerPath = await _appUpdateService.DownloadAndVerifyAsync(update, progress);
             if (_exitRequested || _cleanupStarted || _cleanupCompleted)
                 return;
 
-            SetUpdateStatus(I18n.Tr("Загрузка проверена. Перезапуск MCP Bridge…", "Download verified. Restarting MCP Bridge…"));
+            update.LocalInstallerPath = installerPath;
+            UpdateDownloadProgressBar.IsIndeterminate = false;
+            SidebarUpdateProgressBar.IsIndeterminate = false;
+            UpdateDownloadProgressBar.Value = 100;
+            SidebarUpdateProgressBar.Value = 100;
+            SidebarUpdateButtonText.Text = I18n.Tr("Установить", "Install update");
+            SetUpdateStatus(I18n.Tr(
+                "Обновление v" + update.VersionLabel + " загружено и проверено.",
+                "Update v" + update.VersionLabel + " has been downloaded and verified."));
+        }
+        catch (Exception exception)
+        {
+            ErrorLog.Write("MainWindow.DownloadUpdate", exception);
+            UpdateDownloadProgressBar.Visibility = Visibility.Collapsed;
+            SidebarUpdateProgressBar.Visibility = Visibility.Collapsed;
+            SidebarUpdateButtonText.Text = I18n.Tr("Повторить загрузку", "Retry download");
+            SetUpdateStatus(I18n.Tr(
+                "Не удалось загрузить обновление: " + exception.Message,
+                "Could not download the update: " + exception.Message));
+        }
+        finally
+        {
+            _updateInstallRunning = false;
+            if (!_exitRequested && !_cleanupStarted && !_cleanupCompleted)
+            {
+                SidebarUpdateButton.IsEnabled = true;
+                CheckUpdatesButton.IsEnabled = true;
+            }
+        }
 
+        if (!string.IsNullOrWhiteSpace(installerPath) &&
+            !_exitRequested && !_cleanupStarted && !_cleanupCompleted)
+        {
+            await PromptAndInstallUpdateAsync();
+        }
+    }
+
+    private async Task PromptAndInstallUpdateAsync()
+    {
+        if (_availableUpdate == null || _updateInstallRunning || _cleanupStarted || _cleanupCompleted)
+            return;
+
+        var update = _availableUpdate;
+        if (string.IsNullOrWhiteSpace(update.LocalInstallerPath) || !File.Exists(update.LocalInstallerPath))
+        {
+            await DownloadUpdateAsync(update);
+            return;
+        }
+
+        var confirmation = new UpdateAvailableWindow(update.VersionLabel)
+        {
+            Owner = this
+        };
+
+        if (confirmation.ShowDialog() != true)
+        {
+            SidebarUpdateButtonText.Text = I18n.Tr("Установить", "Install update");
+            SetUpdateStatus(I18n.Tr(
+                "Обновление загружено. Установку можно выполнить позже.",
+                "The update is downloaded. You can install it later."));
+            return;
+        }
+
+        await StartDownloadedUpdateAsync(update);
+    }
+
+    private async Task StartDownloadedUpdateAsync(AppUpdateInfo update)
+    {
+        if (_updateInstallRunning || _cleanupStarted || _cleanupCompleted)
+            return;
+
+        if (string.IsNullOrWhiteSpace(update.LocalInstallerPath) || !File.Exists(update.LocalInstallerPath))
+        {
+            await DownloadUpdateAsync(update);
+            return;
+        }
+
+        _updateInstallRunning = true;
+        SidebarUpdateButton.IsEnabled = false;
+        CheckUpdatesButton.IsEnabled = false;
+        SetUpdateStatus(I18n.Tr("Подготовка установки…", "Preparing installation…"));
+
+        try
+        {
             if (!File.Exists(AppPaths.UpdaterExecutable))
                 throw new FileNotFoundException(I18n.Tr("Не найден скрытый компонент обновления.", "The background updater helper was not found."), AppPaths.UpdaterExecutable);
 
             var arguments = JoinWindowsArguments(new[]
             {
                 "--start",
-                installerPath,
+                update.LocalInstallerPath,
                 AppPaths.InstallDirectory,
                 AppPaths.UpdateTargetDirectory,
                 Process.GetCurrentProcess().Id.ToString(CultureInfo.InvariantCulture),
@@ -1749,10 +1841,11 @@ public partial class MainWindow : Window
             _updateInstallRunning = false;
             SidebarUpdateButton.IsEnabled = true;
             CheckUpdatesButton.IsEnabled = true;
-            ErrorLog.Write("MainWindow.DownloadAndStartUpdate", exception);
+            SidebarUpdateButtonText.Text = I18n.Tr("Установить", "Install update");
+            ErrorLog.Write("MainWindow.StartDownloadedUpdate", exception);
             SetUpdateStatus(I18n.Tr(
-                "Не удалось запустить обновление: " + exception.Message,
-                "Could not start the update: " + exception.Message));
+                "Не удалось запустить установку: " + exception.Message,
+                "Could not start installation: " + exception.Message));
         }
     }
 
