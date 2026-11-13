@@ -110,6 +110,7 @@ Name: "fullreinstall"; Description: "{cm:FullReinstall}"; Flags: unchecked
 [Dirs]
 Name: "{app}\Config"; Permissions: users-modify
 Name: "{app}\Logs"; Permissions: users-modify
+Name: "{app}\Updates"; Permissions: users-modify
 Name: "{app}\Dependencies"; Permissions: users-readexec
 Name: "{app}\Dependencies\EmptyFilesystemRoot"; Permissions: users-modify
 Name: "{app}\Adapters"
@@ -125,6 +126,7 @@ Source: "..\Dependencies\uvx.exe"; DestDir: "{app}\Dependencies"; Flags: ignorev
 Source: "..\Dependencies\tailscale-setup.msi"; DestDir: "{app}\Dependencies"; Flags: ignoreversion
 Source: "..\scripts\Uninstall-Tailscale.ps1"; DestDir: "{app}\Scripts"; Flags: ignoreversion
 Source: "..\scripts\TailscaleSetup.ps1"; DestDir: "{app}\Scripts"; Flags: ignoreversion
+Source: "..\scripts\Cleanup-Updates.ps1"; DestDir: "{app}\Scripts"; Flags: ignoreversion
 Source: "..\Dependencies\node-v26.13.0-x64.msi"; Flags: dontcopy
 #ifdef FilesystemMcpPayload
 Source: "..\Dependencies\FilesystemMcp-engine.json"; Flags: dontcopy
@@ -146,6 +148,7 @@ Name: "{group}\MCP Bridge"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app
 Name: "{autodesktop}\MCP Bridge"; Filename: "{app}\{#AppExeName}"; IconFilename: "{app}\Resources\MCPBridge.ico"; Tasks: desktopicon
 
 [UninstallRun]
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\Scripts\Cleanup-Updates.ps1"" -UpdatesDirectory ""{app}\Updates"""; Flags: runhidden waituntilterminated; RunOnceId: "CleanupMCPBridgeUpdates"
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /T /IM MCPBridge.exe"; Flags: runhidden waituntilterminated; StatusMsg: "{cm:StoppingApp}"; RunOnceId: "StopMCPBridge"
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\Scripts\Uninstall-Tailscale.ps1"" -MsiPath ""{app}\Dependencies\tailscale-installed.msi"" -StateFile ""{app}\Config\tailscale-state.txt"""; Flags: runhidden waituntilterminated; RunOnceId: "StopAndUninstallTailscale"
 

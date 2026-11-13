@@ -152,6 +152,34 @@ try {
     }
 
     $diagnostics.Add("Adapter synchronization: OK ($($adapterSources.Count) files)")
+
+    # Build the silent WinExe updater beside MCPBridge.exe. The installer directory
+    # itself stays read/execute-only; only the separate Updates download folder is writable.
+    $updaterProject = Join-Path $repoRoot 'src\McpBridge.Updater\McpBridge.Updater.csproj'
+    $updaterOutputDirectory = $output
+    if (-not (Test-Path -LiteralPath $updaterProject -PathType Leaf)) {
+        throw "Не найден проект фонового updater: $updaterProject"
+    }
+
+    $updaterOutDirArgument = "-p:OutDir=$updaterOutputDirectory/"
+    $updaterBuildOutput = & $dotnet.Source build $updaterProject --configuration $Configuration --nologo --verbosity minimal $updaterOutDirArgument '-p:PlatformTarget=x64' 2>&1
+    $updaterBuildExitCode = $LASTEXITCODE
+    $diagnostics.Add("Updater build exit code: $updaterBuildExitCode")
+    if ($updaterBuildExitCode -ne 0) {
+        $diagnostics.Add("---- BEGIN updater build output ----")
+        foreach ($line in $updaterBuildOutput) {
+            $diagnostics.Add([string]$line)
+        }
+        $diagnostics.Add("---- END updater build output ----")
+        throw "Сборка фонового updater завершилась с кодом $updaterBuildExitCode. Подробности: $diagnosticsFile"
+    }
+
+    $updaterExecutable = Join-Path $updaterOutputDirectory 'MCPBridge.Updater.exe'
+    if (-not (Test-Path -LiteralPath $updaterExecutable -PathType Leaf) -or
+        (Get-Item -LiteralPath $updaterExecutable).Length -le 0) {
+        throw "Фоновый updater не был собран: $updaterExecutable"
+    }
+    $diagnostics.Add("Updater verified: $updaterExecutable")
 }
 finally {
     if ($null -eq $previousMsBuildSDKsPath) {

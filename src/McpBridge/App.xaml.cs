@@ -9,9 +9,20 @@ namespace McpBridge;
 public partial class App : System.Windows.Application
 {
     private static Mutex? _instanceMutex;
+    internal static bool SkipUpdateCheck { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        var isUpdaterHandoff = Array.Exists(e.Args, argument =>
+            string.Equals(argument, "--update-handoff", StringComparison.OrdinalIgnoreCase));
+        if (!isUpdaterHandoff && AppUpdateService.IsUpdaterRunning())
+        {
+            // A second Bridge instance must not open while the updater replaces files.
+            // The updater launches the next Bridge instance after setup completes.
+            Shutdown();
+            return;
+        }
+
         _instanceMutex = new Mutex(true, @"Local\MCPBridge", out var createdNew);
         if (!createdNew)
         {
@@ -20,6 +31,12 @@ public partial class App : System.Windows.Application
         }
 
         AppPaths.EnsureDirectories();
+        SkipUpdateCheck = Array.Exists(e.Args, argument =>
+            string.Equals(argument, "--skip-update-check", StringComparison.OrdinalIgnoreCase));
+        if (isUpdaterHandoff)
+            AppUpdateService.CompleteUpdaterHandoff(e.Args);
+        else
+            AppUpdateService.CleanupStaleUpdaterWorkers();
 
         DispatcherUnhandledException += (_, args) =>
         {

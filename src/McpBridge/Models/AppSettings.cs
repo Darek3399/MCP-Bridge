@@ -9,7 +9,7 @@ namespace McpBridge.Models;
 public sealed class AppSettings
 {
     [DataMember(Order = 1)]
-    public int SchemaVersion { get; set; } = 6;
+    public int SchemaVersion { get; set; } = 7;
 
     /// <summary>Directories configured for Filesystem MCP.</summary>
     [DataMember(Order = 2)]
@@ -72,6 +72,10 @@ public sealed class AppSettings
     /// <summary>Whether application log files are written. Default is off; toggled from the Logs page in real time.</summary>
     [DataMember(Order = 20, EmitDefaultValue = false)]
     public bool LoggingEnabled { get; set; }
+
+    /// <summary>Whether GitHub release updates are checked automatically when Bridge starts.</summary>
+    [DataMember(Order = 21, EmitDefaultValue = false)]
+    public bool? CheckUpdatesOnStartup { get; set; } = true;
 }
 
 [DataContract]

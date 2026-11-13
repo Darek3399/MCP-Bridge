@@ -46,7 +46,7 @@ public sealed class SettingsStore
         if (settings == null) throw new ArgumentNullException(nameof(settings));
         AppPaths.EnsureDirectories();
         NormalizeSettings(settings);
-        settings.SchemaVersion = 6;
+        settings.SchemaVersion = 7;
 
         var serializer = new DataContractJsonSerializer(
             typeof(AppSettings),
@@ -78,12 +78,13 @@ public sealed class SettingsStore
 
         if (!settings.UnrealMcpEnabled.HasValue) settings.UnrealMcpEnabled = false;
         if (!settings.FilesystemMcpEnabled.HasValue) settings.FilesystemMcpEnabled = true;
+        if (!settings.CheckUpdatesOnStartup.HasValue) settings.CheckUpdatesOnStartup = true;
 
         // Legacy online-access state is intentionally ignored. A public endpoint
         // always requires a fresh explicit user action after upgrade.
         if (settings.SchemaVersion < 5)
             settings.TailscaleFunnelEnabled = false;
-        settings.SchemaVersion = 6;
+        settings.SchemaVersion = 7;
 
         settings.CustomServers ??= new List<CustomMcpServerEntry>();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

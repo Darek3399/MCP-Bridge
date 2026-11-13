@@ -288,57 +288,96 @@
 
                         </StackPanel>
 
-                        <!-- НИЖНЯЯ ПАНЕЛЬ: БИЛД И ССЫЛКА НА GITHUB -->
-                        <Border Grid.Row="1" VerticalAlignment="Bottom" 
-                                BorderBrush="#141619" BorderThickness="0,1,0,0" 
-                                Background="#1A1C20" Padding="14,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                        <!-- НИЖНЯЯ ПАНЕЛЬ: ОБНОВЛЕНИЕ, ВЕРСИЯ И GITHUB -->
+                        <StackPanel Grid.Row="1" VerticalAlignment="Bottom">
+                            <Button x:Name="SidebarUpdateButton"
+                                    Content="Обновить"
+                                    Visibility="Collapsed"
+                                    Height="61"
+                                    HorizontalAlignment="Stretch"
+                                    Background="#2CE5D0"
+                                    Foreground="#101719"
+                                    BorderBrush="#15171A"
+                                    BorderThickness="0,0,0,1"
+                                    FontWeight="SemiBold"
+                                    FontSize="13"
+                                    Padding="18,14"
+                                    Cursor="Hand"
+                                    Click="SidebarUpdate_Click"
+                                    ToolTipService.IsEnabled="False">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}">
+                                            <ContentPresenter HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="{TemplateBinding Padding}"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#36F0DB"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter Property="Opacity" Value="0.82"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Opacity" Value="0.55"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
 
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="AppVersionText" 
-                                               Text="v0.9.0" 
-                                               FontSize="10.5" 
-                                               FontFamily="Segoe UI, Consolas" 
-                                               Foreground="#545B64" 
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
+                            <Border Background="#1A1C20" Padding="14,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="1" 
-                                        Click="GitHubButton_Click" 
-                                        Cursor="Hand" 
-                                        Background="Transparent" 
-                                        BorderThickness="0" 
-                                        Padding="4"
-                                        AutomationProperties.Name="Open MCP Bridge GitHub repository"
-                                        ToolTipService.IsEnabled="False">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}">
-                                                <ContentPresenter/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                    <Path Width="16" Height="16" 
-                                          Stretch="Uniform" 
-                                          Fill="#6E7781"
-                                          Data="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z">
-                                        <Path.Style>
-                                            <Style TargetType="Path">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
-                                                        <Setter Property="Fill" Value="#2CE5D0"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Path.Style>
-                                    </Path>
-                                </Button>
-                            </Grid>
-                        </Border>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="AppVersionText"
+                                                   Text="v0.9.7"
+                                                   FontSize="10.5"
+                                                   FontFamily="Segoe UI, Consolas"
+                                                   Foreground="#545B64"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Click="GitHubButton_Click"
+                                            Cursor="Hand"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="4"
+                                            AutomationProperties.Name="Open MCP Bridge GitHub repository"
+                                            ToolTipService.IsEnabled="False">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <Path Width="16" Height="16"
+                                              Stretch="Uniform"
+                                              Fill="#6E7781"
+                                              Data="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945 0 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.12 3.18.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                                                            <Setter Property="Fill" Value="#2CE5D0"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
 
                     </Grid>
                 </Border>
@@ -858,11 +897,47 @@
                                         </Border>
 
                                         <!-- 3. Автозапуск и системный трей -->
-                                        <Border Style="{StaticResource CardBorderStyle}">
+                                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
                                             <StackPanel>
                                                 <TextBlock x:Name="BgCardTitleText" Text="Автозапуск и работа в фоне" Style="{StaticResource SectionTitleStyle}"/>
                                                 <CheckBox x:Name="AutoStartCheckBox" Content="Запускать MCP Bridge вместе с Windows" Margin="0,12,0,8" Click="AutoStart_Click"/>
                                                 <TextBlock x:Name="BgCardSubText" Text="Закрытие окна на крестик сворачивает приложение в системный трей. Для полного выхода используйте меню трея." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- 4. Проверка обновлений -->
+                                        <Border Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel>
+                                                <TextBlock x:Name="UpdatesCardTitleText" Text="Обновления" Style="{StaticResource SectionTitleStyle}"/>
+                                                <Grid Margin="0,12,0,10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox x:Name="CheckUpdatesOnStartupCheckBox"
+                                                              Grid.Column="0"
+                                                              Content="Проверять обновления при запуске"
+                                                              VerticalAlignment="Center"
+                                                              Margin="0,0,8,0"
+                                                              Click="CheckUpdatesOnStartup_Click"/>
+                                                    <Button x:Name="CheckUpdatesButton"
+                                                            Grid.Column="1"
+                                                            Content="Проверить обновления"
+                                                            Padding="10,7"
+                                                            Click="CheckUpdatesButton_Click"/>
+                                                </Grid>
+                                                <ProgressBar x:Name="UpdateDownloadProgressBar"
+                                                             Height="5"
+                                                             Minimum="0"
+                                                             Maximum="100"
+                                                             Value="0"
+                                                             Visibility="Collapsed"
+                                                             Margin="0,0,0,8"/>
+                                                <TextBlock x:Name="UpdateStatusText"
+                                                           Text=""
+                                                           Style="{StaticResource MutedTextStyle}"
+                                                           TextWrapping="Wrap"
+                                                           Visibility="Collapsed"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>

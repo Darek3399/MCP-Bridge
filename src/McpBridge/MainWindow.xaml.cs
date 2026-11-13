@@ -51,6 +51,10 @@ public partial class MainWindow : Window
     private bool _fontScaleCommitPending;
     private bool _dependencyFooterWarning;
     private DependencyStatusView? _dependencyStatusView;
+    private readonly AppUpdateService _appUpdateService = new();
+    private AppUpdateInfo? _availableUpdate;
+    private bool _updateCheckRunning;
+    private bool _updateInstallRunning;
     private int _onlineServersCount;
     private int _enabledServersCount;
     private int _totalToolsCount;
@@ -89,8 +93,11 @@ public partial class MainWindow : Window
         PresetsItemsControl.ItemsSource = _settings.Presets;
 
         _mcpInfrastructure.StatusChanged += McpInfrastructure_StatusChanged;
-        _tailscaleManager.StatusChanged += TailscaleConnectionManager_StatusChanged;        AutoStartCheckBox.IsChecked = AutoStartService.IsEnabled();
+        _tailscaleManager.StatusChanged += TailscaleConnectionManager_StatusChanged;
+        AutoStartCheckBox.IsChecked = AutoStartService.IsEnabled();
         _settings.RunAtWindowsStartup = AutoStartCheckBox.IsChecked == true;
+        CheckUpdatesOnStartupCheckBox.IsChecked = _settings.CheckUpdatesOnStartup != false;
+        CheckUpdatesOnStartupCheckBox.IsEnabled = AppPaths.CanInstallUpdates;
 
         RefreshUrlState();
         UpdateTailscaleUi();
@@ -108,6 +115,9 @@ public partial class MainWindow : Window
             ErrorLog.LogApp(I18n.Tr("MCP Bridge запущен.", "MCP Bridge started.")); ErrorLog.LogUpdated += (_, _) => Dispatcher.BeginInvoke(new Action(() => { if (MainPages.SelectedIndex == 2) RefreshLogs(); }), DispatcherPriority.Background);
             FooterStatusText.Text = I18n.Tr("Оркестратор запущен.", "Orchestrator started.");
             UpdateTailscaleUi();
+            // Update discovery is independent from the MCP startup/handshake path.
+            if (AppPaths.CanInstallUpdates && _settings.CheckUpdatesOnStartup == true && !App.SkipUpdateCheck)
+                _ = CheckForUpdatesAsync(showUpToDateStatus: false);
             await SyncMcpInfrastructureAsync(forceRetryQuarantined: true);
             _tailscaleManager.Start(_mcpInfrastructure.IsReady);
             var dependencyReport = McpDependencyResolver.GetCachedReport();
@@ -523,6 +533,10 @@ public partial class MainWindow : Window
         BgCardTitleText.Text = I18n.Tr("Автозапуск и работа в фоне", "Startup & Background Mode");
         AutoStartCheckBox.Content = I18n.Tr("Запускать MCP Bridge вместе с Windows", "Launch MCP Bridge at Windows startup");
         BgCardSubText.Text = I18n.Tr("Закрытие окна на крестик сворачивает приложение в системный трей. Для полного выхода используйте меню трея.", "Closing the window minimizes the application to the system tray. Use the tray menu to exit completely.");
+        UpdatesCardTitleText.Text = I18n.Tr("Обновления", "Updates");
+        CheckUpdatesOnStartupCheckBox.Content = I18n.Tr("Проверять обновления при запуске", "Check for updates at startup");
+        CheckUpdatesButton.Content = I18n.Tr("Проверить обновления", "Check for updates");
+        SidebarUpdateButton.Content = I18n.Tr("Обновить", "Update");
 
         if (_trayMenu.Items.Count >= 3)
         {
@@ -1571,6 +1585,212 @@ public partial class MainWindow : Window
         if (_exitRequested || _cleanupStarted || _cleanupCompleted) return;
         _exitRequested = true;
         Close();
+    }
+
+    private void CheckUpdatesOnStartup_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.CheckUpdatesOnStartup = CheckUpdatesOnStartupCheckBox.IsChecked == true;
+        SaveSettings();
+    }
+
+    private void CheckUpdatesButton_Click(object sender, RoutedEventArgs e) => _ = CheckForUpdatesAsync(showUpToDateStatus: true);
+
+    private void SidebarUpdate_Click(object sender, RoutedEventArgs e) => _ = PromptAndInstallUpdateAsync();
+
+    private async Task CheckForUpdatesAsync(bool showUpToDateStatus)
+    {
+        if (_updateCheckRunning || _updateInstallRunning || _cleanupStarted || _cleanupCompleted)
+            return;
+
+        _updateCheckRunning = true;
+        CheckUpdatesButton.IsEnabled = false;
+        SetUpdateStatus(I18n.Tr("Проверка обновлений…", "Checking for updates…"));
+        UpdateDownloadProgressBar.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            var update = await _appUpdateService.CheckForUpdateAsync();
+            _availableUpdate = update;
+            if (update == null)
+            {
+                SidebarUpdateButton.Visibility = Visibility.Collapsed;
+                if (showUpToDateStatus)
+                    SetUpdateStatus(I18n.Tr("Установлена последняя версия.", "You are running the latest version."));
+                else
+                    UpdateStatusText.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            if (!AppPaths.CanInstallUpdates)
+            {
+                SidebarUpdateButton.Visibility = Visibility.Collapsed;
+                SetUpdateStatus(I18n.Tr(
+                    "Доступна v" + update.VersionLabel + ", но установленная версия MCP Bridge не найдена.",
+                    "v" + update.VersionLabel + " is available, but no installed MCP Bridge was found."));
+                return;
+            }
+
+            SidebarUpdateButton.Visibility = Visibility.Visible;
+            SidebarUpdateButton.Content = I18n.Tr("Обновить", "Update");
+            SetUpdateStatus(I18n.Tr(
+                "Доступна новая версия: v" + update.VersionLabel,
+                "A new version is available: v" + update.VersionLabel));
+            await PromptAndInstallUpdateAsync();
+        }
+        catch (Exception exception)
+        {
+            ErrorLog.Write("MainWindow.CheckForUpdates", exception);
+            SetUpdateStatus(I18n.Tr(
+                "Не удалось проверить обновления: " + exception.Message,
+                "Update check failed: " + exception.Message));
+        }
+        finally
+        {
+            _updateCheckRunning = false;
+            if (!_updateInstallRunning)
+                CheckUpdatesButton.IsEnabled = true;
+        }
+    }
+
+    private async Task PromptAndInstallUpdateAsync()
+    {
+        if (_availableUpdate == null || _updateInstallRunning || _cleanupStarted || _cleanupCompleted)
+            return;
+
+        var update = _availableUpdate;
+        var confirmation = WpfMessageBox.Show(
+            this,
+            I18n.Tr(
+                "Доступна MCP Bridge v" + update.VersionLabel + ". Установить обновление сейчас?",
+                "MCP Bridge v" + update.VersionLabel + " is available. Install the update now?"),
+            I18n.Tr("Доступно обновление", "Update available"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirmation != MessageBoxResult.Yes)
+            return;
+
+        await DownloadAndStartUpdateAsync(update);
+    }
+
+    private async Task DownloadAndStartUpdateAsync(AppUpdateInfo update)
+    {
+        if (_updateInstallRunning)
+            return;
+
+        _updateInstallRunning = true;
+        CheckUpdatesButton.IsEnabled = false;
+        SidebarUpdateButton.IsEnabled = false;
+        UpdateDownloadProgressBar.Visibility = Visibility.Visible;
+        UpdateDownloadProgressBar.Value = 0;
+        NavigateToPage(3);
+        SetSettingsSection(technical: false);
+        SetUpdateStatus(I18n.Tr("Загрузка обновления…", "Downloading update…"));
+
+        try
+        {
+            var progress = new Progress<UpdateDownloadProgress>(value =>
+            {
+                if (value.Percentage.HasValue)
+                {
+                    var percentage = value.Percentage.Value;
+                    UpdateDownloadProgressBar.Value = percentage;
+                    SetUpdateStatus(I18n.Tr(
+                        "Загрузка обновления: " + percentage.ToString("0", CultureInfo.InvariantCulture) + "%",
+                        "Downloading update: " + percentage.ToString("0", CultureInfo.InvariantCulture) + "%"));
+                }
+                else
+                {
+                    var megabytes = value.BytesReceived / (1024.0 * 1024.0);
+                    SetUpdateStatus(I18n.Tr(
+                        "Загружено: " + megabytes.ToString("0.0", CultureInfo.InvariantCulture) + " МБ",
+                        "Downloaded: " + megabytes.ToString("0.0", CultureInfo.InvariantCulture) + " MB"));
+                }
+            });
+
+            var installerPath = await _appUpdateService.DownloadAndVerifyAsync(update, progress);
+            if (_exitRequested || _cleanupStarted || _cleanupCompleted)
+                return;
+
+            SetUpdateStatus(I18n.Tr("Загрузка проверена. Перезапуск MCP Bridge…", "Download verified. Restarting MCP Bridge…"));
+
+            if (!File.Exists(AppPaths.UpdaterExecutable))
+                throw new FileNotFoundException(I18n.Tr("Не найден скрытый компонент обновления.", "The background updater helper was not found."), AppPaths.UpdaterExecutable);
+
+            var arguments = JoinWindowsArguments(new[]
+            {
+                "--start",
+                installerPath,
+                AppPaths.InstallDirectory,
+                AppPaths.UpdateTargetDirectory,
+                Process.GetCurrentProcess().Id.ToString(CultureInfo.InvariantCulture),
+                I18n.IsEnglish ? "en" : "ru",
+                update.Sha256
+            });
+
+            var updater = Process.Start(new ProcessStartInfo
+            {
+                FileName = AppPaths.UpdaterExecutable,
+                Arguments = arguments,
+                WorkingDirectory = AppPaths.UpdatesDirectory,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            });
+
+            if (updater == null)
+                throw new InvalidOperationException(I18n.Tr("Не удалось запустить фоновый компонент обновления.", "Could not start the background updater helper."));
+
+            _exitRequested = true;
+            Close();
+        }
+        catch (Exception exception)
+        {
+            _updateInstallRunning = false;
+            SidebarUpdateButton.IsEnabled = true;
+            CheckUpdatesButton.IsEnabled = true;
+            ErrorLog.Write("MainWindow.DownloadAndStartUpdate", exception);
+            SetUpdateStatus(I18n.Tr(
+                "Не удалось запустить обновление: " + exception.Message,
+                "Could not start the update: " + exception.Message));
+        }
+    }
+
+    private void SetUpdateStatus(string message)
+    {
+        UpdateStatusText.Text = message;
+        UpdateStatusText.Visibility = string.IsNullOrWhiteSpace(message) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private static string JoinWindowsArguments(IEnumerable<string> arguments) =>
+        string.Join(" ", arguments.Select(QuoteWindowsArgument));
+
+    private static string QuoteWindowsArgument(string value)
+    {
+        var result = new System.Text.StringBuilder();
+        result.Append('"');
+        var backslashes = 0;
+        foreach (var character in value)
+        {
+            if (character == '\\')
+            {
+                backslashes++;
+                continue;
+            }
+            if (character == '"')
+            {
+                result.Append('\\', backslashes * 2 + 1);
+                result.Append('"');
+                backslashes = 0;
+                continue;
+            }
+            result.Append('\\', backslashes);
+            backslashes = 0;
+            result.Append(character);
+        }
+        result.Append('\\', backslashes * 2);
+        result.Append('"');
+        return result.ToString();
     }
 
     private void AutoStart_Click(object sender, RoutedEventArgs e)

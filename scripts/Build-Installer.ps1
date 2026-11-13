@@ -79,6 +79,11 @@ if (-not $dotnet) {
 
 & $publishScript -Configuration $Configuration -LaunchAfterPublish $false
 
+$updaterExecutable = Join-Path $publishDirectory 'MCPBridge.Updater.exe'
+if (-not (Test-Path -LiteralPath $updaterExecutable -PathType Leaf)) {
+    throw "Не найден фоновый updater в publish payload: $updaterExecutable"
+}
+
 $adapterSourceDirectory = Join-Path $repoRoot 'src\McpBridge\Adapters'
 $adapterPublishDirectory = Join-Path $publishDirectory 'Adapters'
 if (-not (Test-Path -LiteralPath $adapterSourceDirectory -PathType Container) -or
