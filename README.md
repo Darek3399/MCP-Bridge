@@ -3,7 +3,7 @@
 <a id="top"></a>
 
 <div align="right">
-  <a href="docs/donate.md" title="Support the project" style="display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;"><img src="docs/images/coffee-icon.svg" width="18" height="18" alt="">Support</a> ·
+  <a href="docs/donate.md" title="Support the project" style="display: inline-grid; grid-template-columns: 18px max-content; align-items: center; column-gap: 4px; vertical-align: middle;"><img src="docs/images/coffee-icon.svg" width="18" height="18" alt=""><span>Support</span></a> ·
   <a href="README.ru.md">Русский</a> · <a href="README.md">English</a>
 </div>
 
@@ -170,7 +170,6 @@ If MCP Bridge is useful to you, you can support its development:
 </p>
 
 </div>
-
 
 
 
