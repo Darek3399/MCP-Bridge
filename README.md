@@ -3,8 +3,9 @@
 <a id="top"></a>
 
 <div align="right">
-  <a href="docs/donate.md" title="Support the project"><img src="docs/images/coffee-icon.svg" width="18" height="18" alt=""> Support</a> ·
-  <a href="README.ru.md">Русский</a> · <a href="README.md">English</a>
+  <a href="docs/donate.md" title="Support the project"><img src="docs/images/coffee-button-en.svg" height="24" alt="Buy a coffee"></a>&nbsp;
+  <a href="README.ru.md"><img src="https://img.shields.io/badge/-Русский-22252A?style=for-the-badge" height="24" alt="Русский"></a>&nbsp;
+  <a href="README.md"><img src="https://img.shields.io/badge/-English-15322F?style=for-the-badge" height="24" alt="English"></a>
 </div>
 
 <div align="center">
@@ -170,7 +171,6 @@ If MCP Bridge is useful to you, you can support its development:
 </p>
 
 </div>
-
 
 
 

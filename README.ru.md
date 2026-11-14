@@ -3,8 +3,9 @@
 <a id="top"></a>
 
 <div align="right">
-  <a href="docs/donate.md" title="Поддержать проект"><img src="docs/images/coffee-icon.svg" width="18" height="18" alt=""> Поддержать</a> ·
-  <a href="README.ru.md">Русский</a> · <a href="README.md">English</a>
+  <a href="docs/donate.md" title="Поддержать проект"><img src="docs/images/coffee-button-ru.svg" height="24" alt="На кофе разработчику"></a>&nbsp;
+  <a href="README.ru.md"><img src="https://img.shields.io/badge/-Русский-15322F?style=for-the-badge" height="24" alt="Русский"></a>&nbsp;
+  <a href="README.md"><img src="https://img.shields.io/badge/-English-22252A?style=for-the-badge" height="24" alt="English"></a>
 </div>
 
 <div align="center">
@@ -170,7 +171,6 @@ Bridge предоставляет два meta-tools — `all_tools` и `call_too
 </p>
 
 </div>
-
 
 
 
