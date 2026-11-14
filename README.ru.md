@@ -3,7 +3,7 @@
 <a id="top"></a>
 
 <div align="right">
-  <a href="docs/donate.md" title="Поддержать проект"><img src="docs/images/coffee-icon.svg" width="18" height="18" alt="" style="vertical-align: -4px;"> Поддержать</a> ·
+  <a href="docs/donate.md" title="Поддержать проект"><img src="docs/images/coffee-icon.svg" width="18" height="18" alt="" style="vertical-align: middle;"> Поддержать</a> ·
   <a href="README.ru.md">Русский</a> · <a href="README.md">English</a>
 </div>
 
@@ -170,7 +170,6 @@ Bridge предоставляет два meta-tools — `all_tools` и `call_too
 </p>
 
 </div>
-
 
 
 
