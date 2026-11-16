@@ -28,7 +28,7 @@
 </div>
 
 <p align="center">
-  <img src="docs/images/Main_RU.png" width="900" alt="Главный экран MCP Hotplug">
+  <img src="docs/images/Main_RU.svg" width="900" alt="Главный экран MCP Hotplug">
 </p>
 
 ## Что решает MCP Hotplug
@@ -64,7 +64,7 @@
 ```
 
 <p>
-  <img src="docs/images/Settings_RU.png" width="900" alt="Настройки MCP Hotplug и адреса подключения">
+  <img src="docs/images/Settings_RU.svg" width="900" alt="Настройки MCP Hotplug и адреса подключения">
 </p>
 
 ## Удалённый доступ через Tailscale Funnel
@@ -99,7 +99,7 @@
 Включайте и выключайте MCP-серверы во время активного диалога, не переподключая клиент вручную.
 
 <p>
-  <img src="docs/images/MSP_Servises_RU.png" width="900" alt="Управление MCP-серверами">
+  <img src="docs/images/MSP_Servises_RU.svg" width="900" alt="Управление MCP-серверами">
 </p>
 
 ### Используйте пресеты для разных задач

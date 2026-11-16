@@ -28,7 +28,7 @@
 </div>
 
 <p align="center">
-  <img src="docs/images/Main_ENG.png" width="900" alt="MCP Hotplug dashboard">
+  <img src="docs/images/Main_ENG.svg" width="900" alt="MCP Hotplug dashboard">
 </p>
 
 ## Why MCP Hotplug?
@@ -64,7 +64,7 @@ If your client uses a JSON configuration file, add:
 ```
 
 <p>
-  <img src="docs/images/Settings_ENG.png" width="900" alt="MCP Hotplug settings and connection URLs">
+  <img src="docs/images/Settings_ENG.svg" width="900" alt="MCP Hotplug settings and connection URLs">
 </p>
 
 ## Remote access with Tailscale Funnel
@@ -99,7 +99,7 @@ Unlike temporary tunnels, this address does not need to be reacquired on every l
 Enable and disable MCP servers during an active conversation without manually reconnecting your client.
 
 <p>
-  <img src="docs/images/MSP_Servises_ENG.png" width="900" alt="MCP server management">
+  <img src="docs/images/MSP_Servises_ENG.svg" width="900" alt="MCP server management">
 </p>
 
 ### Use presets for different tasks
