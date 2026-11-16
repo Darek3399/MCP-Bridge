@@ -18,13 +18,9 @@
   </p>
 
   <p>
-    <a href="https://github.com/user-attachments/assets/6b1b49db-0a66-40c0-ac24-ed31efa85cad"><img src="https://img.shields.io/badge/Смотреть%20демо-22252A?style=for-the-badge&labelColor=181A1D" alt="Открыть видео демо"></a>
-  </p>
-  <p>
-    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/badge/Release-v0.9.6-0969da?logo=github&logoColor=white" alt="Latest release"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="MIT License"></a>
     <a href="https://mcp.so/server/MCP-Bridge/Darek3399"><img src="https://img.shields.io/badge/MCP.so-MCP_Bridge-f97316?logo=modelcontextprotocol&logoColor=white" alt="MCP Bridge on MCP.so"></a>
-    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge/badges/score.svg" alt="MCP Bridge score on Glama"></a>
+    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge/badges/score.svg?v=2" alt="MCP Bridge score on Glama"></a>
   </p>
 
 
