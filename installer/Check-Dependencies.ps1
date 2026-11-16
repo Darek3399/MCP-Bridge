@@ -8,6 +8,17 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+trap {
+    try {
+        $message = ($_ | Out-String).Trim() -replace '[\r\n]+', ' '
+        $diagnostic = @('Encoding=UTF-8', ('ProbeError=' + $message))
+        [System.IO.File]::WriteAllLines($OutputFile, $diagnostic, [System.Text.UTF8Encoding]::new($true))
+    }
+    catch { }
+    exit 1
+}
+
 . (Join-Path $PSScriptRoot 'NodeRuntimeDiscovery.ps1')
 
 function Get-FirstExistingFile([string[]]$Candidates) {

@@ -90,7 +90,7 @@ try {
 
     $resolvedAppDirectory = [IO.Path]::GetFullPath($AppDirectory)
     if ([string]::IsNullOrWhiteSpace($resolvedAppDirectory) -or $resolvedAppDirectory -eq [IO.Path]::GetPathRoot($resolvedAppDirectory)) {
-        throw 'Путь установки MCP Bridge недопустим для полной очистки.'
+        throw 'Путь установки MCP Hotplug недопустим для полной очистки.'
     }
 
     Preserve-LegacyTailscaleState

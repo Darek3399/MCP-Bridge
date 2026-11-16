@@ -1,7 +1,7 @@
 
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
-  <title id="title">Как работает MCP Bridge</title>
-  <desc id="desc">Архитектурная схема: браузерные и настольные ИИ-клиенты подключаются через единый узел MCP Bridge к локальным и облачным MCP-серверам.</desc>
+  <title id="title">Как работает MCP Hotplug</title>
+  <desc id="desc">Архитектурная схема: браузерные и настольные ИИ-клиенты подключаются через единый узел MCP Hotplug к локальным и облачным MCP-серверам.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#141719"/>
@@ -59,12 +59,12 @@
   <rect width="1600" height="720" fill="url(#grid)"/>
   <rect x="18" y="18" width="1564" height="684" rx="8" fill="none" stroke="#343A3F" stroke-width="1"/>
 
-  <text x="64" y="98" class="title" style="font-size:31px">КАК <tspan fill="#75CDB1">РАБОТАЕТ MCP BRIDGE</tspan></text>
+  <text x="64" y="98" class="title" style="font-size:31px">КАК <tspan fill="#75CDB1">РАБОТАЕТ MCP HOTPLUG</tspan></text>
   <line x1="64" y1="134" x2="1536" y2="134" stroke="#343A3F" stroke-width="1"/>
 
   <g id="architecture" transform="translate(0 -32)">
     <text x="64" y="207" class="zone"><tspan class="zoneNo">01</tspan><tspan dx="10">ИИ-КЛИЕНТЫ</tspan></text>
-    <text x="435" y="207" class="zone"><tspan class="zoneNo">02</tspan><tspan dx="10">УЗЕЛ MCP BRIDGE</tspan></text>
+    <text x="435" y="207" class="zone"><tspan class="zoneNo">02</tspan><tspan dx="10">УЗЕЛ MCP HOTPLUG</tspan></text>
     <text x="1226" y="207" class="zone"><tspan class="zoneNo">03</tspan><tspan dx="10">MCP-СЕРВЕРЫ</tspan></text>
 
     <g id="browser-ai">
@@ -101,11 +101,11 @@
       <text x="88" y="672" class="micro">ЛОКАЛЬНЫЕ КЛИЕНТЫ</text>
     </g>
 
-    <g id="mcp-bridge-hub">
+    <g id="mcp-hotplug-hub">
       <rect x="435" y="226" width="730" height="476" rx="12" fill="url(#hubFill)"/>
       <rect x="435" y="226" width="730" height="8" fill="#75CDB1" opacity=".82" clip-path="url(#hubCardClip)"/>
       <rect x="435" y="226" width="730" height="476" rx="12" fill="none" stroke="#3E6258" stroke-width="1.3"/>
-      <text x="468" y="272" class="hubTitle">MCP Bridge</text>
+      <text x="468" y="272" class="hubTitle">MCP Hotplug</text>
       <text x="468" y="296" class="hubMeta">ЕДИНЫЙ СЛОЙ МАРШРУТИЗАЦИИ</text>
       <g transform="translate(998 251)">
         <rect width="132" height="27" rx="4" fill="#15322F" stroke="#315B50" stroke-width=".8"/>

@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpHotplug", "src\McpHotplug\McpHotplug.csproj", "{A61A9AB8-6D77-4B8A-9A04-3D5B6A6E0A21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpHotplug.Updater", "src\McpHotplug.Updater\McpHotplug.Updater.csproj", "{B2D8BFF2-41D2-4C7B-A023-F5634B2F8A17}"
+EndProject
+Global
+    GlobalSection(SolutionConfigurationPlatforms) = preSolution
+        Debug|Any CPU = Debug|Any CPU
+        Release|Any CPU = Release|Any CPU
+    EndGlobalSection
+    GlobalSection(ProjectConfigurationPlatforms) = postSolution
+        {A61A9AB8-6D77-4B8A-9A04-3D5B6A6E0A21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {A61A9AB8-6D77-4B8A-9A04-3D5B6A6E0A21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {A61A9AB8-6D77-4B8A-9A04-3D5B6A6E0A21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {A61A9AB8-6D77-4B8A-9A04-3D5B6A6E0A21}.Release|Any CPU.Build.0 = Release|Any CPU
+        {B2D8BFF2-41D2-4C7B-A023-F5634B2F8A17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {B2D8BFF2-41D2-4C7B-A023-F5634B2F8A17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {B2D8BFF2-41D2-4C7B-A023-F5634B2F8A17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {B2D8BFF2-41D2-4C7B-A023-F5634B2F8A17}.Release|Any CPU.Build.0 = Release|Any CPU
+    EndGlobalSection
+EndGlobal

@@ -7,20 +7,20 @@
 
 <div align="center">
   <br clear="all">
-  <img style="display: block; margin: 18px auto -16px;" src="src/McpBridge/Resources/MCPBridge.ico" width="72" height="72" alt="MCP Bridge">
-  <h1 style="margin-top: 0;">mcp<b>Bridge</b></h1>
+  <img style="display: block; margin: 18px auto -16px;" src="src/McpHotplug/Resources/MCPHotplug.ico" width="72" height="72" alt="MCP Hotplug">
+  <h1 style="margin-top: 0;">mcp<b>Hotplug</b></h1>
 
   <h3>Один адрес для всех MCP-серверов. Переключайте инструменты, не перезапуская чат.</h3>
 
   <p>
-    MCP Bridge объединяет локальные и удалённые MCP-серверы в одном приложении для Windows.<br>
+    MCP Hotplug объединяет локальные и удалённые MCP-серверы в одном приложении для Windows.<br>
     Подключите AI-клиент один раз, а затем включайте только нужные серверы.
   </p>
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="MIT License"></a>
-    <a href="https://mcp.so/server/MCP-Bridge/Darek3399"><img src="https://img.shields.io/badge/MCP.so-MCP_Bridge-f97316?logo=modelcontextprotocol&logoColor=white" alt="MCP Bridge on MCP.so"></a>
-    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge/badges/score.svg?v=2" alt="MCP Bridge score on Glama"></a>
+    <a href="https://mcp.so/server/MCP-Hotplug/Darek3399"><img src="https://img.shields.io/badge/MCP.so-MCP_Hotplug-f97316?logo=modelcontextprotocol&logoColor=white" alt="MCP Hotplug on MCP.so"></a>
+    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Hotplug"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Hotplug/badges/score.svg?v=2" alt="MCP Hotplug score on Glama"></a>
   </p>
 
 
@@ -28,10 +28,10 @@
 </div>
 
 <p align="center">
-  <img src="docs/images/Main_RU.png" width="900" alt="Главный экран MCP Bridge">
+  <img src="docs/images/Main_RU.png" width="900" alt="Главный экран MCP Hotplug">
 </p>
 
-## Что решает MCP Bridge
+## Что решает MCP Hotplug
 
 - **Один адрес подключения:** объедините несколько локальных и удалённых MCP-серверов.
 - **Переключение на лету:** включайте и выключайте серверы во время работы.
@@ -42,8 +42,8 @@
 
 ## Быстрый старт
 
-1. Скачайте установщик со [страницы последнего релиза](https://github.com/Darek3399/MCP-Bridge/releases/latest).
-2. Установите и запустите MCP Bridge.
+1. Скачайте установщик со [страницы последнего релиза](https://github.com/Darek3399/MCP-Hotplug/releases/latest).
+2. Установите и запустите MCP Hotplug.
 3. Откройте вкладку **MCP Services** и добавьте MCP-сервер. Можно вставить конфигурацию из документации сервера.
 4. Нажмите **Verify & Add**. Если сервер зависит от закрытого приложения, выберите **Save Without Check**.
 5. В настройках MCP-клиента добавьте подключение **Streamable HTTP** и укажите локальный адрес:
@@ -55,7 +55,7 @@
 ```json
 {
   "mcpServers": {
-    "mcp-bridge": {
+    "mcp-hotplug": {
       "type": "http",
       "url": "http://127.0.0.1:8004/mcp"
     }
@@ -64,12 +64,12 @@
 ```
 
 <p>
-  <img src="docs/images/Settings_RU.png" width="900" alt="Настройки MCP Bridge и адреса подключения">
+  <img src="docs/images/Settings_RU.png" width="900" alt="Настройки MCP Hotplug и адреса подключения">
 </p>
 
 ## Удалённый доступ через Tailscale Funnel
 
-При первоначальной настройке авторизуйте устройство в Tailscale и включите Funnel. После этого используется стабильное имя устройства и адрес Funnel: обычно не нужно снова входить в аккаунт или получать новый URL при каждом запуске Bridge. Адрес доступен, пока устройство авторизовано и работает, а Funnel включён.
+При первоначальной настройке авторизуйте устройство в Tailscale и включите Funnel. После этого используется стабильное имя устройства и адрес Funnel: обычно не нужно снова входить в аккаунт или получать новый URL при каждом запуске Hotplug. Адрес доступен, пока устройство авторизовано и работает, а Funnel включён.
 
 В отличие от временных туннелей, этот адрес не нужно получать заново при каждом запуске. Условия других сервисов туннелирования отличаются; постоянный адрес у некоторых из них может быть доступен только на платном тарифе.
 
@@ -108,7 +108,7 @@
 
 ### Подключайте локальные STDIO-серверы
 
-Bridge объединяет локальные консольные MCP-серверы, запускаемые через `npx`, `uvx`, `python` и другие инструменты, с подключением к общему шлюзу.
+Hotplug объединяет локальные консольные MCP-серверы, запускаемые через `npx`, `uvx`, `python` и другие инструменты, с подключением к общему шлюзу.
 
 ### Ограничивайте доступ к папкам
 
@@ -117,17 +117,17 @@ Bridge объединяет локальные консольные MCP-серв
 ## Как это устроено
 
 <p>
-  <img src="docs/images/architecture-ru.svg" width="900" alt="Архитектура MCP Bridge">
+  <img src="docs/images/architecture-ru.svg" width="900" alt="Архитектура MCP Hotplug">
 </p>
 
-1. AI-клиент подключается к endpoint MCP Bridge.
-2. Bridge направляет запросы к включённым MCP-серверам.
+1. AI-клиент подключается к endpoint MCP Hotplug.
+2. Hotplug направляет запросы к включённым MCP-серверам.
 3. Локальные серверы могут использовать STDIO, удалённые — HTTP.
 4. Удалённый доступ для веб-клиента при необходимости включается отдельно через Tailscale Funnel.
 
 ## Инструменты
 
-Bridge предоставляет два meta-tools — `all_tools` и `call_tool` — для обнаружения и вызова инструментов подключённых серверов. Это позволяет не передавать клиенту описания всех инструментов сразу. Фактический эффект зависит от клиента и модели.
+Hotplug предоставляет два meta-tools — `all_tools` и `call_tool` — для обнаружения и вызова инструментов подключённых серверов. Это позволяет не передавать клиенту описания всех инструментов сразу. Фактический эффект зависит от клиента и модели.
 
 - **`all_tools`** — возвращает актуальный кэшированный каталог инструментов включённых MCP-серверов, включая `tool_id`, `inputSchema`, статус сервера и `catalog_revision`.
 - **`call_tool`** — проверяет аргументы по кэшированной `inputSchema` и направляет вызов целевому серверу по параметрам `tool_id`, `catalog_revision` и `arguments`.
@@ -145,7 +145,7 @@ Bridge предоставляет два meta-tools — `all_tools` и `call_too
 
 - Windows 10 x64 (1903+) или Windows 11.
 - .NET Framework 4.8.
-- Установщик для Windows x64 доступен на [странице релизов](https://github.com/Darek3399/MCP-Bridge/releases/latest).
+- Установщик для Windows x64 доступен на [странице релизов](https://github.com/Darek3399/MCP-Hotplug/releases/latest).
 
 ## Технические сведения
 
@@ -161,8 +161,8 @@ Bridge предоставляет два meta-tools — `all_tools` и `call_too
 
 Нашли ошибку или хотите предложить улучшение?
 
-- [Создать issue](https://github.com/Darek3399/MCP-Bridge/issues).
-- [Посмотреть исходный код](https://github.com/Darek3399/MCP-Bridge).
+- [Создать issue](https://github.com/Darek3399/MCP-Hotplug/issues).
+- [Посмотреть исходный код](https://github.com/Darek3399/MCP-Hotplug).
 
 ## Лицензия
 
@@ -170,11 +170,11 @@ Bridge предоставляет два meta-tools — `all_tools` и `call_too
 
 ## Поддержать проект
 
-Если MCP Bridge оказался вам полезен, можно поддержать разработку:
+Если MCP Hotplug оказался вам полезен, можно поддержать разработку:
 
 <p>
   <a href="docs/donate.md">
-    <img src="docs/images/coffee-ru.svg" width="500" alt="Поддержать разработку MCP Bridge">
+    <img src="docs/images/coffee-ru.svg" width="500" alt="Поддержать разработку MCP Hotplug">
   </a>
 </p>
 
@@ -188,41 +188,3 @@ Bridge предоставляет два meta-tools — `all_tools` и `call_too
 </p>
 
 </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,7 +1,12 @@
 <Project>
   <PropertyGroup>
-    <!-- Single source of truth for the MCP Bridge product version. -->
-    <Version>0.9.88</Version>
+    <!-- Single source of truth for the MCP Hotplug product version. -->
+    <Version>0.9.89</Version>
+    <Product>MCP Hotplug</Product>
+    <Title>MCP Hotplug</Title>
+    <Company>MCP Hotplug</Company>
+    <Description>Windows MCP gateway manager with live server and tool switching.</Description>
+    <RepositoryUrl>https://github.com/Darek3399/MCP-Hotplug</RepositoryUrl>
     <BaseOutputPath>$(MSBuildThisFileDirectory)Work\Build\bin\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)Work\Build\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
   </PropertyGroup>

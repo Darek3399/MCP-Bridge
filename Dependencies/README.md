@@ -1,4 +1,4 @@
-# MCP Bridge Dependencies
+# MCP Hotplug Dependencies
 
 This directory is part of the public repository structure.
 

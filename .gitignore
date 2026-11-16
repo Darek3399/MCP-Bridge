@@ -44,4 +44,4 @@ installer/Payload/*
 
 # Release installers and third-party installers are distributed separately.
 *.msi
-MCPBridge-Setup-*.exe
+MCP-Hotplug-Setup-*.exe

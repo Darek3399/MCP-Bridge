@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$project = Join-Path $repoRoot 'src\McpBridge\McpBridge.csproj'
+$project = Join-Path $repoRoot 'src\McpHotplug\McpHotplug.csproj'
 $output = Join-Path $repoRoot 'Work\Build\publish\win-x64'
 $diagnosticsDirectory = Join-Path $repoRoot 'Work\Diagnostics\Build'
 $diagnosticsFile = Join-Path $diagnosticsDirectory 'publish-build-diagnostics.txt'
@@ -28,14 +28,14 @@ if (-not (Test-Path -LiteralPath $project -PathType Leaf)) {
 
 # The publish directory is generated output, never a source of truth.
 # Remove it completely so files from an earlier build cannot survive into a new installer.
-$runningBridge = @(Get-Process -Name 'MCPBridge' -ErrorAction SilentlyContinue)
-if ($runningBridge.Count -gt 0) {
-    Write-Host "Останавливаю запущенный MCPBridge.exe (PID: $($runningBridge.Id -join ', '))..." -ForegroundColor Yellow
-    $runningBridge | Stop-Process -Force -ErrorAction SilentlyContinue
+$runningHotplug = @(Get-Process -Name 'MCPHotplug' -ErrorAction SilentlyContinue)
+if ($runningHotplug.Count -gt 0) {
+    Write-Host "Останавливаю запущенный MCPHotplug.exe (PID: $($runningHotplug.Id -join ', '))..." -ForegroundColor Yellow
+    $runningHotplug | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 1200
 }
 Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='supergateway.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -match 'roots-filter\.js|bridge-mcp-gateway\.js|CustomGateways|filesystem-gateway\.json' } |
+    Where-Object { $_.CommandLine -match 'roots-filter\.js|hotplug-mcp-gateway\.js|CustomGateways|filesystem-gateway\.json' } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
 if (Test-Path -LiteralPath $output) {
@@ -44,7 +44,7 @@ if (Test-Path -LiteralPath $output) {
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 New-Item -ItemType Directory -Path $diagnosticsDirectory -Force | Out-Null
 
-$adapterSourceDirectory = Join-Path $repoRoot 'src\McpBridge\Adapters'
+$adapterSourceDirectory = Join-Path $repoRoot 'src\McpHotplug\Adapters'
 $adapterOutputDirectory = Join-Path $output 'Adapters'
 
 $sdkVersionOutput = & $dotnet.Source --version 2>&1
@@ -117,7 +117,7 @@ try {
         throw "Сборка приложения завершилась с кодом $buildExitCode. Подробности: $diagnosticsFile"
     }
 
-    # JavaScript adapters are runtime payload, not compiled into MCPBridge.exe.
+    # JavaScript adapters are runtime payload, not compiled into MCPHotplug.exe.
     # Copy them explicitly from the one canonical source directory after the build.
     if (-not (Test-Path -LiteralPath $adapterSourceDirectory -PathType Container)) {
         throw "Не найдена папка исходных MCP-адаптеров: $adapterSourceDirectory"
@@ -153,9 +153,9 @@ try {
 
     $diagnostics.Add("Adapter synchronization: OK ($($adapterSources.Count) files)")
 
-    # Build the silent WinExe updater beside MCPBridge.exe. The installer directory
+    # Build the silent WinExe updater beside MCPHotplug.exe. The installer directory
     # itself stays read/execute-only; only the separate Updates download folder is writable.
-    $updaterProject = Join-Path $repoRoot 'src\McpBridge.Updater\McpBridge.Updater.csproj'
+    $updaterProject = Join-Path $repoRoot 'src\McpHotplug.Updater\McpHotplug.Updater.csproj'
     $updaterOutputDirectory = $output
     if (-not (Test-Path -LiteralPath $updaterProject -PathType Leaf)) {
         throw "Не найден проект фонового updater: $updaterProject"
@@ -174,7 +174,7 @@ try {
         throw "Сборка фонового updater завершилась с кодом $updaterBuildExitCode. Подробности: $diagnosticsFile"
     }
 
-    $updaterExecutable = Join-Path $updaterOutputDirectory 'MCPBridge.Updater.exe'
+    $updaterExecutable = Join-Path $updaterOutputDirectory 'MCPHotplug.Updater.exe'
     if (-not (Test-Path -LiteralPath $updaterExecutable -PathType Leaf) -or
         (Get-Item -LiteralPath $updaterExecutable).Length -le 0) {
         throw "Фоновый updater не был собран: $updaterExecutable"
@@ -203,9 +203,9 @@ Write-Host "Готово: $output"
 Write-Host "Диагностика сборки: $diagnosticsFile"
 
 if ($LaunchAfterPublish) {
-    $exePath = Join-Path $output 'MCPBridge.exe'
+    $exePath = Join-Path $output 'MCPHotplug.exe'
     if (Test-Path -LiteralPath $exePath -PathType Leaf) {
-        Write-Host "Запускаю собранный MCPBridge: $exePath" -ForegroundColor Green
+        Write-Host "Запускаю собранный MCPHotplug: $exePath" -ForegroundColor Green
         Start-Process -FilePath $exePath -WorkingDirectory $output
     }
 }

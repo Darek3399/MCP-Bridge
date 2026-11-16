@@ -3,12 +3,12 @@
 
 
 <div align="center">
-  <img src="../src/McpBridge/Resources/MCPBridge.ico" width="72" height="72" alt="MCP Bridge">
+  <img src="../src/McpHotplug/Resources/MCPHotplug.ico" width="72" height="72" alt="MCP Hotplug">
   <h1>Support the Developer · Поддержать разработчика</h1>
   <p>
-    <b>MCP Bridge</b> is an open-source tool developed in spare time — completely free, with no telemetry or paid tiers.<br>
+    <b>MCP Hotplug</b> is an open-source tool developed in spare time — completely free, with no telemetry or paid tiers.<br>
     If it saves you time, context tokens, and routine setup headaches, you can buy the author a coffee!<br><br>
-    <b>MCP Bridge</b> создаётся и развивается в свободное время как полностью бесплатный open-source проект.<br>
+    <b>MCP Hotplug</b> создаётся и развивается в свободное время как полностью бесплатный open-source проект.<br>
     Если шлюз экономит вам время, токены и нервы при работе с MCP-серверами — автора можно угостить кофе:
   </p>
 </div>
@@ -102,8 +102,8 @@
   <tbody>
     <tr>
       <td width="1000">
-        <b>EN:</b> Even if you can't donate right now, giving the repository a <b>⭐ Star</b> on GitHub, sharing <b>MCP Bridge</b> with fellow developers, or reporting bugs in <a href="../../issues">Issues</a> helps the project grow tremendously.<br>
-        <b>RU:</b> Даже без доната вы можете сильно помочь проекту, поставив <b>⭐ Star</b> репозиторию на GitHub, рассказав о <b>MCP Bridge</b> коллегам или поделившись идеями и баг-репортами в разделе <a href="../../issues">Issues</a>.
+        <b>EN:</b> Even if you can't donate right now, giving the repository a <b>⭐ Star</b> on GitHub, sharing <b>MCP Hotplug</b> with fellow developers, or reporting bugs in <a href="../../issues">Issues</a> helps the project grow tremendously.<br>
+        <b>RU:</b> Даже без доната вы можете сильно помочь проекту, поставив <b>⭐ Star</b> репозиторию на GitHub, рассказав о <b>MCP Hotplug</b> коллегам или поделившись идеями и баг-репортами в разделе <a href="../../issues">Issues</a>.
       </td>
     </tr>
   </tbody>

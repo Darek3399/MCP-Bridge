@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-The **MCP Bridge** installer bundles or interacts with the following third-party software components. Each component remains the property of its respective copyright holders and is distributed under its own license terms.
+The **MCP Hotplug** installer bundles or interacts with the following third-party software components. Each component remains the property of its respective copyright holders and is distributed under its own license terms.
 
 ---
 
@@ -40,7 +40,7 @@ The **MCP Bridge** installer bundles or interacts with the following third-party
 * **License & Notice:**
   * The open-source Tailscale client and daemon components are licensed under the **BSD 3-Clause License**.
   * The official signed Windows installer (`tailscale-setup.msi`) and use of the Tailscale service are subject to the [Tailscale Terms of Service](https://tailscale.com/terms).
-  * **Trademark Disclaimer:** Tailscale® is a registered trademark of Tailscale Inc. **MCP Bridge** is an independent project and is not affiliated with, endorsed by, or sponsored by Tailscale Inc.
+  * **Trademark Disclaimer:** Tailscale® is a registered trademark of Tailscale Inc. **MCP Hotplug** is an independent project and is not affiliated with, endorsed by, or sponsored by Tailscale Inc.
 
 ---
 

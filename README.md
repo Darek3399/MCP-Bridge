@@ -7,20 +7,20 @@
 
 <div align="center">
   <br clear="all">
-  <img style="display: block; margin: 18px auto -16px;" src="src/McpBridge/Resources/MCPBridge.ico" width="72" height="72" alt="MCP Bridge">
-  <h1 style="margin-top: 0;">mcp<b>Bridge</b></h1>
+  <img style="display: block; margin: 18px auto -16px;" src="src/McpHotplug/Resources/MCPHotplug.ico" width="72" height="72" alt="MCP Hotplug">
+  <h1 style="margin-top: 0;">mcp<b>Hotplug</b></h1>
 
   <h3>One endpoint for all your MCP servers. Switch tools without restarting the chat.</h3>
 
   <p>
-    MCP Bridge combines local and remote MCP servers in one Windows app.<br>
+    MCP Hotplug combines local and remote MCP servers in one Windows app.<br>
     Connect your AI client once, then enable only the servers you need.
   </p>
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="MIT License"></a>
-    <a href="https://mcp.so/server/MCP-Bridge/Darek3399"><img src="https://img.shields.io/badge/MCP.so-MCP_Bridge-f97316?logo=modelcontextprotocol&logoColor=white" alt="MCP Bridge on MCP.so"></a>
-    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge/badges/score.svg?v=2" alt="MCP Bridge score on Glama"></a>
+    <a href="https://mcp.so/server/MCP-Hotplug/Darek3399"><img src="https://img.shields.io/badge/MCP.so-MCP_Hotplug-f97316?logo=modelcontextprotocol&logoColor=white" alt="MCP Hotplug on MCP.so"></a>
+    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Hotplug"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Hotplug/badges/score.svg?v=2" alt="MCP Hotplug score on Glama"></a>
   </p>
 
 
@@ -28,10 +28,10 @@
 </div>
 
 <p align="center">
-  <img src="docs/images/Main_ENG.png" width="900" alt="MCP Bridge dashboard">
+  <img src="docs/images/Main_ENG.png" width="900" alt="MCP Hotplug dashboard">
 </p>
 
-## Why MCP Bridge?
+## Why MCP Hotplug?
 
 - **One endpoint:** connect several local and remote MCP servers through a single address.
 - **Live switching:** enable or disable servers while you work.
@@ -42,8 +42,8 @@
 
 ## Quick start
 
-1. Download the installer from the [latest release page](https://github.com/Darek3399/MCP-Bridge/releases/latest).
-2. Install and launch MCP Bridge.
+1. Download the installer from the [latest release page](https://github.com/Darek3399/MCP-Hotplug/releases/latest).
+2. Install and launch MCP Hotplug.
 3. Open **MCP Services** and add an MCP server. You can paste its configuration from the server documentation.
 4. Click **Verify & Add**. If the server depends on an app that is currently closed, choose **Save Without Check**.
 5. In your MCP client settings, add a **Streamable HTTP** connection and use this local URL:
@@ -55,7 +55,7 @@ If your client uses a JSON configuration file, add:
 ```json
 {
   "mcpServers": {
-    "mcp-bridge": {
+    "mcp-hotplug": {
       "type": "http",
       "url": "http://127.0.0.1:8004/mcp"
     }
@@ -64,12 +64,12 @@ If your client uses a JSON configuration file, add:
 ```
 
 <p>
-  <img src="docs/images/Settings_ENG.png" width="900" alt="MCP Bridge settings and connection URLs">
+  <img src="docs/images/Settings_ENG.png" width="900" alt="MCP Hotplug settings and connection URLs">
 </p>
 
 ## Remote access with Tailscale Funnel
 
-During the initial setup, authorize your device in Tailscale and enable Funnel. After that, Bridge uses the device's stable name and Funnel URL: you usually do not need to sign in again or obtain a new URL every time Bridge starts. The address remains available while the device is authorized and running, and Funnel is enabled.
+During the initial setup, authorize your device in Tailscale and enable Funnel. After that, Hotplug uses the device's stable name and Funnel URL: you usually do not need to sign in again or obtain a new URL every time Hotplug starts. The address remains available while the device is authorized and running, and Funnel is enabled.
 
 Unlike temporary tunnels, this address does not need to be reacquired on every launch. Terms vary by provider; some alternatives offer persistent addresses only on paid plans.
 
@@ -108,7 +108,7 @@ Save a combination of servers as a preset and switch between setups for differen
 
 ### Connect local STDIO servers
 
-Bridge brings local command-line MCP servers—started with tools such as `npx`, `uvx`, `python`, and others—into a shared gateway.
+Hotplug brings local command-line MCP servers—started with tools such as `npx`, `uvx`, `python`, and others—into a shared gateway.
 
 ### Limit access to folders
 
@@ -117,17 +117,17 @@ For the built-in Filesystem MCP server, choose which folders are available. Gran
 ## How it works
 
 <p>
-  <img src="docs/images/architecture-en.svg" width="900" alt="MCP Bridge architecture">
+  <img src="docs/images/architecture-en.svg" width="900" alt="MCP Hotplug architecture">
 </p>
 
-1. Your AI client connects to the MCP Bridge endpoint.
-2. Bridge routes requests to enabled MCP servers.
+1. Your AI client connects to the MCP Hotplug endpoint.
+2. Hotplug routes requests to enabled MCP servers.
 3. Local servers can use STDIO; remote servers can use HTTP.
 4. If a browser-based client needs remote access, it can be enabled separately through Tailscale Funnel.
 
 ## Tools
 
-Bridge exposes two meta-tools — `all_tools` and `call_tool` — for discovering and calling tools from connected servers. This avoids sending every server's tool description to the client at once; the actual effect depends on the client and model.
+Hotplug exposes two meta-tools — `all_tools` and `call_tool` — for discovering and calling tools from connected servers. This avoids sending every server's tool description to the client at once; the actual effect depends on the client and model.
 
 - **`all_tools`** — returns the latest cached tool catalog snapshot from enabled MCP servers, including `tool_id`, `inputSchema`, per-server status, and `catalog_revision`.
 - **`call_tool`** — validates arguments against the cached `inputSchema` and routes the call to the target server using `tool_id`, `catalog_revision`, and `arguments`.
@@ -145,7 +145,7 @@ See [SECURITY.md](SECURITY.md) for details.
 
 - Windows 10 x64 (version 1903+) or Windows 11.
 - .NET Framework 4.8.
-- Download the Windows x64 installer from [GitHub Releases](https://github.com/Darek3399/MCP-Bridge/releases/latest).
+- Download the Windows x64 installer from [GitHub Releases](https://github.com/Darek3399/MCP-Hotplug/releases/latest).
 
 ## Technical details
 
@@ -161,8 +161,8 @@ See [SECURITY.md](SECURITY.md) for details.
 
 Found a bug or have an idea for an improvement?
 
-- [Open an issue](https://github.com/Darek3399/MCP-Bridge/issues).
-- [Browse the source code](https://github.com/Darek3399/MCP-Bridge).
+- [Open an issue](https://github.com/Darek3399/MCP-Hotplug/issues).
+- [Browse the source code](https://github.com/Darek3399/MCP-Hotplug).
 
 ## License
 
@@ -170,11 +170,11 @@ Released under the [MIT License](LICENSE).
 
 ## Support the project
 
-If MCP Bridge is useful to you, you can support its development:
+If MCP Hotplug is useful to you, you can support its development:
 
 <p>
   <a href="docs/donate.md">
-    <img src="docs/images/coffee-en.svg" width="500" alt="Support MCP Bridge development">
+    <img src="docs/images/coffee-en.svg" width="500" alt="Support MCP Hotplug development">
   </a>
 </p>
 
@@ -188,86 +188,3 @@ If MCP Bridge is useful to you, you can support its development:
 </p>
 
 </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

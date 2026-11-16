@@ -16,3 +16,7 @@ indent_size = 4
 
 [*.{xaml,csproj,props,targets}]
 indent_size = 2
+
+[*.ps1]
+charset = utf-8-bom
+end_of_line = crlf

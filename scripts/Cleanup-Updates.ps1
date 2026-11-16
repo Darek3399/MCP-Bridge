@@ -9,12 +9,12 @@ $ErrorActionPreference = 'SilentlyContinue'
 # During an in-place upgrade, the Setup EXE itself is running from Updates.
 # Keep that directory intact until the new installer has finished.
 $upgradeInProgress = $false
-try {
-    $value = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\MCPBridge' -Name 'UpgradeInProgress' -ErrorAction Stop
-    $upgradeInProgress = [string]$value -eq '1'
-}
-catch {
-    $upgradeInProgress = $false
+foreach ($regPath in @('HKLM:\SOFTWARE\MCPHotplug', 'HKLM:\SOFTWARE\MCPBridge')) {
+    try {
+        $value = Get-ItemPropertyValue -LiteralPath $regPath -Name 'UpgradeInProgress' -ErrorAction Stop
+        if ([string]$value -eq '1') { $upgradeInProgress = $true; break }
+    }
+    catch { }
 }
 
 if ($upgradeInProgress) {
@@ -22,11 +22,12 @@ if ($upgradeInProgress) {
 }
 
 # Autostart registry key is always removed on uninstall.
+Remove-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'MCPHotplug' -ErrorAction SilentlyContinue
 Remove-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'MCPBridge' -ErrorAction SilentlyContinue
 
 function Get-UninstallFlag([string]$Name, [bool]$Default = $false) {
     try {
-        $val = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\MCPBridge' -Name $Name -ErrorAction Stop
+        $val = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\MCPHotplug' -Name $Name -ErrorAction Stop
         return ([string]$val -eq '1')
     }
     catch {

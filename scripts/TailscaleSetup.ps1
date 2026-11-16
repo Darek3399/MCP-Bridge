@@ -33,12 +33,12 @@ function Write-Result([string[]]$Lines) {
 function Test-TailscaleMsiAuthenticodeSignature([string]$Path) {
     # Verify the embedded Authenticode signature through the Windows trust
     # provider directly, without auto-loading Microsoft.PowerShell.Security.
-    if (-not ('MCPBridgeWinTrustVerifier' -as [type])) {
+    if (-not ('MCPHotplugWinTrustVerifier' -as [type])) {
         Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
-public static class MCPBridgeWinTrustVerifier
+public static class MCPHotplugWinTrustVerifier
 {
     private static readonly Guid GenericVerifyV2 =
         new Guid("00AAC56B-CD44-11D0-8CC2-00C04FC295EE");
@@ -118,7 +118,7 @@ public static class MCPBridgeWinTrustVerifier
 '@
     }
 
-    $trustResult = [MCPBridgeWinTrustVerifier]::VerifyFile($Path)
+    $trustResult = [MCPHotplugWinTrustVerifier]::VerifyFile($Path)
     if ($trustResult -ne 0) {
         throw ('Tailscale MSI не прошёл системную проверку Authenticode (WinVerifyTrust: 0x{0:X8}): {1}' -f $trustResult, $Path)
     }
@@ -299,7 +299,7 @@ function Get-TailscaleInstallation {
 
         throw ('Обнаружена неполная или противоречивая установка Tailscale (' +
             ($evidence -join '; ') +
-            '). MSI повторно не запускается, чтобы не повредить существующую установку. Восстановите или удалите Tailscale штатным установщиком и повторите установку MCP Bridge.')
+            '). MSI повторно не запускается, чтобы не повредить существующую установку. Восстановите или удалите Tailscale штатным установщиком и повторите установку MCP Hotplug.')
     }
 
     return @{
@@ -474,11 +474,9 @@ function Test-FunnelCapability([string]$Cli) {
     }
 
     $id = [Guid]::NewGuid().ToString('N')
-    $probeTempDir = Split-Path -Parent $OutputFile
-    if ([string]::IsNullOrWhiteSpace($probeTempDir)) { $probeTempDir = $env:TEMP }
-    $stdoutPath = Join-Path $probeTempDir ('MCPBridge-FunnelProbe-' + $id + '-funnel.out')
-    $stderrPath = Join-Path $probeTempDir ('MCPBridge-FunnelProbe-' + $id + '-funnel.err')
-    $probePath = '/mcpbridge-test-' + $id.Substring(0, 8)
+    $stdoutPath = Join-Path $env:TEMP ('MCPHotplug-FunnelProbe-' + $id + '-funnel.out')
+    $stderrPath = Join-Path $env:TEMP ('MCPHotplug-FunnelProbe-' + $id + '-funnel.err')
+    $probePath = '/mcphotplug-test-' + $id.Substring(0, 8)
 
     $funnelProcess = $null
     $publicUrl = ''
@@ -797,7 +795,7 @@ try {
             } else { '' }
 
             @(
-                ('InstalledByMcpBridge=' + $installedByBridge),
+                ('InstalledByMcpHotplug=' + $installedByBridge),
                 ('PreviousStartMode=' + $previousMode),
                 ('PreviousServiceStatus=' + $previousStatus),
                 ('PreviousSddlBase64=' + $encodedSddl)
@@ -806,9 +804,7 @@ try {
 
         if (-not $wasInstalled) {
             Copy-Item -LiteralPath $MsiPath -Destination $managedMsiPath -Force
-            $logsDir = Join-Path (Split-Path -Parent (Split-Path -Parent $StateFile)) 'Logs'
-            New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
-            $logPath = Join-Path $logsDir 'tailscale-msi.log'
+            $logPath = Join-Path $env:TEMP 'MCPHotplug-tailscale-msi.log'
             $arguments = '/i "' + $MsiPath + '" /qn /norestart TS_NOLAUNCH=1 INSTALLDIR="' + $installDirectory + '" /L*v "' + $logPath + '"'
             $msi = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\msiexec.exe') -ArgumentList $arguments -PassThru -Wait -WindowStyle Hidden
             if ($msi.ExitCode -notin @(0, 3010, 1641)) {
@@ -824,7 +820,7 @@ try {
                 Get-Content -LiteralPath $StateFile -Raw
             } else { '' }
             $bridgeAlreadyConfigured = $existingState -match '(?m)^TailscaleSettingsApplied=1$' -or
-                $existingState -match '(?m)^BridgeSetupComplete=1$'
+                $existingState -match '(?m)^(?:Hotplug|Bridge)SetupComplete=1$'
 
             # A previous Bridge version may have stopped a pre-existing service
             # during an upgrade. If online setup was never completed, restore the
@@ -856,13 +852,11 @@ try {
             $stateText = if (Test-Path -LiteralPath $StateFile -PathType Leaf) {
                 Get-Content -LiteralPath $StateFile -Raw
             } else { '' }
-            if ($stateText -match '(?m)^InstalledByMcpBridge=1$') {
+            if ($stateText -match '(?m)^InstalledByMcp(?:Hotplug|Bridge)=1$') {
                 Copy-Item -LiteralPath $MsiPath -Destination $managedMsiPath -Force
             }
 
-            $logsDir = Join-Path (Split-Path -Parent (Split-Path -Parent $StateFile)) 'Logs'
-            New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
-            $repairLogPath = Join-Path $logsDir 'tailscale-msi-repair.log'
+            $repairLogPath = Join-Path $env:TEMP 'MCPHotplug-tailscale-msi-repair.log'
             $repairArguments = '/i "' + $MsiPath + '" REINSTALL=ALL REINSTALLMODE=vomus TS_NOLAUNCH=1 /qn /norestart /L*v "' + $repairLogPath + '"'
             $repair = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\msiexec.exe') -ArgumentList $repairArguments -PassThru -Wait -WindowStyle Hidden
             if ($repair.ExitCode -notin @(0, 3010, 1641)) {
@@ -929,7 +923,7 @@ try {
 
         $service = Get-Service -Name 'Tailscale' -ErrorAction Stop
         if ($service.Status -ne 'Running') {
-            throw 'Служба Tailscale остановлена. Повторите подключение, чтобы Bridge запустил её с нужными правами.'
+            throw 'Служба Tailscale остановлена. Повторите подключение, чтобы Hotplug запустил её с нужными правами.'
         }
 
         $ipOutput = & $paths.Cli ip -4 2>&1
@@ -1037,8 +1031,8 @@ try {
         }
 
         $stateText = Get-Content -LiteralPath $StateFile -Raw
-        if ($stateText -notmatch '(?m)^BridgeSetupComplete=1$') {
-            Add-Content -LiteralPath $StateFile -Value 'BridgeSetupComplete=1' -Encoding ASCII
+        if ($stateText -notmatch '(?m)^(?:Hotplug|Bridge)SetupComplete=1$') {
+            Add-Content -LiteralPath $StateFile -Value 'HotplugSetupComplete=1' -Encoding ASCII
         }
         Write-Result @(
             'Connected=1',
@@ -1061,7 +1055,7 @@ try {
 
         if (Test-Path -LiteralPath $StateFile -PathType Leaf) {
             $stateText = (Get-Content -LiteralPath $StateFile) -join [Environment]::NewLine
-            $installedByBridge = $stateText -match '(?m)^InstalledByMcpBridge=1$'
+            $installedByBridge = $stateText -match '(?m)^InstalledByMcp(?:Hotplug|Bridge)=1$'
 
             if ($installedByBridge) {
                 $managedMsiPath = Join-Path (Split-Path -Parent $MsiPath) 'tailscale-installed.msi'

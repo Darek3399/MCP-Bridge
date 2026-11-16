@@ -14,7 +14,7 @@ $diagnosticsDirectory = Join-Path $workspaceRoot 'Diagnostics\Installer'
 $dependenciesDirectory = Join-Path $repoRoot 'Dependencies'
 $publishDirectory = Join-Path $buildRoot 'publish\win-x64'
 $installerDirectory = Join-Path $buildRoot 'installer'
-$installerScript = Join-Path $repoRoot 'installer\MCPBridge.iss'
+$installerScript = Join-Path $repoRoot 'installer\MCPHotplug.iss'
 $versionPropsFile = Join-Path $repoRoot 'Directory.Build.props'
 $publishScript = Join-Path $PSScriptRoot 'Publish-Windows.ps1'
 $payloadScript = Join-Path $PSScriptRoot 'Prepare-InstallerPayload.ps1'
@@ -53,7 +53,7 @@ if ($installerVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za
     throw "Некорректная версия продукта '$installerVersion' в '$versionPropsFile'. Ожидается SemVer вида 1.2.3 или 1.2.3-preview.1."
 }
 
-Write-Host "Версия MCP Bridge: $installerVersion (Directory.Build.props)"
+Write-Host "Версия MCP Hotplug: $installerVersion (Directory.Build.props)"
 
 if (-not (Test-Path -LiteralPath $publishScript -PathType Leaf)) {
     throw "Не найден сценарий публикации приложения: $publishScript"
@@ -79,12 +79,12 @@ if (-not $dotnet) {
 
 & $publishScript -Configuration $Configuration -LaunchAfterPublish $false
 
-$updaterExecutable = Join-Path $publishDirectory 'MCPBridge.Updater.exe'
+$updaterExecutable = Join-Path $publishDirectory 'MCPHotplug.Updater.exe'
 if (-not (Test-Path -LiteralPath $updaterExecutable -PathType Leaf)) {
     throw "Не найден фоновый updater в publish payload: $updaterExecutable"
 }
 
-$adapterSourceDirectory = Join-Path $repoRoot 'src\McpBridge\Adapters'
+$adapterSourceDirectory = Join-Path $repoRoot 'src\McpHotplug\Adapters'
 $adapterPublishDirectory = Join-Path $publishDirectory 'Adapters'
 if (-not (Test-Path -LiteralPath $adapterSourceDirectory -PathType Container) -or
     -not (Test-Path -LiteralPath $adapterPublishDirectory -PathType Container)) {
@@ -112,7 +112,7 @@ foreach ($sourceAdapter in $sourceAdapters) {
 
 Write-Host "Проверка MCP-адаптеров пройдена: $($sourceAdapters.Count) файлов совпадают с исходниками."
 
-$installerOutput = Join-Path $installerDirectory "MCPBridge-Setup-$installerVersion.exe"
+$installerOutput = Join-Path $installerDirectory "MCP-Hotplug-Setup-$installerVersion.exe"
 $compilerLog = Join-Path $diagnosticsDirectory 'inno-setup-build.log'
 
 $embeddedPayloadRoots = @(

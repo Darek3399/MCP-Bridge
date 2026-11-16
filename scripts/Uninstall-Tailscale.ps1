@@ -11,12 +11,12 @@ $ErrorActionPreference = 'Stop'
 function Test-TailscaleMsiAuthenticodeSignature([string]$Path) {
     # Verify the embedded Authenticode signature through the Windows trust
     # provider directly, without auto-loading Microsoft.PowerShell.Security.
-    if (-not ('MCPBridgeWinTrustVerifier' -as [type])) {
+    if (-not ('MCPHotplugWinTrustVerifier' -as [type])) {
         Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
-public static class MCPBridgeWinTrustVerifier
+public static class MCPHotplugWinTrustVerifier
 {
     private static readonly Guid GenericVerifyV2 =
         new Guid("00AAC56B-CD44-11D0-8CC2-00C04FC295EE");
@@ -96,7 +96,7 @@ public static class MCPBridgeWinTrustVerifier
 '@
     }
 
-    $trustResult = [MCPBridgeWinTrustVerifier]::VerifyFile($Path)
+    $trustResult = [MCPHotplugWinTrustVerifier]::VerifyFile($Path)
     if ($trustResult -ne 0) {
         throw ('Tailscale MSI не прошёл системную проверку Authenticode (WinVerifyTrust: 0x{0:X8}): {1}' -f $trustResult, $Path)
     }
@@ -123,18 +123,20 @@ if (-not (Test-Path -LiteralPath $StateFile -PathType Leaf)) {
 }
 
 $stateText = (Get-Content -LiteralPath $StateFile) -join [Environment]::NewLine
-$installedByBridge = $stateText -match '(?m)^InstalledByMcpBridge=1$'
+$installedByBridge = $stateText -match '(?m)^InstalledByMcp(?:Hotplug|Bridge)=1$'
 $bridgeAppliedSettings = $stateText -match '(?m)^TailscaleSettingsApplied=1$' -or
-    $stateText -match '(?m)^BridgeSetupComplete=1$'
+    $stateText -match '(?m)^(?:Hotplug|Bridge)SetupComplete=1$'
 
 # During an in-place upgrade, preserve an unconfigured pre-existing Tailscale
 # session. Stop the service only if Bridge had already taken ownership of it.
 $upgradeInProgress = $false
-try {
-    $upgradeValue = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\MCPBridge' -Name 'UpgradeInProgress' -ErrorAction Stop
-    $upgradeInProgress = [string]$upgradeValue -eq '1'
+foreach ($regPath in @('HKLM:\SOFTWARE\MCPHotplug', 'HKLM:\SOFTWARE\MCPBridge')) {
+    try {
+        $upgradeValue = Get-ItemPropertyValue -LiteralPath $regPath -Name 'UpgradeInProgress' -ErrorAction Stop
+        if ([string]$upgradeValue -eq '1') { $upgradeInProgress = $true; break }
+    }
+    catch { }
 }
-catch { }
 
 # Keep the installed Tailscale client and its machine identity during an
 # MCP Bridge upgrade. The next installer can repair/update the MSI in place.
@@ -162,7 +164,7 @@ if ($upgradeInProgress) {
 if ($installedByBridge) {
     $managedMsiPath = $MsiPath
     if (-not (Test-Path -LiteralPath $managedMsiPath -PathType Leaf)) {
-        throw "Для удаления установленного Bridge клиента не найден сохранённый исходный MSI: $managedMsiPath"
+        throw "Для удаления установленного Hotplug клиента не найден сохранённый исходный MSI: $managedMsiPath"
     }
 
     Test-TailscaleMsiAuthenticodeSignature -Path $managedMsiPath
@@ -173,25 +175,6 @@ if ($installedByBridge) {
         throw "Не удалось удалить Tailscale MSI. Код: $($msi.ExitCode)"
     }
     Remove-Item -LiteralPath $managedMsiPath -Force -ErrorAction SilentlyContinue
-
-    $removeTailscaleKey = $false
-    try {
-        $keyFlag = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\MCPBridge' -Name 'UninstallRemoveTailscaleKey' -ErrorAction Stop
-        $removeTailscaleKey = [string]$keyFlag -eq '1'
-    }
-    catch { }
-
-    if ($removeTailscaleKey) {
-        foreach ($tsDir in @(
-            (Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'Tailscale'),
-            (Join-Path $env:LOCALAPPDATA 'Tailscale'),
-            (Join-Path $env:APPDATA 'Tailscale')
-        )) {
-            if (-not [string]::IsNullOrWhiteSpace($tsDir) -and (Test-Path -LiteralPath $tsDir)) {
-                Remove-Item -LiteralPath $tsDir -Recurse -Force -ErrorAction SilentlyContinue
-            }
-        }
-    }
 }
 else {
     $previousAcceptDns = [regex]::Match($stateText, '(?m)^PreviousAcceptDns=(true|false)$').Groups[1].Value
@@ -220,10 +203,6 @@ else {
 
         Start-Service -Name 'Tailscale'
         (Get-Service -Name 'Tailscale').WaitForStatus('Running', [TimeSpan]::FromSeconds(45))
-
-        if ($bridgeAppliedSettings) {
-            try { & $cliPath funnel --https=443 --set-path=/mcp off 2>$null | Out-Null } catch { }
-        }
 
         if ($previousAcceptDns) {
             & $cliPath set ('--accept-dns=' + $previousAcceptDns)
