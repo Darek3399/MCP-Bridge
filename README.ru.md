@@ -24,11 +24,8 @@
   </p>
   <p>
     <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/github/v/release/Darek3399/MCP-Bridge?color=0969da&label=Release&logo=github&logoColor=white" alt="Latest release"></a>
-    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/github/downloads/Darek3399/MCP-Bridge/total?color=10b981&label=Downloads&logo=github&logoColor=white" alt="Total downloads"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="MIT License"></a>
-    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-0078D4?logo=windows&logoColor=white" alt="Windows 10/11 x64"></a>
-    <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-2026--07--28-5b5fc7?logo=modelcontextprotocol&logoColor=white" alt="MCP Protocol 2026-07-28"></a>
-    <a href="https://mcp.so/server/MCP-Bridge/Darek3399"><img src="https://img.shields.io/badge/MCP.so-Listed-f97316" alt="Listed on MCP.so"></a>
+    <a href="https://mcp.so/server/MCP-Bridge/Darek3399"><img src="https://img.shields.io/badge/MCP.so-MCP_Bridge-f97316?logo=modelcontextprotocol&logoColor=white" alt="MCP Bridge on MCP.so"></a>
   </p>
   <p>
     <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge/badges/score.svg" alt="MCP Bridge score on Glama"></a>
