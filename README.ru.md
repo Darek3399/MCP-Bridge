@@ -22,6 +22,18 @@
     &nbsp;
     <a href="https://github.com/user-attachments/assets/6b1b49db-0a66-40c0-ac24-ed31efa85cad"><img src="https://img.shields.io/badge/Смотреть%20демо-22252A?style=for-the-badge&labelColor=181A1D" alt="Открыть видео демо"></a>
   </p>
+  <p>
+    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/github/v/release/Darek3399/MCP-Bridge?color=0969da&label=Release&logo=github&logoColor=white" alt="Latest release"></a>
+    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/github/downloads/Darek3399/MCP-Bridge/total?color=10b981&label=Downloads&logo=github&logoColor=white" alt="Total downloads"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="MIT License"></a>
+    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-0078D4?logo=windows&logoColor=white" alt="Windows 10/11 x64"></a>
+    <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-2026--07--28-5b5fc7?logo=modelcontextprotocol&logoColor=white" alt="MCP Protocol 2026-07-28"></a>
+    <a href="https://mcp.so/server/MCP-Bridge/Darek3399"><img src="https://img.shields.io/badge/MCP.so-Listed-f97316" alt="Listed on MCP.so"></a>
+  </p>
+  <p>
+    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge/badges/score.svg" alt="MCP Bridge score on Glama"></a>
+  </p>
+
 
   <p><sub>Windows 10/11 · Для локальных десктопных клиентов публичный туннель не нужен</sub></p>
 </div>
@@ -48,6 +60,19 @@
 5. В настройках MCP-клиента добавьте подключение **Streamable HTTP** и укажите локальный адрес:
 
    `http://127.0.0.1:8004/mcp`
+
+Если ваш клиент использует JSON-файл конфигурации, добавьте:
+
+```json
+{
+  "mcpServers": {
+    "mcp-bridge": {
+      "type": "http",
+      "url": "http://127.0.0.1:8004/mcp"
+    }
+  }
+}
+```
 
 <p>
   <img src="docs/images/Settings_RU.png" width="900" alt="Настройки MCP Bridge и адреса подключения">
@@ -111,7 +136,12 @@ Bridge объединяет локальные консольные MCP-серв
 3. Локальные серверы могут использовать STDIO, удалённые — HTTP.
 4. Удалённый доступ для веб-клиента при необходимости включается отдельно через Tailscale Funnel.
 
+## Инструменты
+
 Bridge предоставляет два meta-tools — `all_tools` и `call_tool` — для обнаружения и вызова инструментов подключённых серверов. Это позволяет не передавать клиенту описания всех инструментов сразу. Фактический эффект зависит от клиента и модели.
+
+- **`all_tools`** — возвращает актуальный кэшированный каталог инструментов включённых MCP-серверов, включая `tool_id`, `inputSchema`, статус сервера и `catalog_revision`.
+- **`call_tool`** — проверяет аргументы по кэшированной `inputSchema` и направляет вызов целевому серверу по параметрам `tool_id`, `catalog_revision` и `arguments`.
 
 ## Безопасность и ограничения
 
@@ -147,7 +177,7 @@ Bridge предоставляет два meta-tools — `all_tools` и `call_too
 
 ## Лицензия
 
-Условия использования проекта описаны в файле [LICENSE](LICENSE).
+Проект распространяется под лицензией [MIT](LICENSE).
 
 ## Поддержать проект
 

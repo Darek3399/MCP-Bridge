@@ -22,6 +22,18 @@
     &nbsp;
     <a href="https://github.com/user-attachments/assets/6b1b49db-0a66-40c0-ac24-ed31efa85cad"><img src="https://img.shields.io/badge/Watch%20demo-22252A?style=for-the-badge&labelColor=181A1D" alt="Open video demo"></a>
   </p>
+  <p>
+    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/github/v/release/Darek3399/MCP-Bridge?color=0969da&label=Release&logo=github&logoColor=white" alt="Latest release"></a>
+    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/github/downloads/Darek3399/MCP-Bridge/total?color=10b981&label=Downloads&logo=github&logoColor=white" alt="Total downloads"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="MIT License"></a>
+    <a href="https://github.com/Darek3399/MCP-Bridge/releases/latest"><img src="https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-0078D4?logo=windows&logoColor=white" alt="Windows 10/11 x64"></a>
+    <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-2026--07--28-5b5fc7?logo=modelcontextprotocol&logoColor=white" alt="MCP Protocol 2026-07-28"></a>
+    <a href="https://mcp.so/server/MCP-Bridge/Darek3399"><img src="https://img.shields.io/badge/MCP.so-Listed-f97316" alt="Listed on MCP.so"></a>
+  </p>
+  <p>
+    <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Bridge/badges/score.svg" alt="MCP Bridge score on Glama"></a>
+  </p>
+
 
   <p><sub>Windows 10/11 · No public tunnel is required for local desktop clients</sub></p>
 </div>
@@ -48,6 +60,19 @@
 5. In your MCP client settings, add a **Streamable HTTP** connection and use this local URL:
 
    `http://127.0.0.1:8004/mcp`
+
+If your client uses a JSON configuration file, add:
+
+```json
+{
+  "mcpServers": {
+    "mcp-bridge": {
+      "type": "http",
+      "url": "http://127.0.0.1:8004/mcp"
+    }
+  }
+}
+```
 
 <p>
   <img src="docs/images/Settings_ENG.png" width="900" alt="MCP Bridge settings and connection URLs">
@@ -111,7 +136,12 @@ For the built-in Filesystem MCP server, choose which folders are available. Gran
 3. Local servers can use STDIO; remote servers can use HTTP.
 4. If a browser-based client needs remote access, it can be enabled separately through Tailscale Funnel.
 
+## Tools
+
 Bridge exposes two meta-tools — `all_tools` and `call_tool` — for discovering and calling tools from connected servers. This avoids sending every server's tool description to the client at once; the actual effect depends on the client and model.
+
+- **`all_tools`** — returns the latest cached tool catalog snapshot from enabled MCP servers, including `tool_id`, `inputSchema`, per-server status, and `catalog_revision`.
+- **`call_tool`** — validates arguments against the cached `inputSchema` and routes the call to the target server using `tool_id`, `catalog_revision`, and `arguments`.
 
 ## Security and limitations
 
@@ -147,7 +177,7 @@ Found a bug or have an idea for an improvement?
 
 ## License
 
-See the [LICENSE](LICENSE) file for the project's terms.
+Released under the [MIT License](LICENSE).
 
 ## Support the project
 
