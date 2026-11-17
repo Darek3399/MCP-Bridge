@@ -188,8 +188,7 @@ Hotplug предоставляет два meta-tools — `all_tools` и `call_to
 <p align="center">
   <a href="README.md">English</a> ·
   <a href="SECURITY.md">Безопасность</a> ·
-  <a href="THIRD_PARTY_NOTICES.md">Сторонние компоненты</a> ·
-  <a href="docs/donate.md">Поддержать проект</a>
+  <a href="THIRD_PARTY_NOTICES.md">Сторонние компоненты</a>
 </p>
 
 </div>

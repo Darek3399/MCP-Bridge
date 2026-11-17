@@ -188,8 +188,7 @@ If MCP Hotplug is useful to you, you can support its development:
 <p align="center">
   <a href="README.ru.md">Русский</a> ·
   <a href="SECURITY.md">Security</a> ·
-  <a href="THIRD_PARTY_NOTICES.md">Third-party notices</a> ·
-  <a href="docs/donate.md">Support the project</a>
+  <a href="THIRD_PARTY_NOTICES.md">Third-party notices</a>
 </p>
 
 </div>
