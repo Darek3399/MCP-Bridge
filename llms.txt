@@ -1,0 +1,28 @@
+# MCP Hotplug
+
+> Native Windows desktop MCP gateway and manager (`MIT` license) that combines local STDIO and remote HTTP MCP servers behind one local endpoint (`http://127.0.0.1:8004/mcp`), cuts initial context token burn to 2 meta-tools (`all_tools`, `call_tool`), survives Unreal Engine / Blender / Unity restarts, cleans up child processes with Win32 Job Objects, and optionally exposes local servers to web AI via a static Tailscale Funnel URL.
+
+## Core Problems Solved
+
+- **Token burn and IDE tool caps:** Clients only receive 2 static meta-tools (`all_tools` and `call_tool`) at startup instead of dumping dozens of tool schemas into context, bypassing the 40/80 tool limit in Cursor and Windsurf.
+- **Live switching without client restarts:** Toggle MCP servers, task presets, and allowed filesystem folders (`roots-filter`) mid-conversation without editing JSON configs or restarting Claude Desktop, Cursor, Windsurf, or browser tabs.
+- **Engine & 3D editor resilience:** Built-in `Unreal MCP` (`:8000/mcp`) support and `WAITING` / `Offline (cache retained)` states keep the AI session alive when Unreal Engine 5.8, Blender, Unity, or IDEs close or crash, reconnecting automatically on reopen. Failing servers are isolated in `QUARANTINE`.
+- **Static HTTPS URL for browser AI:** Optional isolated `Tailscale Funnel` (`accept-dns=false`, preserving Windows system DNS) exposes local STDIO/HTTP servers to ChatGPT, Gemini, Grok, and `claude.ai` under one persistent HTTPS link.
+- **Zero zombie processes on Windows:** Each server runs inside a `Win32 Job Object` (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`), killing the entire `cmd.exe` / `npx` / `node.exe` / `uvx.exe` process tree cleanly on toggle-off.
+- **Batteries-included Windows installer:** Single `.exe` (Inno Setup) and WinGet package (`Darek3399.MCPHotplug`) with bundled `Node.js`, `uv/uvx`, `supergateway`, `Tailscale`, and `Filesystem MCP`. Downloaded `npm` dependencies stay isolated in the app directory and are removed when a server is deleted.
+
+## Technical Details
+
+- **Stack:** C# / .NET Framework 4.8 WPF desktop UI + Node.js routing gateway + `McpHotplug.Updater`
+- **OS:** Windows 10 / Windows 11 x64
+- **Local Endpoint:** `http://127.0.0.1:8004/mcp` (Streamable HTTP) and `hotplug-mcp-stdio.js` (STDIO)
+- **Roadmap:** Per-tool toggling inside individual servers (e.g., disabling write/delete tools in Filesystem or trimming large engine toolsets) and DPAPI encryption for stored env secrets.
+
+## Links
+
+- [GitHub Repository](https://github.com/Darek3399/MCP-Hotplug)
+- [English README](https://github.com/Darek3399/MCP-Hotplug/blob/main/README.md)
+- [Russian README](https://github.com/Darek3399/MCP-Hotplug/blob/main/README.ru.md)
+- [Latest Release & Windows Installer](https://github.com/Darek3399/MCP-Hotplug/releases/latest)
+- [Glama Server Listing](https://glama.ai/mcp/servers/Darek3399/MCP-Hotplug)
+- [Security Policy](https://github.com/Darek3399/MCP-Hotplug/blob/main/SECURITY.md)

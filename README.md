@@ -34,12 +34,17 @@
 
 ## Why MCP Hotplug?
 
-- **One endpoint:** connect several local and remote MCP servers through a single address.
-- **Live switching:** enable or disable servers while you work.
-- **Task presets:** save server combinations and switch between workflows quickly.
-- **Local servers in web AI:** optionally expose local STDIO servers through Tailscale Funnel.
+- **One stable gateway instead of juggling configs.** Connect local STDIO (`npx`, `uvx`, `python`) and remote HTTP servers once through `http://127.0.0.1:8004/mcp` (or the built-in STDIO bridge). To any AI client, it looks like a single steady MCP.
+- **Cut token burn and skip tool caps.** At startup, your AI sees only 2 tools (`all_tools` and `call_tool`) instead of a hundred schemas. Tool descriptions load on demand and only from servers currently switched on, so you never hit the 40/80 tool cap in Cursor or Windsurf.
+- **Toggle servers and presets mid-chat.** Turn MCP servers or task presets on and off in one click on the fly. Keep typing in the exact same conversation without editing JSON files, restarting your client, or refreshing browser tabs.
+- **Auto-standby for Unreal Engine 5.8 (`:8000`), Blender, Unity, and IDEs.** Close your 3D editor or crash during a compile, and the AI session stays intact. The server drops into `WAITING`, reconnects on its own when the app comes back, and lets you launch programs in any order (built-in `Unreal MCP` profile included).
+- **One static HTTPS URL for browser AI (ChatGPT, Gemini, Grok, claude.ai).** Built-in `Tailscale Funnel` (isolated with `accept-dns=false` so it will not touch your Windows DNS) turns your local servers into one permanent HTTPS link that never changes between launches.
+- **Zero leftover `node.exe` or `uvx.exe` zombies in Task Manager.** Flipping a server off terminates the entire child process tree via a `Windows Job Object`, so nothing stays stuck eating RAM.
+- **Batteries-included `.exe` with clean disk isolation.** Standard Windows installer with bundled `Node.js`, `uvx`, and `Filesystem MCP` (folder permissions are checkboxes in the UI, no terminal needed). Any `npm` packages download strictly into the app folder and wipe cleanly if you remove a server later.
 
-> **No tunnel is needed for local desktop clients.** Tailscale Funnel is an optional setup for compatible web-based AI clients that need remote access.
+> **Coming soon:** toggling individual tools inside a single server (for example, keeping 7 needed tools out of 14 in Filesystem or trimming heavy sets like Unreal `All Toolsets`) to cut token waste even further and keep models focused.
+>
+> *No tunnel is needed for local desktop clients (Claude Desktop, Cursor, Windsurf, etc.). Point them straight to `http://127.0.0.1:8004/mcp`.*
 
 ## Quick start
 
