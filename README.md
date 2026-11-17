@@ -18,6 +18,7 @@
   </p>
 
   <p>
+    <a href="#quick-start"><img src="https://img.shields.io/badge/WinGet-Darek3399.MCPHotplug-0078D4?logo=windows&logoColor=white" alt="WinGet package"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="MIT License"></a>
     <a href="https://mcp.so/server/MCP-Hotplug/Darek3399"><img src="https://img.shields.io/badge/MCP.so-MCP_Hotplug-f97316?logo=modelcontextprotocol&logoColor=white" alt="MCP Hotplug on MCP.so"></a>
     <a href="https://glama.ai/mcp/servers/Darek3399/MCP-Hotplug"><img src="https://glama.ai/mcp/servers/Darek3399/MCP-Hotplug/badges/score.svg?v=2" alt="MCP Hotplug score on Glama"></a>
@@ -42,7 +43,11 @@
 
 ## Quick start
 
-1. Download the installer from the [latest release page](https://github.com/Darek3399/MCP-Hotplug/releases/latest).
+1. Download the installer from the [latest release page](https://github.com/Darek3399/MCP-Hotplug/releases/latest), or install via **WinGet**:
+
+   ```powershell
+   winget install Darek3399.MCPHotplug
+   ```
 2. Install and launch MCP Hotplug.
 3. Open **MCP Services** and add an MCP server. You can paste its configuration from the server documentation.
 4. Click **Verify & Add**. If the server depends on an app that is currently closed, choose **Save Without Check**.
