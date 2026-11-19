@@ -76,6 +76,17 @@ public sealed class AppSettings
     /// <summary>Whether GitHub release updates are checked automatically when Hotplug starts.</summary>
     [DataMember(Order = 21, EmitDefaultValue = false)]
     public bool? CheckUpdatesOnStartup { get; set; } = true;
+
+    /// <summary>Whether built-in Binary MCP is enabled.</summary>
+    [DataMember(Order = 22, EmitDefaultValue = false)]
+    public bool? BinaryMcpEnabled { get; set; } = true;
+
+    [DataMember(Order = 23, EmitDefaultValue = false)]
+    public CustomMcpServerEntry? BinaryMcpCustom { get; set; }
+
+    /// <summary>Per-server disabled tool paths (arbitrary nesting depth, independent of presets).</summary>
+    [DataMember(Order = 24, EmitDefaultValue = false)]
+    public Dictionary<string, List<string>> DisabledToolsByServer { get; set; } = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 }
 
 [DataContract]
@@ -246,6 +257,8 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
     public string StatusText { get; set; } = string.Empty;
     public string DisplayStatusText => McpHotplug.Services.I18n.TranslateServerStatus(StatusText);
     public int ToolsCount { get; set; }
+    public int TotalToolsCount { get; set; }
+    public bool AllToolsDisabled { get; set; }
     public string ToolsPreview { get; set; } = string.Empty;
     public string LastDiagnosticLog { get; set; } = string.Empty;
 
@@ -264,6 +277,8 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
         HealthState = source.HealthState;
         StatusText = source.StatusText;
         ToolsCount = source.ToolsCount;
+        TotalToolsCount = source.TotalToolsCount;
+        AllToolsDisabled = source.AllToolsDisabled;
         ToolsPreview = source.ToolsPreview;
         LastDiagnosticLog = source.LastDiagnosticLog;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
@@ -312,12 +327,15 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
     public System.Windows.Visibility CustomActionsVisibility => System.Windows.Visibility.Visible;
 
     public System.Windows.Visibility DeleteButtonVisibility =>
-        string.Equals(Id, "filesystem", StringComparison.OrdinalIgnoreCase)
+        string.Equals(Id, "filesystem", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Id, "binary", StringComparison.OrdinalIgnoreCase)
             ? System.Windows.Visibility.Hidden
             : System.Windows.Visibility.Visible;
 
-    public System.Windows.Visibility ToolsBadgeVisibility =>
-        ToolsCount > 0 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+    public System.Windows.Visibility ToolsBadgeVisibility => System.Windows.Visibility.Visible;
 
-    public string ToolsBadgeText => ToolsCount.ToString();
+    public string ToolsBadgeText =>
+        TotalToolsCount > 0 && ToolsCount != TotalToolsCount
+            ? ToolsCount + " / " + TotalToolsCount
+            : (TotalToolsCount > 0 ? TotalToolsCount.ToString() : (ToolsCount > 0 ? ToolsCount.ToString() : "—"));
 }

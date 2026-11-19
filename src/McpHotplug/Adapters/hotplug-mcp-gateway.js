@@ -150,7 +150,7 @@ const TOOLS = [
       'Returns the latest per-server tool catalog snapshot published by the independent MCP Poll Manager. ' +
       'This operation reads the cache only: it does not probe, initialize, or wait for any upstream server. ' +
       'The catalog includes stable tool_id values, complete inputSchema JSON Schemas, source server information, ' +
-      'per-server status, staleness and catalog_revision.',
+      'per-server status, staleness, catalog_revision, and compact name-only disabled_tools lists (tools disabled by the user to save tokens; ask the user to enable one if needed).',
     inputSchema: {
       type: 'object',
       properties: {},

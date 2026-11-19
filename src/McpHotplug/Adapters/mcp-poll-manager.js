@@ -9,7 +9,8 @@ function cloneConfig(config) {
     temporary: config.temporary === true,
     headers: config.headers && typeof config.headers === 'object' ? { ...config.headers } : undefined,
     args: Array.isArray(config.args) ? [...config.args] : undefined,
-    env: config.env && typeof config.env === 'object' ? { ...config.env } : undefined
+    env: config.env && typeof config.env === 'object' ? { ...config.env } : undefined,
+    disabledTools: Array.isArray(config.disabledTools) ? [...config.disabledTools] : undefined
   };
 }
 
@@ -37,6 +38,8 @@ function transportFingerprint(config) {
   delete transportConfig.scope;
   delete transportConfig.pollIntervalMs;
   delete transportConfig.temporary;
+  delete transportConfig.disabledTools;
+  delete transportConfig.localTargetOffline;
   return configFingerprint(transportConfig);
 }
 

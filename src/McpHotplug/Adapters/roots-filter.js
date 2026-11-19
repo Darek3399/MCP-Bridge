@@ -12,6 +12,7 @@ const path = require('node:path');
 const { URL } = require('node:url');
 const { McpServerStateCache, safeError } = require('./mcp-state-cache');
 const { McpPollManager } = require('./mcp-poll-manager');
+const toolPolicy = require('./mcp-tool-policy');
 
 const MAX_BODY_BYTES = 64 * 1024 * 1024;
 const MANAGER_API_KEY = String(process.env.MCPHOTPLUG_MANAGER_API_KEY || '');
@@ -153,6 +154,76 @@ function saveStdioToolsCache() {
     fs.writeFileSync(tmpPath, JSON.stringify(obj), 'utf8');
     fs.renameSync(tmpPath, stdioToolsCachePath);
   } catch (_) {}
+}
+
+const toolTreesCachePath = options.config
+  ? path.join(path.dirname(options.config), 'tool-trees-cache.json')
+  : null;
+const persistedToolTreesByServer = new Map();
+const nestedDiscoveryInFlight = new Set();
+const nestedDiscoveryDoneSession = new Set();
+
+if (toolTreesCachePath && fs.existsSync(toolTreesCachePath)) {
+  try {
+    const rawTrees = JSON.parse(fs.readFileSync(toolTreesCachePath, 'utf8'));
+    if (rawTrees && typeof rawTrees === 'object') {
+      for (const [k, v] of Object.entries(rawTrees)) {
+        if (v && typeof v === 'object') persistedToolTreesByServer.set(k, v);
+      }
+    }
+  } catch (_) {}
+}
+
+function savePersistedToolTrees() {
+  if (!toolTreesCachePath) return;
+  try {
+    const obj = {};
+    for (const [k, v] of persistedToolTreesByServer.entries()) obj[k] = v;
+    const tmpPath = toolTreesCachePath + '.tmp';
+    fs.writeFileSync(tmpPath, JSON.stringify(obj), 'utf8');
+    fs.renameSync(tmpPath, toolTreesCachePath);
+  } catch (_) {}
+}
+
+function hydrateAllPersistedTrees() {
+  for (const [serverId, entry] of persistedToolTreesByServer.entries()) {
+    stateCache.hydratePersistedTree(serverId, entry.tools, entry.discoveredNested);
+  }
+}
+
+async function discoverNestedTreeForServer(serverId, force = false) {
+  const id = String(serverId || '');
+  if (!id || !pollManager || nestedDiscoveryInFlight.has(id)) return null;
+  const cached = stateCache.getInternalServer(id);
+  const worker = pollManager.getWorker(id);
+  if (!cached || !worker || !cached.enabled || cached.temporary) return null;
+  if (cached.health !== 'online' || !Array.isArray(cached.tools) || cached.tools.length === 0) return null;
+  if (!toolPolicy.detectMetaPattern(cached.tools)) return null;
+  if (!force && nestedDiscoveryDoneSession.has(id) && cached.discoveredNested && cached.discoveredNested.schemaVersion === 2) return cached.discoveredNested;
+
+  nestedDiscoveryInFlight.add(id);
+  stateCache.setDiscovering(id, true);
+  try {
+    const discovered = await toolPolicy.discoverNestedForServer(
+      (subToolName, subArgs) => worker.callTool(subToolName, subArgs || {}),
+      cached.tools, 0, 5
+    );
+    if (discovered) {
+      stateCache.setDiscoveredNested(id, discovered);
+      nestedDiscoveryDoneSession.add(id);
+      persistedToolTreesByServer.set(id, {
+        tools: cached.tools,
+        discoveredNested: discovered,
+        updatedAt: new Date().toISOString()
+      });
+      savePersistedToolTrees();
+    }
+    return discovered;
+  } catch (_) { return null; }
+  finally {
+    nestedDiscoveryInFlight.delete(id);
+    stateCache.setDiscovering(id, false);
+  }
 }
 
 const stdioRevalidationInFlight = new Set();
@@ -1629,9 +1700,40 @@ async function handleToolCall(rpcMsg) {
     };
   }
 
+  const cachedForRoute = stateCache.getInternalServer(route.upstream.id);
+  if (cachedForRoute) {
+    const guard = toolPolicy.checkToolCallAllowed(
+      route.originalName,
+      params.arguments,
+      cachedForRoute.tools,
+      cachedForRoute.discoveredNested,
+      cachedForRoute.disabledTools
+    );
+    if (!guard.allowed) {
+      return {
+        jsonrpc: '2.0',
+        id: rpcMsg.id,
+        result: {
+          isError: true,
+          content: [{ type: 'text', text: guard.message }]
+        }
+      };
+    }
+  }
+
   const parameterHeaders = buildMcpParameterHeaders(route.headerBindings, params.arguments);
   try {
-    const result = await route.worker.callTool(route.originalName, params.arguments, parameterHeaders);
+    let result = await route.worker.callTool(route.originalName, params.arguments, parameterHeaders);
+    if (cachedForRoute) {
+      result = toolPolicy.filterToolCallResponse(
+        route.originalName,
+        params.arguments,
+        result,
+        cachedForRoute.tools,
+        cachedForRoute.discoveredNested,
+        cachedForRoute.disabledTools
+      );
+    }
     return { jsonrpc: '2.0', id: rpcMsg.id, result };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -1753,6 +1855,8 @@ function resetUpstreamConnectionState(previous, reason, removeFromToolsCache = f
         cacheModified = true;
     }
     if (cacheModified) saveStdioToolsCache();
+    if (persistedToolTreesByServer.delete(key)) savePersistedToolTrees();
+    nestedDiscoveryDoneSession.delete(key);
   }
   for (const [name, route] of toolRouteMap) {
     if (route && route.upstream && String(route.upstream.id) === key)
@@ -1783,6 +1887,21 @@ pollManager.on('error', error => {
 
 stateCache.on('changed', event => {
   if (event && event.event === 'server.polling') return;
+  if (event && event.event === 'verification.completed' && event.success === true && event.serverId && !event.temporary) {
+    const internal = stateCache.getInternalServer(event.serverId);
+    if (internal && Array.isArray(internal.tools) && internal.tools.length > 0) {
+      const existing = persistedToolTreesByServer.get(String(event.serverId)) || {};
+      persistedToolTreesByServer.set(String(event.serverId), {
+        tools: internal.tools,
+        discoveredNested: internal.discoveredNested || existing.discoveredNested || null,
+        updatedAt: new Date().toISOString()
+      });
+      savePersistedToolTrees();
+      if (toolPolicy.detectMetaPattern(internal.tools) && (!nestedDiscoveryDoneSession.has(String(event.serverId)) || !internal.discoveredNested || internal.discoveredNested.schemaVersion !== 2)) {
+        void discoverNestedTreeForServer(event.serverId, false);
+      }
+    }
+  }
   if (event && event.event === 'verification.completed' &&
       event.catalogChanged !== true && event.protocolChanged !== true) return;
   rebuildToolRouteMap();
@@ -1796,6 +1915,8 @@ function sendSseEvent(response, eventName, payload) {
 async function initializePollManager() {
   if (upstreams.length === 0) return;
   await pollManager.replaceConfiguration(upstreams);
+  hydrateAllPersistedTrees();
+  rebuildToolRouteMap();
 }
 
 void initializePollManager().catch(error => {
@@ -1843,6 +1964,15 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const filtered = toolPolicy.filterCatalogToolsForServer(
+        internal.tools,
+        internal.discoveredNested,
+        internal.disabledTools
+      );
+      const disabledTopLevelTools = internal.tools
+        .map(t => t && t.name ? String(t.name) : '')
+        .filter(name => name && !filtered.tools.some(ft => ft && ft.name === name));
+
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify({
         state: stateCache.getServer(serverId),
@@ -1850,8 +1980,81 @@ const server = http.createServer(async (req, res) => {
         discoveredServerName: internal.serverInfo && internal.serverInfo.name
           ? String(internal.serverInfo.name)
           : null,
-        toolNames: internal.tools.map(tool => String(tool.name || '')).filter(Boolean),
-        tools: internal.tools
+        toolNames: filtered.tools.map(tool => String(tool.name || '')).filter(Boolean),
+        tools: filtered.tools,
+        allToolsDisabled: filtered.allDisabled,
+        disabledTools: filtered.disabledTools,
+        disabledTopLevelTools
+      }));
+      return;
+    }
+
+    if (req.method === 'GET' && reqUrl.pathname === '/__manager/server/tools') {
+      const serverId = String(reqUrl.searchParams.get('id') || '');
+      const internal = serverId ? stateCache.getInternalServer(serverId) : null;
+      if (internal && internal.enabled && internal.health === 'online' &&
+          toolPolicy.detectMetaPattern(internal.tools) &&
+          (!nestedDiscoveryDoneSession.has(serverId) || !internal.discoveredNested || internal.discoveredNested.schemaVersion !== 2) &&
+          !nestedDiscoveryInFlight.has(serverId)) {
+        void discoverNestedTreeForServer(serverId, false);
+      }
+      const tree = serverId ? stateCache.getServerToolTree(serverId) : null;
+      if (!tree) {
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ error: 'MCP server tool tree was not found.' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(tree));
+      return;
+    }
+
+    if (req.method === 'POST' && reqUrl.pathname === '/__manager/server/tools/discover') {
+      const bodyText = await readRequestBody(req);
+      const parsed = JSON.parse(bodyText || '{}');
+      const serverId = String(parsed.serverId || '');
+      const internal = serverId ? stateCache.getInternalServer(serverId) : null;
+      if (!internal || internal.temporary) {
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ error: 'MCP server was not found.' }));
+        return;
+      }
+      await discoverNestedTreeForServer(serverId, true);
+      rebuildToolRouteMap();
+      const tree = stateCache.getServerToolTree(serverId);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(tree));
+      return;
+    }
+
+    if (req.method === 'POST' && reqUrl.pathname === '/__manager/server/tools/policy') {
+      const bodyText = await readRequestBody(req);
+      const parsed = JSON.parse(bodyText || '{}');
+      const serverId = String(parsed.serverId || '');
+      const disabledTools = Array.isArray(parsed.disabledTools) ? parsed.disabledTools : [];
+      const updatedState = serverId ? stateCache.setDisabledTools(serverId, disabledTools) : null;
+      if (!updatedState) {
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ updated: false, error: 'MCP server was not found.' }));
+        return;
+      }
+      for (const upstream of upstreams) {
+        if (upstream && String(upstream.id) === serverId) {
+          upstream.disabledTools = toolPolicy.normalizeDisabledList(disabledTools);
+        }
+      }
+      const worker = pollManager.getWorker(serverId);
+      if (worker && worker.config) {
+        worker.config.disabledTools = toolPolicy.normalizeDisabledList(disabledTools);
+      }
+      rebuildToolRouteMap();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({
+        updated: true,
+        serverId,
+        state: updatedState,
+        tree: stateCache.getServerToolTree(serverId),
+        cacheRevision: String(stateCache.cacheRevision)
       }));
       return;
     }
@@ -1881,6 +2084,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const args = parsed.arguments && typeof parsed.arguments === 'object' && !Array.isArray(parsed.arguments)
+        ? parsed.arguments
+        : {};
+
+      const guard = toolPolicy.checkToolCallAllowed(
+        toolName,
+        args,
+        cached.tools,
+        cached.discoveredNested,
+        cached.disabledTools
+      );
+      if (!guard.allowed) {
+        res.writeHead(403, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify({ code: guard.code, error: guard.message }));
+        return;
+      }
+
       const cachedTool = cached.tools.find(tool => tool && tool.name === toolName);
       if (!cachedTool) {
         res.writeHead(404, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -1888,9 +2108,6 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const args = parsed.arguments && typeof parsed.arguments === 'object' && !Array.isArray(parsed.arguments)
-        ? parsed.arguments
-        : {};
       const modern = upstreamTransportModes.get(serverId) === 'streamable-http-modern';
       const headerValidation = modern
         ? validateToolHeaderBindings(cachedTool.inputSchema || {})
@@ -1903,7 +2120,18 @@ const server = http.createServer(async (req, res) => {
 
       try {
         const parameterHeaders = buildMcpParameterHeaders(headerValidation.bindings, args);
-        const result = await worker.callTool(toolName, args, parameterHeaders);
+        const rawResult = await worker.callTool(toolName, args, parameterHeaders);
+        const result = toolPolicy.filterToolCallResponse(
+          toolName,
+          args,
+          rawResult,
+          cached.tools,
+          cached.discoveredNested,
+          cached.disabledTools
+        );
+        if (toolPolicy.detectMetaPattern(cached.tools) && !nestedDiscoveryDoneSession.has(serverId)) {
+          void discoverNestedTreeForServer(serverId, false);
+        }
         res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify({ result }));
       } catch (error) {
@@ -2027,6 +2255,7 @@ const server = http.createServer(async (req, res) => {
       );
       upstreams = nextUpstreams;
       const update = await pollManager.replaceConfiguration(nextUpstreams);
+      hydrateAllPersistedTrees();
       if (proxyChanged) {
         await restartRemoteHttpWorkers();
       }

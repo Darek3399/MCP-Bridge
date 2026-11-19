@@ -18,13 +18,20 @@ class HotplugToolDispatcher {
   }
 
   async call({ toolId, catalogRevision, arguments: toolArguments }) {
-    // Use the last catalog published by all_tools; warm once from Router cache if empty/missing.
     let descriptor = this.catalogManager.getCachedDescriptor(toolId);
     if (!descriptor) {
       try { await this.catalogManager.getCatalog(); } catch (_) {}
       descriptor = this.catalogManager.getCachedDescriptor(toolId);
     }
     if (!descriptor) {
+      const disabled = this.catalogManager.getDisabledDescriptor(toolId);
+      if (disabled) {
+        return toolError(
+          'TOOL_DISABLED',
+          'Tool "' + disabled.originalName + '" on server "' + disabled.serverName + '" is currently disabled by the user in MCP Hotplug to save tokens. Ask the user to enable it if needed.',
+          { requested_tool_id: toolId, server_id: disabled.serverId }
+        );
+      }
       return toolError(
         'TOOL_NOT_FOUND',
         'This tool is not present in the last cached catalog returned by all_tools. Call all_tools to read the current cache snapshot and select a listed tool.',
@@ -34,7 +41,6 @@ class HotplugToolDispatcher {
 
     let currentDescriptor;
     try {
-      // Read only the selected server's cache entry, never tools/list for all servers.
       currentDescriptor = await this.catalogManager.getCurrentServerToolDescriptor(descriptor);
     } catch (error) {
       return toolError(
@@ -56,6 +62,14 @@ class HotplugToolDispatcher {
       );
     }
 
+    if (currentDescriptor.disabled === true) {
+      return toolError(
+        'TOOL_DISABLED',
+        'Tool "' + descriptor.originalName + '" on server "' + descriptor.serverName + '" is currently disabled by the user in MCP Hotplug to save tokens. Ask the user to enable it if needed.',
+        { requested_tool_id: toolId, server_id: descriptor.serverId }
+      );
+    }
+
     const args = toolArguments && typeof toolArguments === 'object' && !Array.isArray(toolArguments)
       ? toolArguments : {};
 
@@ -73,9 +87,6 @@ class HotplugToolDispatcher {
     }
 
     try {
-      // Route directly to the selected server. The Router checks the same
-      // server_revision again immediately before dispatch, closing the race
-      // between our cache read/schema validation and the actual call.
       const response = await this.routerClient.callServerTool(
         descriptor.serverId,
         descriptor.originalName,
@@ -112,37 +123,18 @@ class HotplugToolDispatcher {
       return result;
     } catch (error) {
       const code = error && typeof error.code === 'string' ? error.code : '';
-      const details = error && error.details && typeof error.details === 'object'
-        ? error.details
-        : {};
-
+      if (code === 'TOOL_DISABLED') {
+        return toolError('TOOL_DISABLED', error instanceof Error ? error.message : 'The selected tool is disabled by the user in MCP Hotplug to save tokens.', { requested_tool_id: toolId, server_id: descriptor.serverId });
+      }
       if (code === 'TOOL_VERSION_CHANGED') {
-        return toolError(
-          'CATALOG_CHANGED',
-          'The selected server changed immediately before dispatch, so no tool call was made. Call all_tools to read the latest cached catalog, then select the tool again.',
-          {
-            requested_tool_id: toolId,
-            server_id: descriptor.serverId
-          }
-        );
+        return toolError('CATALOG_CHANGED', 'The selected server changed immediately before dispatch, so no tool call was made. Call all_tools to read the latest cached catalog, then select the tool again.', { requested_tool_id: toolId, server_id: descriptor.serverId });
       }
-
       if (code === 'TOOL_NOT_AVAILABLE') {
-        return toolError(
-          'TOOL_NOT_AVAILABLE',
-          'The selected tool is no longer present in the selected server cache. Call all_tools to read the latest cached catalog.',
-          { requested_tool_id: toolId, server_id: descriptor.serverId }
-        );
+        return toolError('TOOL_NOT_AVAILABLE', 'The selected tool is no longer present in the selected server cache. Call all_tools to read the latest cached catalog.', { requested_tool_id: toolId, server_id: descriptor.serverId });
       }
-
       if (code === 'INVALID_CACHED_SCHEMA') {
-        return toolError(
-          'INVALID_CACHED_SCHEMA',
-          'The cached MCP schema contains invalid parameter-header annotations. No upstream tool call was made.',
-          { requested_tool_id: toolId, server_id: descriptor.serverId }
-        );
+        return toolError('INVALID_CACHED_SCHEMA', 'The cached MCP schema contains invalid parameter-header annotations. No upstream tool call was made.', { requested_tool_id: toolId, server_id: descriptor.serverId });
       }
-
       return toolError(
         'UPSTREAM_UNAVAILABLE',
         'The upstream MCP could not complete this call. The Poll Manager continues its independent health checks; all_tools only reads the latest cached state. Do not automatically repeat a potentially side-effecting operation.',

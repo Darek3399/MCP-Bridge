@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <!-- Single source of truth for the MCP Hotplug product version. -->
-    <Version>0.9.89</Version>
+    <Version>0.9.90</Version>
     <Product>MCP Hotplug</Product>
     <Title>MCP Hotplug</Title>
     <Company>MCP Hotplug</Company>

@@ -103,6 +103,7 @@ public static class AppPaths
     public static string FilesystemGatewayConfig => Path.Combine(ConfigDirectory, "filesystem-gateway.json");
     public static string CompositeGatewayConfig => Path.Combine(ConfigDirectory, "composite-gateway.json");
     public static string RouterUpstreamsConfig => Path.Combine(ConfigDirectory, "router-upstreams.json");
+    public static string BinaryRootsConfig => Path.Combine(ConfigDirectory, "binary-roots.json");
     public static string EmptyFilesystemRootDirectory => Path.Combine(DependenciesDirectory, "EmptyFilesystemRoot");
     public static string ServerPackagesDirectory => Path.Combine(ConfigDirectory, "ServerPackages");
 
@@ -111,6 +112,7 @@ public static class AppPaths
 
     public static string RootsFilterScript => Path.Combine(AdaptersDirectory, "roots-filter.js");
     public static string HotplugMcpGatewayScript => Path.Combine(AdaptersDirectory, "hotplug-mcp-gateway.js");
+    public static string BinaryMcpScript => Path.Combine(AdaptersDirectory, "binary-mcp.js");
 
     public static string GetCustomGatewayConfigPath(string serverId) =>
         Path.Combine(CustomGatewaysDirectory, "gateway-" + serverId + ".json");

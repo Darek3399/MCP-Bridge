@@ -475,11 +475,21 @@ public partial class MainWindow : Window
         TechnicalSettingsNavText.Text = I18n.Tr("Технические настройки и подключения", "Technical & connection settings");
         InterfaceSettingsNavText.Text = I18n.Tr("Интерфейс и приложение", "Interface & application");
 
-        RootsSectionTitleText.Text = I18n.Tr("Разрешённые папки (", "Allowed Folders (") + GetFilesystemDisplayName() + ")";
+        RootsSectionTitleText.Text = I18n.Tr("Разрешённые папки", "Allowed Folders");
         RenameFsBtn.Content = I18n.Tr("✎ Настроить", "✎ Configure");
         RootsSectionSubText.Text = I18n.Tr(
             "Отмеченные галочкой папки доступны для чтения и записи. Снятие галочки мгновенно отключает доступ к папке без перезапуска роутера.",
             "Checked folders are accessible for reading and writing. Unchecking a folder immediately revokes access without restarting the router.");
+        if (RootsHelpTitleText != null)
+        {
+            RootsHelpTitleText.Text = I18n.Tr("РАЗРЕШЁННЫЕ ДИРЕКТОРИИ", "ALLOWED DIRECTORIES");
+            RootsHelpBodyText.Text = I18n.Tr(
+                "Общий белый список директорий. Доступ за пределы отмеченных папок и по симлинкам заблокирован.",
+                "Shared directory allow-list. Access outside checked folders and across symlinks is blocked.");
+            RootsHelpListText.Text = I18n.Tr(
+                "Используется для:\n• Filesystem MCP — чтение, поиск и редактирование текстовых файлов\n• Binary MCP — чтение и атомарная запись бинарных файлов (включая передачу чанками с проверкой SHA-256)",
+                "Used by:\n• Filesystem MCP — reading, searching and editing text files\n• Binary MCP — reading and atomic writing of binary files (including chunked transfers with SHA-256 verification)");
+        }
         AddRootBtn.Content = I18n.Tr("＋  Добавить папку", "＋  Add Folder");
         RemoveRootBtn.Content = I18n.Tr("Удалить выбранную", "Remove Selected");
 
@@ -643,6 +653,10 @@ public partial class MainWindow : Window
         {
             _settings.FilesystemMcpEnabled = isEnabled;
         }
+        else if (string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.BinaryMcpEnabled = isEnabled;
+        }
         else
         {
             var custom = _settings.CustomServers.FirstOrDefault(s => string.Equals(s.Id, serverId, StringComparison.OrdinalIgnoreCase));
@@ -715,6 +729,32 @@ public partial class MainWindow : Window
         await SyncMcpInfrastructureAsync(forceRetryQuarantined: true);
     }
 
+    private async void ServerTools_Click(object sender, RoutedEventArgs e)
+    {
+        if (_cleanupStarted || _cleanupCompleted) return;
+        if (sender is not FrameworkElement element || element.Tag is not string serverId) return;
+
+        var serverItem = _serverItems.FirstOrDefault(s => string.Equals(s.Id, serverId, StringComparison.OrdinalIgnoreCase));
+        var serverName = serverItem?.Name ?? serverId;
+
+        _settings.DisabledToolsByServer ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        _settings.DisabledToolsByServer.TryGetValue(serverId, out var savedDisabled);
+
+        var dialog = new ServerToolsWindow(_mcpInfrastructure, serverId, serverName, savedDisabled) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+
+        if (dialog.ResultDisabledTools.Count > 0)
+            _settings.DisabledToolsByServer[serverId] = dialog.ResultDisabledTools;
+        else
+            _settings.DisabledToolsByServer.Remove(serverId);
+
+        if (!SaveSettings()) return;
+        await _mcpInfrastructure.ApplyServerToolsPolicyAsync(serverId, dialog.ResultDisabledTools);
+        ErrorLog.LogApp(I18n.Tr(
+            "Обновлены инструменты «" + serverName + "» (отключено узлов: " + dialog.ResultDisabledTools.Count + ").",
+            "Updated tools for '" + serverName + "' (disabled nodes: " + dialog.ResultDisabledTools.Count + ")."));
+    }
+
     private async void EditServer_Click(object sender, RoutedEventArgs e)
     {
         if (_cleanupStarted || _cleanupCompleted) return;
@@ -753,6 +793,17 @@ public partial class MainWindow : Window
         if (string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase))
         {
             await EditFilesystemServerAsync();
+            return;
+        }
+        if (string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase))
+        {
+            var currentBinName = _settings.BinaryMcpCustom?.Name ?? "Binary MCP";
+            var renameDlg = new FilesystemRenameDialog(currentBinName) { Owner = this };
+            if (renameDlg.ShowDialog() != true || string.IsNullOrWhiteSpace(renameDlg.ServerName)) return;
+            _settings.BinaryMcpCustom ??= new CustomMcpServerEntry { Id = SettingsStore.BuiltInBinaryId, Transport = "http" };
+            _settings.BinaryMcpCustom.Name = renameDlg.ServerName;
+            if (!SaveSettings()) return;
+            await SyncMcpInfrastructureAsync();
             return;
         }
 
@@ -1029,6 +1080,7 @@ public partial class MainWindow : Window
             _settings.UnrealMcpEnabled = enableAll || enabledSet.Contains(SettingsStore.BuiltInUnrealId);
         if (!_settings.FilesystemMcpDeleted)
             _settings.FilesystemMcpEnabled = enableAll || enabledSet.Contains(SettingsStore.BuiltInFilesystemId);
+        _settings.BinaryMcpEnabled = enableAll || enabledSet.Contains(SettingsStore.BuiltInBinaryId);
 
         foreach (var srv in _settings.CustomServers)
             srv.Enabled = enableAll || enabledSet.Contains(srv.Id);
@@ -1083,6 +1135,11 @@ public partial class MainWindow : Window
         {
             enabledIds.Add(SettingsStore.BuiltInFilesystemId);
             enabledNames.Add(_settings.FilesystemMcpCustom?.Name ?? "Filesystem MCP");
+        }
+        if (_settings.BinaryMcpEnabled != false)
+        {
+            enabledIds.Add(SettingsStore.BuiltInBinaryId);
+            enabledNames.Add(_settings.BinaryMcpCustom?.Name ?? "Binary MCP");
         }
         foreach (var srv in _settings.CustomServers.Where(s => s.Enabled))
         {
@@ -1259,8 +1316,8 @@ public partial class MainWindow : Window
         {
             await _mcpInfrastructure.ApplyAllowedRootsAsync(GetEnabledRootPaths());
             FooterStatusText.Text = I18n.Tr(
-                "Разрешённые папки Filesystem MCP обновлены без перезапуска Hotplug MCP Gateway (:8004) и внутреннего роутера (:8001).",
-                "Filesystem MCP allowed folders updated without restarting Hotplug MCP Gateway (:8004) or the internal router (:8001).");
+                "Разрешённые папки обновлены для Filesystem MCP и Binary MCP без перезапуска шлюза (:8004) и роутера (:8001).",
+                "Allowed folders updated for Filesystem MCP and Binary MCP without restarting the gateway (:8004) or router (:8001).");
         }
         catch (Exception exception)
         {

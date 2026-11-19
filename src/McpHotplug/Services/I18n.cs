@@ -36,6 +36,7 @@ public static class I18n
         ("Конфигурация MCP-сервера отсутствует.", "MCP server configuration is missing."),
         ("Удалённые MCP-серверы должны использовать HTTPS. Обычный HTTP разрешён только для localhost / loopback.", "Remote MCP servers must use HTTPS. Plain HTTP is allowed only for localhost / loopback."),
         ("Удалённый адрес не подтверждён. Откройте редактор сервера и отдельно подтвердите доверие к: ", "Remote endpoint has not been approved. Open the server editor and explicitly trust: "),
+        ("Сервер офлайн · все инструменты отключены", "Server offline · all tools disabled"),
         ("Карантин: ", "Quarantine: "),
         ("Выключен", "Disabled")
     };

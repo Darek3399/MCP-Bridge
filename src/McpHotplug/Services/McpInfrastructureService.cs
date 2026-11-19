@@ -60,6 +60,9 @@ public sealed class McpInfrastructureService : IDisposable
     private const string LoopbackPrefix = "http" + "://127.0.0.1:";
     private static readonly string UnrealEndpoint = LoopbackPrefix + "8000/mcp";
     private static readonly string FilesystemEndpoint = LoopbackPrefix + "8003/filesystem/mcp";
+    private static readonly string BinaryEndpoint = LoopbackPrefix + "8005/mcp";
+    private static readonly string BinaryHealthEndpoint = LoopbackPrefix + "8005/__manager/health";
+    private static readonly string BinaryRootsEndpoint = LoopbackPrefix + "8005/__manager/roots";
     private static readonly string FilteredEndpoint = LoopbackPrefix + "8001/mcp";
     private static readonly string HotplugEndpoint = LoopbackPrefix + "8004/mcp";
     private static readonly string RouterHealthEndpoint = LoopbackPrefix + "8001/__manager/health";
@@ -67,6 +70,7 @@ public sealed class McpInfrastructureService : IDisposable
     private static readonly string HotplugHealthEndpoint = LoopbackPrefix + "8004/__manager/health";
     private const string ProtocolVersion = "2025-06-18";
     private const int FilesystemPort = 8003;
+    private const int BinaryPort = 8005;
     private const int FilterPort = 8001;
     private const int HotplugMcpPort = 8004;
     private const int CustomPortRangeStart = 8010;
@@ -87,6 +91,7 @@ public sealed class McpInfrastructureService : IDisposable
     private readonly Dictionary<string, ServerRuntimeStatus> _statusById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, bool> _desiredEnabledById = new(StringComparer.OrdinalIgnoreCase);
     private volatile ManagedChild? _filesystemGateway;
+    private volatile ManagedChild? _binaryMcp;
     private volatile ManagedChild? _rootsFilter;
     private volatile ManagedChild? _hotplugGateway;
     private DateTime _nextHotplugGatewayRetryUtc = DateTime.MinValue;
@@ -110,6 +115,9 @@ public sealed class McpInfrastructureService : IDisposable
     private string _activeFilesystemFingerprint = string.Empty;
     private bool _unrealEnabled = false; private bool _unrealDeleted; private bool _filesystemDeleted; private CustomMcpServerEntry? _unrealCustom; private CustomMcpServerEntry? _filesystemCustom;
     private bool _filesystemEnabled = true;
+    private bool _binaryEnabled = true;
+    private CustomMcpServerEntry? _binaryCustom;
+    private Dictionary<string, List<string>> _disabledToolsByServer = new(StringComparer.OrdinalIgnoreCase);
     private List<CustomMcpServerEntry> _customServers = new();
 
     public McpInfrastructureService()
@@ -148,6 +156,8 @@ public sealed class McpInfrastructureService : IDisposable
                 _unrealEnabled = isEnabled;
             else if (string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase))
                 _filesystemEnabled = isEnabled;
+            else if (string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase))
+                _binaryEnabled = isEnabled;
             else
             {
                 var custom = _customServers.FirstOrDefault(s => string.Equals(s.Id, serverId, StringComparison.OrdinalIgnoreCase));
@@ -198,11 +208,21 @@ public sealed class McpInfrastructureService : IDisposable
         _filesystemCustom = settings.FilesystemMcpCustom?.Clone();
         _unrealEnabled = !_unrealDeleted && (settings.UnrealMcpEnabled ?? false);
         _filesystemEnabled = !_filesystemDeleted && (settings.FilesystemMcpEnabled ?? true);
+        _binaryCustom = settings.BinaryMcpCustom?.Clone();
+        _binaryEnabled = settings.BinaryMcpEnabled ?? true;
+        _disabledToolsByServer = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        if (settings.DisabledToolsByServer != null)
+        {
+            foreach (var kv in settings.DisabledToolsByServer)
+                if (!string.IsNullOrWhiteSpace(kv.Key) && kv.Value != null)
+                    _disabledToolsByServer[kv.Key] = new List<string>(kv.Value);
+        }
         _customServers = (settings.CustomServers ?? new List<CustomMcpServerEntry>()).Select(s => s.Clone()).ToList();
         _desiredRoots = NormalizeRoots(enabledRoots);
 
         _desiredEnabledById[SettingsStore.BuiltInUnrealId] = _unrealEnabled;
         _desiredEnabledById[SettingsStore.BuiltInFilesystemId] = _filesystemEnabled;
+        _desiredEnabledById[SettingsStore.BuiltInBinaryId] = _binaryEnabled;
         foreach (var s in _customServers)
             _desiredEnabledById[s.Id] = s.Enabled;
 
@@ -260,6 +280,29 @@ public sealed class McpInfrastructureService : IDisposable
             {
                 ApplyDesiredEnabledToStatus(fsStatus, _filesystemEnabled);
             }
+        }
+
+        if (!_statusById.TryGetValue(SettingsStore.BuiltInBinaryId, out var binStatus))
+        {
+            var binName = (_binaryCustom != null && !string.IsNullOrWhiteSpace(_binaryCustom.Name)) ? _binaryCustom.Name! : "Binary MCP";
+            _statusById[SettingsStore.BuiltInBinaryId] = new ServerRuntimeStatus
+            {
+                Id = SettingsStore.BuiltInBinaryId,
+                Name = binName,
+                Subtitle = I18n.Tr("Бинарный обмен файлами (read/write binary & chunks)", "Binary file transfer (read/write binary & chunks)"),
+                EndpointDisplay = "8005",
+                PathDisplay = "/mcp",
+                TransportBadge = "LOCAL HTTP",
+                UpstreamUrl = BinaryEndpoint,
+                IsBuiltIn = true,
+                IsEnabled = _binaryEnabled,
+                HealthState = _binaryEnabled ? McpServerHealthState.Waiting : McpServerHealthState.Disabled,
+                StatusText = _binaryEnabled ? I18n.Tr("Установка связи MCP…", "Establishing MCP connection…") : I18n.Tr("Выключен (процесс остановлен)", "Disabled (process stopped)")
+            };
+        }
+        else
+        {
+            ApplyDesiredEnabledToStatus(binStatus, _binaryEnabled);
         }
 
         foreach (var server in _customServers)
@@ -323,6 +366,7 @@ public sealed class McpInfrastructureService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(serverId) ||
             string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
             return true;
         try
@@ -349,6 +393,7 @@ public sealed class McpInfrastructureService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(serverId) ||
             string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
             return;
         try
@@ -366,6 +411,7 @@ public sealed class McpInfrastructureService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(serverId) ||
             string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
             return;
 
@@ -520,6 +566,7 @@ public sealed class McpInfrastructureService : IDisposable
                 StringComparer.OrdinalIgnoreCase)
             {
                 SettingsStore.BuiltInFilesystemId,
+                SettingsStore.BuiltInBinaryId,
                 SettingsStore.BuiltInUnrealId,
                 "_shared"
             };
@@ -611,6 +658,10 @@ public sealed class McpInfrastructureService : IDisposable
                  _statusById.TryGetValue(SettingsStore.BuiltInFilesystemId, out var filesystemStatus) &&
                  filesystemStatus.HealthState == McpServerHealthState.Quarantine) ||
                 string.Equals(forceRetryServerId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
+            await ReconcileBinaryServerAsync(
+                dependencies,
+                _desiredRoots,
+                string.Equals(forceRetryServerId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase)).ConfigureAwait(false);
             PublishCurrentSnapshot();
 
             // 3. Запускаем роутер (:8001) и открываем SSE-канал статусов
@@ -733,6 +784,10 @@ public sealed class McpInfrastructureService : IDisposable
                     routerDependencies,
                     _desiredRoots,
                     forceRestartIfChanged: false).ConfigureAwait(false);
+                await ReconcileBinaryServerAsync(
+                    routerDependencies,
+                    _desiredRoots,
+                    forceRestart: false).ConfigureAwait(false);
                 await ReconcileUnrealServerAsync().ConfigureAwait(false);
                 await ReconcileCustomServersAsync(
                     routerDependencies,
@@ -768,6 +823,11 @@ public sealed class McpInfrastructureService : IDisposable
             if (_filesystemEnabled && _filesystemGateway != null && IsExited(_filesystemGateway.Process))
             {
                 await ReconcileFilesystemServerAsync(dependencies, _activeRoots, true).ConfigureAwait(false);
+                changed = true;
+            }
+            if (_binaryEnabled && (_binaryMcp == null || IsExited(_binaryMcp.Process)))
+            {
+                await ReconcileBinaryServerAsync(dependencies, _desiredRoots, true).ConfigureAwait(false);
                 changed = true;
             }
 
@@ -1026,6 +1086,7 @@ public sealed class McpInfrastructureService : IDisposable
             }
 
             await ReconcileFilesystemServerAsync(dependencies, roots, true).ConfigureAwait(false);
+            await ReconcileBinaryServerAsync(dependencies, roots, false).ConfigureAwait(false);
 
             if (routerNeedsStart && !dependencies.HasNode)
             {
@@ -1885,6 +1946,7 @@ public sealed class McpInfrastructureService : IDisposable
             {
                 if (!string.Equals(existingStatusId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(existingStatusId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(existingStatusId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) &&
                     !desiredIds.Contains(existingStatusId))
                 {
                     _statusById.Remove(existingStatusId);
@@ -2277,7 +2339,10 @@ public sealed class McpInfrastructureService : IDisposable
                 Scope = resolvedScope,
                 Transport = transport,
                 ConfigurationFingerprint = HashConfigurationFingerprint(fingerprint),
-                LocalTargetOffline = localTargetOffline
+                LocalTargetOffline = localTargetOffline,
+                DisabledTools = _disabledToolsByServer.TryGetValue(id, out var disabledList) && disabledList.Count > 0
+                    ? new List<string>(disabledList)
+                    : null
             });
         }
 
@@ -2373,6 +2438,22 @@ public sealed class McpInfrastructureService : IDisposable
                     true,
                     true);
             }
+        }
+
+        var binaryName = _binaryCustom != null && !string.IsNullOrWhiteSpace(_binaryCustom.Name)
+            ? _binaryCustom.Name!
+            : "Binary MCP";
+        if (!_binaryEnabled)
+        {
+            AddUpstream(SettingsStore.BuiltInBinaryId, binaryName, BinaryEndpoint, null, "http", "binary-mcp-v1", false, false, "local");
+        }
+        else if (_binaryMcp != null && !IsExited(_binaryMcp.Process))
+        {
+            AddUpstream(SettingsStore.BuiltInBinaryId, binaryName, BinaryEndpoint, null, "http", "binary-mcp-v1", true, false, "local");
+        }
+        else
+        {
+            AddUpstream(SettingsStore.BuiltInBinaryId, binaryName, string.Empty, null, "http", "binary-mcp-v1", true, true, "local");
         }
 
         foreach (var configured in _customServers)
@@ -2712,6 +2793,8 @@ public sealed class McpInfrastructureService : IDisposable
                     continue;
                 }
                 status.ToolsCount = Math.Max(0, state.ToolsCount);
+                status.TotalToolsCount = Math.Max(0, state.TotalToolsCount);
+                status.AllToolsDisabled = state.AllToolsDisabled;
                 status.ToolsPreview = state.ToolsPreview != null
                     ? string.Join(", ", state.ToolsPreview.Take(6))
                     : string.Empty;
@@ -2761,9 +2844,11 @@ public sealed class McpInfrastructureService : IDisposable
                     case McpServerHealthState.Offline:
                         if (string.Equals(state.Transport, "stdio", StringComparison.OrdinalIgnoreCase) && status.ToolsCount > 0)
                             MarkServerPackageReady(state.ServerId);
-                        status.StatusText = state.Stale
-                            ? I18n.Tr("Сервер офлайн · кэш сохранён", "Server offline · cache retained")
-                            : I18n.Tr("Сервер офлайн", "Server offline");
+                        status.StatusText = state.AllToolsDisabled
+                            ? I18n.Tr("Сервер офлайн · все инструменты отключены", "Server offline · all tools disabled")
+                            : (state.Stale
+                                ? I18n.Tr("Сервер офлайн · кэш сохранён", "Server offline · cache retained")
+                                : I18n.Tr("Сервер офлайн", "Server offline"));
                         break;
 
                     case McpServerHealthState.Disabled:
@@ -2859,6 +2944,168 @@ public sealed class McpInfrastructureService : IDisposable
             PublishCurrentSnapshot();
         }
         finally { _operationGate.Release(); }
+    }
+
+    public Task<McpServerToolTree?> GetServerToolsTreeAsync(string serverId) =>
+        _pollManagerClient.GetServerToolsTreeAsync(serverId);
+
+    public Task<McpServerToolTree?> DiscoverServerToolsAsync(string serverId) =>
+        _pollManagerClient.DiscoverServerToolsAsync(serverId);
+
+    public async Task ApplyServerToolsPolicyAsync(string serverId, IEnumerable<string> disabledTools)
+    {
+        var normalized = (disabledTools ?? Array.Empty<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+
+        lock (_stateLock)
+        {
+            if (normalized.Count > 0) _disabledToolsByServer[serverId] = normalized;
+            else _disabledToolsByServer.Remove(serverId);
+        }
+
+        if (IsRouterReady)
+        {
+            await _pollManagerClient.UpdateServerToolsPolicyAsync(serverId, normalized).ConfigureAwait(false);
+            await RefreshPollCacheSnapshotAsync().ConfigureAwait(false);
+        }
+        PublishCurrentSnapshot();
+    }
+
+    private async Task ReconcileBinaryServerAsync(McpDependencySet dependencies, string[] roots, bool forceRestart)
+    {
+        const string id = SettingsStore.BuiltInBinaryId;
+        if (!_statusById.TryGetValue(id, out var status))
+        {
+            status = new ServerRuntimeStatus
+            {
+                Id = id,
+                Name = "Binary MCP",
+                Subtitle = I18n.Tr("Бинарный обмен файлами (read/write binary & chunks)", "Binary file transfer (read/write binary & chunks)"),
+                IsBuiltIn = true,
+                TransportBadge = "LOCAL HTTP",
+                EndpointDisplay = "8005",
+                PathDisplay = "/mcp",
+                UpstreamUrl = BinaryEndpoint
+            };
+            _statusById[id] = status;
+        }
+
+        status.Name = (_binaryCustom != null && !string.IsNullOrWhiteSpace(_binaryCustom.Name)) ? _binaryCustom.Name! : "Binary MCP";
+        var desiredEnabled = IsDesiredEnabled(id, _binaryEnabled);
+        status.IsEnabled = desiredEnabled;
+
+        if (!desiredEnabled)
+        {
+            if (_binaryMcp != null)
+            {
+                await StopChildAsync(_binaryMcp).ConfigureAwait(false);
+                _binaryMcp = null;
+                await WaitForPortReleaseAsync(BinaryPort, 3000).ConfigureAwait(false);
+            }
+            ApplyDesiredEnabledToStatus(status, false);
+            return;
+        }
+
+        if (!dependencies.HasNode)
+        {
+            if (_binaryMcp != null)
+            {
+                await StopChildAsync(_binaryMcp).ConfigureAwait(false);
+                _binaryMcp = null;
+            }
+            status.HealthState = McpServerHealthState.Quarantine;
+            status.ToolsCount = 0;
+            status.StatusText = BuildNodeDependencyUnavailableMessage(dependencies);
+            return;
+        }
+
+        WriteBinaryRootsFile(roots);
+        var alive = _binaryMcp != null && !IsExited(_binaryMcp.Process);
+        if (alive && !forceRestart)
+        {
+            await PushRootsToBinaryMcpAsync(roots).ConfigureAwait(false);
+            return;
+        }
+
+        if (_binaryMcp != null)
+        {
+            await StopChildAsync(_binaryMcp).ConfigureAwait(false);
+            _binaryMcp = null;
+            await WaitForPortReleaseAsync(BinaryPort, 4000).ConfigureAwait(false);
+        }
+
+        try
+        {
+            if (!File.Exists(AppPaths.BinaryMcpScript))
+                throw new FileNotFoundException("Не найден скрипт Binary MCP.", AppPaths.BinaryMcpScript);
+
+            EnsurePortAvailable(BinaryPort, "Binary MCP");
+            var args = string.Join(" ", new[]
+            {
+                QuoteArgument(AppPaths.BinaryMcpScript),
+                "--listen", QuoteArgument("127.0.0.1"),
+                "--port", BinaryPort.ToString(),
+                "--roots-file", QuoteArgument(AppPaths.BinaryRootsConfig)
+            });
+            var env = BuildEnrichedEnvironment(dependencies, null);
+            env["MCPHOTPLUG_MANAGER_API_KEY"] = _managerApiKey;
+            var child = StartChild(dependencies.NodeExecutable, args, AppPaths.InstallDirectory, "Binary MCP", env);
+            var health = await WaitForHttpHealthAsync(BinaryHealthEndpoint, child, 8000).ConfigureAwait(false);
+            if (!health.Success)
+            {
+                await StopChildAsync(child).ConfigureAwait(false);
+                throw new InvalidOperationException("Binary MCP (:8005) не запустился: " + health.Message);
+            }
+            _binaryMcp = child;
+            status.UpstreamUrl = BinaryEndpoint;
+            if (status.HealthState == McpServerHealthState.Disabled || status.HealthState == McpServerHealthState.Quarantine)
+            {
+                status.HealthState = McpServerHealthState.Waiting;
+                status.StatusText = I18n.Tr("Ожидание проверки MCP endpoint…", "Waiting for MCP endpoint verification…");
+            }
+            ErrorLog.LogConnection(I18n.Tr("Binary MCP (:8005) запущен.", "Binary MCP (:8005) started."));
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("McpInfrastructureService.ReconcileBinaryServerAsync", ex);
+            status.HealthState = McpServerHealthState.Quarantine;
+            status.StatusText = I18n.Tr("Ошибка запуска Binary MCP: ", "Binary MCP startup error: ") + ex.Message;
+            status.ToolsCount = 0;
+        }
+    }
+
+    private static void WriteBinaryRootsFile(string[] roots)
+    {
+        var json = McpServerConfigParser.SerializeJson(new Dictionary<string, object?> { ["roots"] = roots ?? Array.Empty<string>() });
+        WriteJsonTextFile(AppPaths.BinaryRootsConfig, json);
+    }
+
+    private async Task PushRootsToBinaryMcpAsync(string[] roots)
+    {
+        if (_binaryMcp == null || IsExited(_binaryMcp.Process)) return;
+        try
+        {
+            var json = McpServerConfigParser.SerializeJson(new Dictionary<string, object?> { ["roots"] = roots ?? Array.Empty<string>() });
+            var body = Encoding.UTF8.GetBytes(json);
+            var req = (HttpWebRequest)WebRequest.Create(BinaryRootsEndpoint);
+            req.Method = "POST";
+            req.ContentType = "application/json";
+            req.Headers["X-McpHotplug-Manager-Key"] = _managerApiKey;
+            req.Proxy = null;
+            req.Timeout = 3000;
+            req.ContentLength = body.Length;
+            using (var s = await req.GetRequestStreamAsync().ConfigureAwait(false))
+                await s.WriteAsync(body, 0, body.Length).ConfigureAwait(false);
+            using var resp = (HttpWebResponse)await req.GetResponseAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("McpInfrastructureService.PushRootsToBinaryMcpAsync", ex);
+        }
     }
 
     private async Task StartFilesystemGatewayAsync(McpDependencySet dependencies, string[] roots)
@@ -3620,6 +3867,7 @@ public sealed class McpInfrastructureService : IDisposable
             var list = new List<ServerRuntimeStatus>();
             if (_statusById.TryGetValue(SettingsStore.BuiltInUnrealId, out var unreal)) list.Add(unreal);
             if (_statusById.TryGetValue(SettingsStore.BuiltInFilesystemId, out var fs)) list.Add(fs);
+            if (_statusById.TryGetValue(SettingsStore.BuiltInBinaryId, out var bin)) list.Add(bin);
             foreach (var custom in _customServers)
                 if (_statusById.TryGetValue(custom.Id, out var s)) list.Add(s);
             return list;
@@ -3643,7 +3891,7 @@ public sealed class McpInfrastructureService : IDisposable
         {
             fpBuilder.Append('|').Append(s.Id).Append(':').Append(s.IsEnabled).Append(':')
                      .Append((int)s.HealthState).Append(':').Append(s.DisplayStatusText).Append(':')
-                     .Append(s.ToolsCount).Append(':').Append(s.EndpointDisplay).Append(':').Append(s.PathDisplay);
+                     .Append(s.ToolsCount).Append(':').Append(s.TotalToolsCount).Append(':').Append(s.AllToolsDisabled).Append(':').Append(s.EndpointDisplay).Append(':').Append(s.PathDisplay);
         }
         var currentFp = fpBuilder.ToString();
         if (string.Equals(_lastPublishedUiFingerprint, currentFp, StringComparison.Ordinal))
@@ -3761,12 +4009,14 @@ public sealed class McpInfrastructureService : IDisposable
         _customStdioRuntimes.Clear();
         await StopChildAsync(_hotplugGateway).ConfigureAwait(false); _hotplugGateway = null;
         await StopChildAsync(_rootsFilter).ConfigureAwait(false); _rootsFilter = null;
+        await StopChildAsync(_binaryMcp).ConfigureAwait(false); _binaryMcp = null;
         await StopChildAsync(_filesystemGateway).ConfigureAwait(false); _filesystemGateway = null;
         if (verifyPortRelease)
         {
             await WaitForPortReleaseAsync(HotplugMcpPort, 3000).ConfigureAwait(false);
             await WaitForPortReleaseAsync(FilterPort, 3000).ConfigureAwait(false);
             await WaitForPortReleaseAsync(FilesystemPort, 3000).ConfigureAwait(false);
+            await WaitForPortReleaseAsync(BinaryPort, 3000).ConfigureAwait(false);
         }
         return new List<string>();
     }
@@ -3814,6 +4064,8 @@ public sealed class McpInfrastructureService : IDisposable
         public McpServerHealthState HealthState { get; set; } = McpServerHealthState.Disabled;
         public string StatusText { get; set; } = string.Empty;
         public int ToolsCount { get; set; }
+        public int TotalToolsCount { get; set; }
+        public bool AllToolsDisabled { get; set; }
         public string ToolsPreview { get; set; } = string.Empty;
         public string LastDiagnosticLog { get; set; } = string.Empty;
         public string LastFingerprint { get; set; } = string.Empty;
@@ -3823,7 +4075,7 @@ public sealed class McpInfrastructureService : IDisposable
         {
             Id = Id, Name = Name, Subtitle = Subtitle, EndpointDisplay = EndpointDisplay, PathDisplay = PathDisplay,
             TransportBadge = TransportBadge, IsBuiltIn = IsBuiltIn, IsEnabled = IsEnabled, HealthState = HealthState,
-            StatusText = StatusText, ToolsCount = ToolsCount, ToolsPreview = ToolsPreview, LastDiagnosticLog = LastDiagnosticLog
+            StatusText = StatusText, ToolsCount = ToolsCount, TotalToolsCount = TotalToolsCount, AllToolsDisabled = AllToolsDisabled, ToolsPreview = ToolsPreview, LastDiagnosticLog = LastDiagnosticLog
         };
     }
 

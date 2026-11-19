@@ -12,6 +12,7 @@ public sealed class SettingsStore
 {
     public const string BuiltInUnrealId = "unreal";
     public const string BuiltInFilesystemId = "filesystem";
+    public const string BuiltInBinaryId = "binary";
 
     public AppSettings Load()
     {
@@ -79,6 +80,24 @@ public sealed class SettingsStore
         if (!settings.UnrealMcpEnabled.HasValue) settings.UnrealMcpEnabled = false;
         if (!settings.FilesystemMcpEnabled.HasValue) settings.FilesystemMcpEnabled = true;
         if (!settings.CheckUpdatesOnStartup.HasValue) settings.CheckUpdatesOnStartup = true;
+        if (!settings.BinaryMcpEnabled.HasValue) settings.BinaryMcpEnabled = true;
+
+        var normalizedDisabled = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        if (settings.DisabledToolsByServer != null)
+        {
+            foreach (var kv in settings.DisabledToolsByServer)
+            {
+                if (string.IsNullOrWhiteSpace(kv.Key) || kv.Value == null) continue;
+                var list = kv.Value
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .Select(v => v.Trim())
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(v => v, StringComparer.Ordinal)
+                    .ToList();
+                if (list.Count > 0) normalizedDisabled[kv.Key.Trim()] = list;
+            }
+        }
+        settings.DisabledToolsByServer = normalizedDisabled;
 
         // Legacy online-access state is intentionally ignored. A public endpoint
         // always requires a fresh explicit user action after upgrade.
@@ -90,7 +109,8 @@ public sealed class SettingsStore
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             BuiltInUnrealId,
-            BuiltInFilesystemId
+            BuiltInFilesystemId,
+            BuiltInBinaryId
         };
 
         foreach (var server in settings.CustomServers)

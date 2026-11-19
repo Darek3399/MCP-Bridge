@@ -98,5 +98,8 @@ internal sealed class RouterUpstreamItem
 
     [DataMember(Name = "localTargetOffline", Order = 10, EmitDefaultValue = false)]
     public bool LocalTargetOffline { get; set; }
+
+    [DataMember(Name = "disabledTools", Order = 11, EmitDefaultValue = false)]
+    public List<string>? DisabledTools { get; set; }
 }
 

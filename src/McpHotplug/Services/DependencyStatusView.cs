@@ -129,6 +129,8 @@ public sealed class DependencyStatusView : UserControl
         ScrollViewer.SetHorizontalScrollBarVisibility(_grid, ScrollBarVisibility.Auto);
         ScrollViewer.SetVerticalScrollBarVisibility(_grid, ScrollBarVisibility.Auto);
 
+        _grid.Resources[SystemColors.ControlBrushKey] = Brush("#16181B");
+        _grid.Resources[SystemColors.WindowBrushKey] = Brush("#202328");
         _grid.ColumnHeaderStyle = CreateColumnHeaderStyle();
         _grid.RowStyle = CreateRowStyle();
         _grid.CellStyle = CreateCellStyle();

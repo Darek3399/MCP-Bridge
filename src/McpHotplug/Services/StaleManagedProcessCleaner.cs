@@ -14,7 +14,7 @@ namespace McpHotplug.Services;
 /// </summary>
 internal static class StaleManagedProcessCleaner
 {
-    private static readonly int[] CoreManagedPorts = { 8001, 8002, 8003, 8004 };
+    private static readonly int[] CoreManagedPorts = { 8001, 8002, 8003, 8004, 8005 };
 
     public static void CleanupKnownOrphans()
     {
@@ -130,7 +130,9 @@ internal static class StaleManagedProcessCleaner
                        process.CommandLine.IndexOf("8001", StringComparison.OrdinalIgnoreCase) >= 0;
         var isHotplugGateway = ContainsPath(process.CommandLine, AppPaths.HotplugMcpGatewayScript) &&
                               process.CommandLine.IndexOf("8004", StringComparison.OrdinalIgnoreCase) >= 0;
-        return isRouter || isHotplugGateway;
+        var isBinaryMcp = ContainsPath(process.CommandLine, AppPaths.BinaryMcpScript) &&
+                          process.CommandLine.IndexOf("8005", StringComparison.OrdinalIgnoreCase) >= 0;
+        return isRouter || isHotplugGateway || isBinaryMcp;
     }
 
     private static bool IsOrphaned(ProcessRecord process, IReadOnlyDictionary<int, ProcessRecord> snapshot)

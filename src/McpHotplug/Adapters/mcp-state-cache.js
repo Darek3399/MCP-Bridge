@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
+const toolPolicy = require('./mcp-tool-policy');
 
 function cloneJson(value) {
   if (value === undefined) return undefined;
@@ -31,6 +32,7 @@ function transportFingerprint(config) {
   delete transportConfig.pollIntervalMs;
   delete transportConfig.temporary;
   delete transportConfig.localTargetOffline;
+  delete transportConfig.disabledTools;
   return fingerprint(transportConfig);
 }
 
@@ -67,12 +69,19 @@ class McpServerStateCache extends EventEmitter {
     const pollIntervalMs = Number(config.pollIntervalMs) > 0
       ? Number(config.pollIntervalMs)
       : (scope === 'remote' ? 30000 : 2500);
+    const nextDisabledTools = Array.isArray(config.disabledTools)
+      ? toolPolicy.normalizeDisabledList(config.disabledTools)
+      : (existing ? existing.disabledTools : []);
+    const disabledToolsChanged = Boolean(
+      existing && JSON.stringify(existing.disabledTools) !== JSON.stringify(nextDisabledTools)
+    );
     const reenabled = Boolean(existing && existing.enabled === false && enabled);
     const enabledChanged = Boolean(existing && existing.enabled !== enabled);
     const routeMetadataChanged = Boolean(
       !existing ||
       transportChanged ||
       enabledChanged ||
+      disabledToolsChanged ||
       existing.name !== name
     );
     const metadataChanged = Boolean(
@@ -96,6 +105,12 @@ class McpServerStateCache extends EventEmitter {
     );
     const clearTransportState = transportChanged && !preserveCatalog;
 
+    let nextCatalogRevision = clearTransportState ? 0 : (existing ? existing.catalogRevision : 0);
+    if (disabledToolsChanged) {
+      nextCatalogRevision += 1;
+      this.catalogRevision += 1;
+    }
+
     const next = {
       serverId: id,
       name,
@@ -111,6 +126,7 @@ class McpServerStateCache extends EventEmitter {
           ? 'waiting'
           : (existing ? existing.health : 'waiting')),
       isPolling: existing && !transportChanged ? existing.isPolling : false,
+      isDiscovering: existing && !transportChanged ? Boolean(existing.isDiscovering) : false,
       pollIntervalMs,
       configRevision: existing
         ? (transportChanged
@@ -124,7 +140,7 @@ class McpServerStateCache extends EventEmitter {
       serverRevisionToken: !existing || routeMetadataChanged
         ? crypto.randomUUID()
         : existing.serverRevisionToken,
-      catalogRevision: clearTransportState ? 0 : (existing ? existing.catalogRevision : 0),
+      catalogRevision: nextCatalogRevision,
       lastAttemptAt: clearTransportState ? null : (existing ? existing.lastAttemptAt : null),
       lastCompletedAt: clearTransportState ? null : (existing ? existing.lastCompletedAt : null),
       lastSuccessAt: clearTransportState ? null : (existing ? existing.lastSuccessAt : null),
@@ -139,6 +155,9 @@ class McpServerStateCache extends EventEmitter {
         ? null
         : (existing ? existing.lastError : null),
       tools: clearTransportState ? [] : (existing ? existing.tools : []),
+      persistedTools: clearTransportState ? [] : (existing ? existing.persistedTools : []),
+      discoveredNested: clearTransportState ? null : (existing ? existing.discoveredNested : null),
+      disabledTools: nextDisabledTools,
       toolFingerprint: clearTransportState ? '' : (existing ? existing.toolFingerprint : ''),
       serverInfo: clearTransportState ? null : (existing ? existing.serverInfo : null),
       protocolMode: clearTransportState ? null : (existing ? existing.protocolMode : null),
@@ -148,8 +167,69 @@ class McpServerStateCache extends EventEmitter {
     };
     this.states.set(id, next);
     if (metadataChanged)
-      this._publish('server.configured', id);
+      this._publish('server.configured', id, { catalogChanged: disabledToolsChanged || enabledChanged });
     return this.getServer(id);
+  }
+
+  hydratePersistedTree(id, persistedTools, discoveredNested) {
+    const state = this.states.get(String(id));
+    if (!state) return false;
+    let changed = false;
+    if (Array.isArray(persistedTools) && persistedTools.length > 0 && state.persistedTools.length === 0) {
+      state.persistedTools = cloneJson(persistedTools);
+      changed = true;
+    }
+    if (discoveredNested && typeof discoveredNested === 'object' && !state.discoveredNested) {
+      state.discoveredNested = cloneJson(discoveredNested);
+      changed = true;
+    }
+    if (changed) {
+      state.updatedAt = new Date().toISOString();
+      this._publish('server.nestedDiscovered', state.serverId, { catalogChanged: true });
+    }
+    return changed;
+  }
+
+  setDisabledTools(id, disabledList) {
+    const state = this.states.get(String(id));
+    if (!state) return null;
+    const normalized = toolPolicy.normalizeDisabledList(disabledList);
+    if (JSON.stringify(state.disabledTools) === JSON.stringify(normalized)) {
+      return this.getServer(id);
+    }
+    state.disabledTools = normalized;
+    state.catalogRevision += 1;
+    this.catalogRevision += 1;
+    state.serverRevision += 1;
+    state.serverRevisionToken = crypto.randomUUID();
+    state.updatedAt = new Date().toISOString();
+    this._publish('server.policyChanged', state.serverId, { catalogChanged: true });
+    return this.getServer(id);
+  }
+
+  setDiscovering(id, isDiscovering) {
+    const state = this.states.get(String(id));
+    if (!state) return false;
+    const next = Boolean(isDiscovering);
+    if (state.isDiscovering === next) return false;
+    state.isDiscovering = next;
+    state.updatedAt = new Date().toISOString();
+    this._publish('server.nestedDiscovering', state.serverId, { isDiscovering: next });
+    return true;
+  }
+
+  setDiscoveredNested(id, discoveredNested) {
+    const state = this.states.get(String(id));
+    if (!state) return false;
+    state.discoveredNested = discoveredNested ? cloneJson(discoveredNested) : null;
+    state.isDiscovering = false;
+    state.catalogRevision += 1;
+    this.catalogRevision += 1;
+    state.serverRevision += 1;
+    state.serverRevisionToken = crypto.randomUUID();
+    state.updatedAt = new Date().toISOString();
+    this._publish('server.nestedDiscovered', state.serverId, { catalogChanged: true });
+    return true;
   }
 
   setPolling(id, isPolling, attemptedAt = null) {
@@ -178,6 +258,7 @@ class McpServerStateCache extends EventEmitter {
       this.catalogRevision += 1;
     }
     state.tools = tools;
+    if (tools.length > 0) state.persistedTools = cloneJson(tools);
     state.toolFingerprint = nextFingerprint;
     state.health = 'online';
     state.pending = false;
@@ -228,12 +309,13 @@ class McpServerStateCache extends EventEmitter {
     return true;
   }
 
-    setFailure(id, error, result = {}) {
+  setFailure(id, error, result = {}) {
     const state = this.states.get(String(id));
     if (!state) return false;
 
     if (error && Array.isArray(error.discoveredTools) && error.discoveredTools.length > 0 && state.tools.length === 0) {
       state.tools = cloneJson(error.discoveredTools);
+      state.persistedTools = cloneJson(error.discoveredTools);
       state.toolFingerprint = fingerprint(state.tools);
     }
     if (error && error.discoveredServerInfo && !state.serverInfo) {
@@ -307,6 +389,9 @@ class McpServerStateCache extends EventEmitter {
       configurationFingerprint: typeof permanentConfig.configurationFingerprint === 'string'
         ? permanentConfig.configurationFingerprint
         : null,
+      disabledTools: Array.isArray(permanentConfig.disabledTools)
+        ? toolPolicy.normalizeDisabledList(permanentConfig.disabledTools)
+        : (previous.disabledTools || []),
       serverRevision: previous.serverRevision + 1,
       serverRevisionToken: crypto.randomUUID(),
       firstDownloadStartedAt: previous && previous.firstDownloadStartedAt ? previous.firstDownloadStartedAt : Date.now(),
@@ -350,13 +435,42 @@ class McpServerStateCache extends EventEmitter {
     return this.states.get(String(id)) || null;
   }
 
+  getServerToolTree(id) {
+    const state = this.states.get(String(id));
+    if (!state || state.temporary) return null;
+    const effectiveTools = state.tools.length > 0 ? state.tools : state.persistedTools;
+    const tree = toolPolicy.buildServerToolTree(effectiveTools, state.discoveredNested, state.disabledTools);
+    const pub = this._publicState(state);
+    return {
+      serverId: state.serverId,
+      name: state.name,
+      enabled: state.enabled,
+      health: pub.health,
+      rawHealth: state.health,
+      isDiscovering: Boolean(state.isDiscovering),
+      allToolsDisabled: pub.allToolsDisabled,
+      disabledTools: [...state.disabledTools],
+      rawToolsCount: effectiveTools.length,
+      ...tree
+    };
+  }
+
   buildCatalog() {
-    const active = [...this.states.values()].filter(state =>
+    const candidates = [...this.states.values()].filter(state =>
       !state.temporary && state.enabled && state.health !== 'disabled' && state.tools.length > 0
     );
+
+    const activeEntries = [];
     const nameCounts = new Map();
-    for (const state of active) {
-      for (const tool of state.tools) {
+    for (const state of candidates) {
+      const filtered = toolPolicy.filterCatalogToolsForServer(
+        state.tools,
+        state.discoveredNested,
+        state.disabledTools
+      );
+      if (filtered.allDisabled || filtered.tools.length === 0) continue;
+      activeEntries.push({ state, tools: filtered.tools });
+      for (const tool of filtered.tools) {
         if (tool && typeof tool.name === 'string' && tool.name.trim()) {
           nameCounts.set(tool.name, (nameCounts.get(tool.name) || 0) + 1);
         }
@@ -364,9 +478,9 @@ class McpServerStateCache extends EventEmitter {
     }
 
     const tools = [];
-    for (const state of active) {
+    for (const { state, tools: filteredTools } of activeEntries) {
       const prefix = String(state.serverId).replace(/[^A-Za-z0-9_-]/g, '_');
-      for (const rawTool of state.tools) {
+      for (const rawTool of filteredTools) {
         if (!rawTool || typeof rawTool.name !== 'string' || !rawTool.name.trim()) continue;
         const originalName = rawTool.name;
         const uniquePrefix = prefix + '_' +
@@ -398,19 +512,36 @@ class McpServerStateCache extends EventEmitter {
 
     const revisionPayload = [...this.states.values()]
       .filter(state => !state.temporary && state.enabled)
-      .map(state => [state.serverId, state.serverRevisionToken, state.serverRevision, state.catalogRevision])
+      .map(state => [
+        state.serverId,
+        state.serverRevisionToken,
+        state.serverRevision,
+        state.catalogRevision,
+        state.disabledTools
+      ])
       .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
     const revision = fingerprint(revisionPayload);
     return {
       status: 'ready',
       cache_revision: String(this.cacheRevision),
       catalog_revision: revision,
+      disabled_tools_note: toolPolicy.DISABLED_TOOLS_NOTE,
       servers: this.getAllServers(),
       tools
     };
   }
 
   _publicState(state) {
+    const effectiveTools = state.tools.length > 0 ? state.tools : state.persistedTools;
+    const tree = toolPolicy.buildServerToolTree(effectiveTools, state.discoveredNested, state.disabledTools);
+    const totalToolsCount = tree.totalLeafCount > 0 ? tree.totalLeafCount : effectiveTools.length;
+    const enabledToolsCount = tree.totalLeafCount > 0
+      ? tree.enabledLeafCount
+      : (tree.allDisabled ? 0 : effectiveTools.length);
+    const allToolsDisabled = Boolean(state.enabled && tree.allDisabled && totalToolsCount > 0);
+    const effectiveHealth = allToolsDisabled ? 'offline' : state.health;
+    const disabledHierarchy = state.enabled ? toolPolicy.buildCompactDisabledHierarchy(tree) : [];
+
     return {
       serverId: state.serverId,
       name: state.name,
@@ -418,7 +549,9 @@ class McpServerStateCache extends EventEmitter {
       pending: state.pending,
       scope: state.scope,
       transport: state.transport,
-      health: state.health,
+      health: effectiveHealth,
+      rawHealth: state.health,
+      allToolsDisabled,
       isPolling: state.isPolling,
       pollIntervalMs: state.pollIntervalMs,
       configRevision: state.configRevision,
@@ -431,7 +564,10 @@ class McpServerStateCache extends EventEmitter {
       consecutiveFailures: state.consecutiveFailures,
       stale: state.stale,
       lastError: state.lastError,
-      toolsCount: state.tools.length,
+      toolsCount: enabledToolsCount,
+      enabledToolsCount,
+      totalToolsCount,
+      disabledTools: disabledHierarchy,
       toolsPreview: state.tools.slice(0, 6).map(tool => tool.name),
       updatedAt: state.updatedAt
     };

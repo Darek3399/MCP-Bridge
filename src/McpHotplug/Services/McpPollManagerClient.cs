@@ -20,6 +20,9 @@ internal sealed class McpPollManagerClient
     private const string VerifyUrl = BaseUrl + "/__manager/verification/subscribe";
     private const string VerificationCacheUrl = BaseUrl + "/__manager/verification/cache";
     private const string PromotionUrl = BaseUrl + "/__manager/verification/promote";
+    private const string ServerToolsUrl = BaseUrl + "/__manager/server/tools";
+    private const string DiscoverServerToolsUrl = BaseUrl + "/__manager/server/tools/discover";
+    private const string ServerToolsPolicyUrl = BaseUrl + "/__manager/server/tools/policy";
     private readonly string _managerApiKey;
     public McpPollManagerClient(string managerApiKey)
     {
@@ -405,6 +408,93 @@ internal sealed class McpPollManagerClient
             ?? throw new InvalidOperationException("Poll Manager returned an invalid temporary cache entry.");
     }
 
+    public async Task<McpServerToolTree?> GetServerToolsTreeAsync(string serverId, CancellationToken cancellationToken = default)
+    {
+        var url = ServerToolsUrl + "?id=" + Uri.EscapeDataString(serverId);
+        var request = CreateManagerRequest(url);
+        request.Method = "GET";
+        request.Proxy = null;
+        request.Timeout = 5000;
+        request.ReadWriteTimeout = 5000;
+        using var registration = cancellationToken.Register(() => { try { request.Abort(); } catch { } });
+        try
+        {
+            using var response = (HttpWebResponse)await request.GetResponseAsync().ConfigureAwait(false);
+            using var stream = response.GetResponseStream();
+            if (stream == null) return null;
+            var serializer = new DataContractJsonSerializer(typeof(McpServerToolTree));
+            return serializer.ReadObject(stream) as McpServerToolTree;
+        }
+        catch (WebException ex) when (ex.Response is HttpWebResponse err && err.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    public async Task<McpServerToolTree?> DiscoverServerToolsAsync(string serverId, CancellationToken cancellationToken = default)
+    {
+        var request = CreateManagerRequest(DiscoverServerToolsUrl);
+        request.Method = "POST";
+        request.ContentType = "application/json";
+        request.Proxy = null;
+        request.Timeout = 45000;
+        request.ReadWriteTimeout = 45000;
+
+        var payload = new PollManagerExistingVerificationRequest { ServerId = serverId };
+        var serializer = new DataContractJsonSerializer(typeof(PollManagerExistingVerificationRequest));
+        byte[] body;
+        using (var memory = new MemoryStream())
+        {
+            serializer.WriteObject(memory, payload);
+            body = memory.ToArray();
+        }
+        request.ContentLength = body.Length;
+
+        using var registration = cancellationToken.Register(() => { try { request.Abort(); } catch { } });
+        using (var reqStream = await request.GetRequestStreamAsync().ConfigureAwait(false))
+            await reqStream.WriteAsync(body, 0, body.Length, cancellationToken).ConfigureAwait(false);
+
+        using var response = (HttpWebResponse)await request.GetResponseAsync().ConfigureAwait(false);
+        using var stream = response.GetResponseStream();
+        if (stream == null) return null;
+        var resSerializer = new DataContractJsonSerializer(typeof(McpServerToolTree));
+        return resSerializer.ReadObject(stream) as McpServerToolTree;
+    }
+
+    public async Task<bool> UpdateServerToolsPolicyAsync(
+        string serverId,
+        IEnumerable<string> disabledTools,
+        CancellationToken cancellationToken = default)
+    {
+        var request = CreateManagerRequest(ServerToolsPolicyUrl);
+        request.Method = "POST";
+        request.ContentType = "application/json";
+        request.Proxy = null;
+        request.Timeout = 8000;
+        request.ReadWriteTimeout = 8000;
+
+        var payload = new PollManagerToolPolicyRequest
+        {
+            ServerId = serverId,
+            DisabledTools = new List<string>(disabledTools)
+        };
+        var serializer = new DataContractJsonSerializer(typeof(PollManagerToolPolicyRequest));
+        byte[] body;
+        using (var memory = new MemoryStream())
+        {
+            serializer.WriteObject(memory, payload);
+            body = memory.ToArray();
+        }
+        request.ContentLength = body.Length;
+
+        using var registration = cancellationToken.Register(() => { try { request.Abort(); } catch { } });
+        using (var reqStream = await request.GetRequestStreamAsync().ConfigureAwait(false))
+            await reqStream.WriteAsync(body, 0, body.Length, cancellationToken).ConfigureAwait(false);
+
+        using var response = (HttpWebResponse)await request.GetResponseAsync().ConfigureAwait(false);
+        return (int)response.StatusCode >= 200 && (int)response.StatusCode < 300;
+    }
+
     private async Task RemoveTemporaryVerificationCacheAsync(string serverId)
     {
         var url = VerificationCacheUrl + "?id=" + Uri.EscapeDataString(serverId);
@@ -486,6 +576,18 @@ internal sealed class PollManagerServerState
 
     [DataMember(Name = "toolsCount")]
     public int ToolsCount { get; set; }
+
+    [DataMember(Name = "enabledToolsCount")]
+    public int EnabledToolsCount { get; set; }
+
+    [DataMember(Name = "totalToolsCount")]
+    public int TotalToolsCount { get; set; }
+
+    [DataMember(Name = "allToolsDisabled")]
+    public bool AllToolsDisabled { get; set; }
+
+    [DataMember(Name = "rawHealth")]
+    public string? RawHealth { get; set; }
 
     [DataMember(Name = "toolsPreview")]
     public List<string> ToolsPreview { get; set; } = new();
@@ -606,6 +708,7 @@ internal sealed class PollManagerVerificationCache
     public string? DiscoveredServerName { get; set; }
 }
 
+
 internal sealed class PollManagerVerificationResponse
 {
     public bool Success { get; set; }
@@ -614,4 +717,97 @@ internal sealed class PollManagerVerificationResponse
     public PollManagerServerState? State { get; set; }
     public List<string> ToolNames { get; set; } = new();
     public string? DiscoveredServerName { get; set; }
+}
+
+[DataContract]
+internal sealed class PollManagerToolPolicyRequest
+{
+    [DataMember(Name = "serverId")]
+    public string ServerId { get; set; } = string.Empty;
+
+    [DataMember(Name = "disabledTools")]
+    public List<string> DisabledTools { get; set; } = new();
+}
+
+[DataContract]
+public sealed class McpServerToolTree
+{
+    [DataMember(Name = "serverId")]
+    public string ServerId { get; set; } = string.Empty;
+
+    [DataMember(Name = "name")]
+    public string Name { get; set; } = string.Empty;
+
+    [DataMember(Name = "enabled")]
+    public bool Enabled { get; set; }
+
+    [DataMember(Name = "health")]
+    public string Health { get; set; } = string.Empty;
+
+    [DataMember(Name = "rawHealth")]
+    public string RawHealth { get; set; } = string.Empty;
+
+    [DataMember(Name = "isDiscovering")]
+    public bool IsDiscovering { get; set; }
+
+    [DataMember(Name = "allToolsDisabled")]
+    public bool AllToolsDisabled { get; set; }
+
+    [DataMember(Name = "totalLeafCount")]
+    public int TotalLeafCount { get; set; }
+
+    [DataMember(Name = "enabledLeafCount")]
+    public int EnabledLeafCount { get; set; }
+
+    [DataMember(Name = "hasMetaPattern")]
+    public bool HasMetaPattern { get; set; }
+
+    [DataMember(Name = "metaPatternType")]
+    public string? MetaPatternType { get; set; }
+
+    [DataMember(Name = "hasDiscoveredMeta")]
+    public bool HasDiscoveredMeta { get; set; }
+
+    [DataMember(Name = "disabledTools")]
+    public List<string> DisabledTools { get; set; } = new();
+
+    [DataMember(Name = "nodes")]
+    public List<McpToolTreeNode> Nodes { get; set; } = new();
+}
+
+[DataContract]
+public sealed class McpToolTreeNode
+{
+    [DataMember(Name = "path")]
+    public string Path { get; set; } = string.Empty;
+
+    [DataMember(Name = "name")]
+    public string Name { get; set; } = string.Empty;
+
+    [DataMember(Name = "displayName")]
+    public string DisplayName { get; set; } = string.Empty;
+
+    [DataMember(Name = "kind")]
+    public string Kind { get; set; } = "tool";
+
+    [DataMember(Name = "metaType")]
+    public string MetaType { get; set; } = "flat";
+
+    [DataMember(Name = "description")]
+    public string Description { get; set; } = string.Empty;
+
+    [DataMember(Name = "enabled")]
+    public bool Enabled { get; set; } = true;
+
+    [DataMember(Name = "indeterminate")]
+    public bool Indeterminate { get; set; }
+
+    [DataMember(Name = "totalLeafCount")]
+    public int TotalLeafCount { get; set; }
+
+    [DataMember(Name = "enabledLeafCount")]
+    public int EnabledLeafCount { get; set; }
+
+    [DataMember(Name = "children")]
+    public List<McpToolTreeNode> Children { get; set; } = new();
 }
