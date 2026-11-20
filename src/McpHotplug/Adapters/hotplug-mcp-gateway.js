@@ -8,6 +8,7 @@ const { URL } = require('node:url');
 const { HotplugRouterClient } = require('./hotplug-router-client');
 const { ToolCatalogManager } = require('./hotplug-catalog-manager');
 const { HotplugToolDispatcher } = require('./hotplug-tool-dispatcher');
+const toolPolicy = require('./mcp-tool-policy');
 
 const MODERN_PROTOCOL_VERSION = '2026-07-28';
 const LEGACY_PROTOCOL_VERSIONS = new Set(['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05']);
@@ -146,11 +147,7 @@ const TOOLS = [
   {
     name: 'all_tools',
     title: 'Get the live Hotplug tool catalog',
-    description:
-      'Returns the latest per-server tool catalog snapshot published by the independent MCP Poll Manager. ' +
-      'This operation reads the cache only: it does not probe, initialize, or wait for any upstream server. ' +
-      'The catalog includes stable tool_id values, complete inputSchema JSON Schemas, source server information, ' +
-      'per-server status, staleness, catalog_revision, and compact name-only disabled_tools lists (tools disabled by the user to save tokens; ask the user to enable one if needed).',
+    description: toolPolicy.GATEWAY_ALL_TOOLS_DESCRIPTION,
     inputSchema: {
       type: 'object',
       properties: {},
@@ -301,13 +298,12 @@ async function handleRpc(request, response, rpcMessage) {
     const recoveredVersion = (requestedVersion && LEGACY_PROTOCOL_VERSIONS.has(requestedVersion))
       ? requestedVersion
       : '2025-06-18';
-    const recoveredId = sessionId || crypto.randomUUID();
     effectiveSession = {
       createdAt: Date.now(),
       lastActivity: Date.now(),
       protocolVersion: recoveredVersion
     };
-    sessions.set(recoveredId, effectiveSession);
+    if (sessionId) sessions.set(sessionId, effectiveSession);
   }
 
   if (!isModern && effectiveSession && requestedVersion &&
@@ -538,6 +534,9 @@ const server = http.createServer(async (request, response) => {
     }
   }
 });
+
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 125000;
 
 server.on('error', error => {
   process.stderr.write('Hotplug MCP Gateway server error: ' + error.message + '\n');

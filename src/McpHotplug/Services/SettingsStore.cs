@@ -13,6 +13,7 @@ public sealed class SettingsStore
     public const string BuiltInUnrealId = "unreal";
     public const string BuiltInFilesystemId = "filesystem";
     public const string BuiltInBinaryId = "binary";
+    public const string BuiltInHotplugControlId = "hotplug_control";
 
     public AppSettings Load()
     {
@@ -80,7 +81,8 @@ public sealed class SettingsStore
         if (!settings.UnrealMcpEnabled.HasValue) settings.UnrealMcpEnabled = false;
         if (!settings.FilesystemMcpEnabled.HasValue) settings.FilesystemMcpEnabled = true;
         if (!settings.CheckUpdatesOnStartup.HasValue) settings.CheckUpdatesOnStartup = true;
-        if (!settings.BinaryMcpEnabled.HasValue) settings.BinaryMcpEnabled = true;
+        if (!settings.BinaryMcpEnabled.HasValue) settings.BinaryMcpEnabled = false;
+        if (!settings.HotplugControlMcpEnabled.HasValue) settings.HotplugControlMcpEnabled = false;
 
         var normalizedDisabled = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         if (settings.DisabledToolsByServer != null)
@@ -110,7 +112,8 @@ public sealed class SettingsStore
         {
             BuiltInUnrealId,
             BuiltInFilesystemId,
-            BuiltInBinaryId
+            BuiltInBinaryId,
+            BuiltInHotplugControlId
         };
 
         foreach (var server in settings.CustomServers)

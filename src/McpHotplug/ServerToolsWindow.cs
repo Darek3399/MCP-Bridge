@@ -36,6 +36,7 @@ public sealed class ServerToolsWindow : Window
 
     private readonly CheckBox _masterCheckBox;
     private readonly Button _undoButton;
+    private readonly Button _okButton;
     private readonly StackPanel _loadingPanel;
     private readonly RotateTransform _spinnerRotate;
     private readonly TextBlock _statsText;
@@ -47,6 +48,7 @@ public sealed class ServerToolsWindow : Window
     private bool _skipClosePrompt;
     private int _lastTreeSignature = -1;
 
+    public string ServerId => _serverId;
     public List<string> ResultDisabledTools { get; private set; } = new();
 
     public ServerToolsWindow(
@@ -145,7 +147,7 @@ public sealed class ServerToolsWindow : Window
         };
         _loadingPanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0), Visibility = Visibility.Collapsed };
         _loadingPanel.Children.Add(spinnerIcon);
-        _loadingPanel.Children.Add(new TextBlock { Text = I18n.Tr("Загрузка…", "Loading…"), FontSize = 11, Foreground = ToolBrush, VerticalAlignment = VerticalAlignment.Center });
+        _loadingPanel.Children.Add(new TextBlock { Text = I18n.Tr("Загрузка инструментов… (пока недоступны)", "Loading tools… (unavailable yet)"), FontSize = 11, Foreground = ToolBrush, VerticalAlignment = VerticalAlignment.Center });
 
         _undoButton = new Button
         {
@@ -161,13 +163,6 @@ public sealed class ServerToolsWindow : Window
         Grid.SetColumn(rightControls, 1);
         topRow.Children.Add(rightControls);
         headerStack.Children.Add(topRow);
-
-        var legendPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-        legendPanel.Children.Add(new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(2), Background = CategoryBrush, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
-        legendPanel.Children.Add(new TextBlock { Text = I18n.Tr("Категория / подкатегория", "Category / subcategory"), FontSize = 11, Foreground = CategoryBrush, Margin = new Thickness(0, 0, 14, 0) });
-        legendPanel.Children.Add(new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(2), Background = ToolBrush, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
-        legendPanel.Children.Add(new TextBlock { Text = I18n.Tr("Инструмент (действие)", "Executable tool"), FontSize = 11, Foreground = ToolBrush });
-        headerStack.Children.Add(legendPanel);
         headerCard.Child = headerStack;
         contentGrid.Children.Add(headerCard);
 
@@ -230,14 +225,14 @@ public sealed class ServerToolsWindow : Window
         bottomGrid.Children.Add(_offlineWarningText);
 
         var buttonsPanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var okButton = new Button { Content = I18n.Tr("ОК", "OK"), MinWidth = 96, Padding = new Thickness(16, 8, 16, 8), Margin = new Thickness(0, 0, 8, 0) };
-        if (Application.Current.TryFindResource("PrimaryButtonStyle") is Style pStyle) okButton.Style = pStyle;
-        okButton.Click += OkButton_Click;
+        _okButton = new Button { Content = I18n.Tr("ОК", "OK"), MinWidth = 96, Padding = new Thickness(16, 8, 16, 8), Margin = new Thickness(0, 0, 8, 0) };
+        if (Application.Current.TryFindResource("PrimaryButtonStyle") is Style pStyle) _okButton.Style = pStyle;
+        _okButton.Click += OkButton_Click;
 
         var cancelButton = new Button { Content = I18n.Tr("Отмена", "Cancel"), MinWidth = 96, Padding = new Thickness(14, 8, 14, 8) };
         cancelButton.Click += CancelButton_Click;
 
-        buttonsPanel.Children.Add(okButton);
+        buttonsPanel.Children.Add(_okButton);
         buttonsPanel.Children.Add(cancelButton);
         Grid.SetColumn(buttonsPanel, 1);
         bottomGrid.Children.Add(buttonsPanel);
@@ -300,8 +295,11 @@ public sealed class ServerToolsWindow : Window
 
     private void SetLoadingState(bool isLoading)
     {
+        _okButton.IsEnabled = !isLoading && _rootNodes.Count > 0;
+        _treeView.Visibility = isLoading || _rootNodes.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         if (isLoading)
         {
+            _masterCheckBox.IsEnabled = false;
             if (_loadingPanel.Visibility != Visibility.Visible)
             {
                 _loadingPanel.Visibility = Visibility.Visible;
@@ -309,11 +307,24 @@ public sealed class ServerToolsWindow : Window
                 _spinnerRotate.BeginAnimation(RotateTransform.AngleProperty, anim);
             }
         }
-        else if (_loadingPanel.Visibility != Visibility.Collapsed)
+        else
         {
-            _spinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
-            _loadingPanel.Visibility = Visibility.Collapsed;
+            _masterCheckBox.IsEnabled = _rootNodes.Count > 0;
+            if (_loadingPanel.Visibility != Visibility.Collapsed)
+            {
+                _spinnerRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+                _loadingPanel.Visibility = Visibility.Collapsed;
+            }
         }
+    }
+
+    private static bool IsTreeLoading(McpServerToolTree? tree)
+    {
+        if (tree == null) return false;
+        if (string.Equals(tree.ToolsLoadState, "error", StringComparison.OrdinalIgnoreCase)) return false;
+        return tree.IsDiscovering ||
+            string.Equals(tree.ToolsLoadState, "loading", StringComparison.OrdinalIgnoreCase) ||
+            (tree.HasMetaPattern && !tree.HasDiscoveredMeta && string.Equals(tree.RawHealth, "online", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task LoadAndWatchTreeAsync()
@@ -323,10 +334,16 @@ public sealed class ServerToolsWindow : Window
         {
             var tree = await _infrastructure.GetServerToolsTreeAsync(_serverId);
             if (_windowCts.IsCancellationRequested) return;
-            PopulateTree(tree, preserveLocalChanges: false);
-
-            var needsPolling = tree != null &&
-                (tree.IsDiscovering || (tree.HasMetaPattern && !tree.HasDiscoveredMeta && string.Equals(tree.RawHealth, "online", StringComparison.OrdinalIgnoreCase)));
+            var needsPolling = IsTreeLoading(tree);
+            if (!needsPolling)
+                PopulateTree(tree, preserveLocalChanges: false);
+            else
+            {
+                _emptyStateText.Text = I18n.Tr(
+                    "Загрузка дерева инструментов…\nИнструменты станут доступны после завершения загрузки.",
+                    "Loading tool tree…\nTools will become available once loading completes.");
+                _emptyStateText.Visibility = Visibility.Visible;
+            }
 
             while (needsPolling && !_windowCts.IsCancellationRequested)
             {
@@ -335,8 +352,9 @@ public sealed class ServerToolsWindow : Window
                 if (_windowCts.IsCancellationRequested) break;
                 tree = await _infrastructure.GetServerToolsTreeAsync(_serverId);
                 if (_windowCts.IsCancellationRequested || tree == null) break;
-                PopulateTree(tree, preserveLocalChanges: true);
-                needsPolling = tree.IsDiscovering;
+                needsPolling = IsTreeLoading(tree);
+                if (!needsPolling)
+                    PopulateTree(tree, preserveLocalChanges: _rootNodes.Count > 0);
             }
         }
         catch (OperationCanceledException) { }
@@ -364,6 +382,23 @@ public sealed class ServerToolsWindow : Window
 
     private void PopulateTree(McpServerToolTree? tree, bool preserveLocalChanges)
     {
+        if (tree != null &&
+            string.Equals(tree.ToolsLoadState, "error", StringComparison.OrdinalIgnoreCase) &&
+            tree.HasMetaPattern && !tree.HasDiscoveredMeta)
+        {
+            _rootNodes.Clear();
+            var errDetail = string.IsNullOrWhiteSpace(tree.ToolsLoadError) ? string.Empty : ("\n" + tree.ToolsLoadError);
+            _emptyStateText.Text = I18n.Tr(
+                "Не удалось полностью загрузить дерево инструментов «" + _serverName + "»." + errDetail,
+                "Failed to load the complete tool tree for '" + _serverName + "'." + errDetail);
+            _emptyStateText.Visibility = Visibility.Visible;
+            _treeView.Visibility = Visibility.Collapsed;
+            _masterCheckBox.IsEnabled = false;
+            _okButton.IsEnabled = false;
+            UpdateSummary();
+            return;
+        }
+
         if (tree == null || tree.Nodes.Count == 0)
         {
             _rootNodes.Clear();
@@ -371,7 +406,9 @@ public sealed class ServerToolsWindow : Window
                 "Инструменты для «" + _serverName + "» ещё не получены.\nПодключите сервер хотя бы один раз — дерево сохранится в локальный кэш.",
                 "No tools have been cached for '" + _serverName + "' yet.\nConnect the server at least once so its tool tree is cached locally.");
             _emptyStateText.Visibility = Visibility.Visible;
+            _treeView.Visibility = Visibility.Collapsed;
             _masterCheckBox.IsEnabled = false;
+            _okButton.IsEnabled = false;
             UpdateSummary();
             return;
         }
@@ -386,7 +423,9 @@ public sealed class ServerToolsWindow : Window
 
         _rootNodes.Clear();
         _emptyStateText.Visibility = Visibility.Collapsed;
+        _treeView.Visibility = Visibility.Visible;
         _masterCheckBox.IsEnabled = true;
+        _okButton.IsEnabled = true;
 
         foreach (var node in tree.Nodes)
             _rootNodes.Add(BuildVm(node, null, 0, activeDisabled));
@@ -454,6 +493,36 @@ public sealed class ServerToolsWindow : Window
         if (_redoStack.Count == 0 || _rootNodes.Count == 0) return;
         _undoStack.Push(new List<string>(_lastCommittedSnapshot));
         ApplyDisabledSnapshot(_redoStack.Pop());
+        _lastCommittedSnapshot = CollectDisabledPaths();
+        UpdateSummary();
+        _undoButton.IsEnabled = _undoStack.Count > 0;
+    }
+
+    public void ApplyExternalDisabledToolsUpdate(IEnumerable<string> nextDisabledTools)
+    {
+        var normalized = (nextDisabledTools ?? Array.Empty<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+
+        _initialDisabledSet.Clear();
+        foreach (var path in normalized) _initialDisabledSet.Add(path);
+
+        if (_rootNodes.Count == 0)
+        {
+            _lastCommittedSnapshot = normalized;
+            return;
+        }
+
+        var current = CollectDisabledPaths();
+        if (current.Count == normalized.Count && !current.Zip(normalized, (a, b) => a != b).Any(x => x))
+            return;
+
+        _undoStack.Push(new List<string>(current));
+        _redoStack.Clear();
+        ApplyDisabledSnapshot(normalized);
         _lastCommittedSnapshot = CollectDisabledPaths();
         UpdateSummary();
         _undoButton.IsEnabled = _undoStack.Count > 0;

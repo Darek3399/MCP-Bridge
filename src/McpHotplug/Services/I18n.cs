@@ -14,6 +14,8 @@ public static class I18n
     private static readonly (string Russian, string English)[] ServerStatusTranslations =
     {
         ("Скачивание и запуск пакета MCP…", "Downloading & starting MCP package…"),
+        ("Загрузка инструментов… (пока недоступны)", "Loading tools… (unavailable yet)"),
+        ("Ошибка загрузки инструментов · повтор…", "Tool loading error · retrying…"),
         ("Установка связи MCP…", "Establishing MCP connection…"),
         ("Запуск и проверка MCP…", "Starting & verifying MCP…"),
         ("Подключение к MCP-серверу…", "Connecting to MCP server…"),

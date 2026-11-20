@@ -1,6 +1,7 @@
 'use strict';
 
 const { validate: validateSchema } = require('./hotplug-schema-validator');
+const toolPolicy = require('./mcp-tool-policy');
 
 function toolError(code, message, details = {}) {
   const payload = { code, message, ...details };
@@ -28,7 +29,7 @@ class HotplugToolDispatcher {
       if (disabled) {
         return toolError(
           'TOOL_DISABLED',
-          'Tool "' + disabled.originalName + '" on server "' + disabled.serverName + '" is currently disabled by the user in MCP Hotplug to save tokens. Ask the user to enable it if needed.',
+          toolPolicy.formatToolDisabledMessage(disabled.originalName, disabled.serverName, this.catalogManager.canSelfManage),
           { requested_tool_id: toolId, server_id: disabled.serverId }
         );
       }
@@ -65,7 +66,7 @@ class HotplugToolDispatcher {
     if (currentDescriptor.disabled === true) {
       return toolError(
         'TOOL_DISABLED',
-        'Tool "' + descriptor.originalName + '" on server "' + descriptor.serverName + '" is currently disabled by the user in MCP Hotplug to save tokens. Ask the user to enable it if needed.',
+        toolPolicy.formatToolDisabledMessage(descriptor.originalName, descriptor.serverName, this.catalogManager.canSelfManage),
         { requested_tool_id: toolId, server_id: descriptor.serverId }
       );
     }
@@ -124,7 +125,7 @@ class HotplugToolDispatcher {
     } catch (error) {
       const code = error && typeof error.code === 'string' ? error.code : '';
       if (code === 'TOOL_DISABLED') {
-        return toolError('TOOL_DISABLED', error instanceof Error ? error.message : 'The selected tool is disabled by the user in MCP Hotplug to save tokens.', { requested_tool_id: toolId, server_id: descriptor.serverId });
+        return toolError('TOOL_DISABLED', error instanceof Error ? error.message : toolPolicy.formatToolDisabledMessage(descriptor.originalName, descriptor.serverName, this.catalogManager.canSelfManage), { requested_tool_id: toolId, server_id: descriptor.serverId });
       }
       if (code === 'TOOL_VERSION_CHANGED') {
         return toolError('CATALOG_CHANGED', 'The selected server changed immediately before dispatch, so no tool call was made. Call all_tools to read the latest cached catalog, then select the tool again.', { requested_tool_id: toolId, server_id: descriptor.serverId });

@@ -127,6 +127,23 @@ class McpServerStateCache extends EventEmitter {
           : (existing ? existing.health : 'waiting')),
       isPolling: existing && !transportChanged ? existing.isPolling : false,
       isDiscovering: existing && !transportChanged ? Boolean(existing.isDiscovering) : false,
+      toolsLoadState: !enabled
+        ? 'not_loaded'
+        : (clearTransportState
+          ? 'not_loaded'
+          : (existing && existing.toolsLoadState ? existing.toolsLoadState : 'not_loaded')),
+      toolsLoadError: clearTransportState || reenabled
+        ? null
+        : (existing ? (existing.toolsLoadError || null) : null),
+      nestedDiscoveryComplete: clearTransportState
+        ? false
+        : (existing ? Boolean(existing.nestedDiscoveryComplete) : false),
+      nestedDiscoveryFailedAt: clearTransportState
+        ? 0
+        : (existing ? (existing.nestedDiscoveryFailedAt || 0) : 0),
+      nestedDiscoveryFailureCount: clearTransportState
+        ? 0
+        : (existing ? (existing.nestedDiscoveryFailureCount || 0) : 0),
       pollIntervalMs,
       configRevision: existing
         ? (transportChanged
@@ -211,10 +228,18 @@ class McpServerStateCache extends EventEmitter {
     const state = this.states.get(String(id));
     if (!state) return false;
     const next = Boolean(isDiscovering);
-    if (state.isDiscovering === next) return false;
+    const prevState = state.toolsLoadState;
+    if (next) {
+      state.toolsLoadState = 'loading';
+      state.toolsLoadError = null;
+    }
+    if (state.isDiscovering === next && prevState === state.toolsLoadState) return false;
     state.isDiscovering = next;
     state.updatedAt = new Date().toISOString();
-    this._publish('server.nestedDiscovering', state.serverId, { isDiscovering: next });
+    this._publish('server.nestedDiscovering', state.serverId, {
+      isDiscovering: next,
+      toolsLoadState: state.toolsLoadState
+    });
     return true;
   }
 
@@ -223,12 +248,37 @@ class McpServerStateCache extends EventEmitter {
     if (!state) return false;
     state.discoveredNested = discoveredNested ? cloneJson(discoveredNested) : null;
     state.isDiscovering = false;
+    state.nestedDiscoveryComplete = true;
+    state.nestedDiscoveryFailedAt = 0;
+    state.nestedDiscoveryFailureCount = 0;
+    state.toolsLoadState = 'ready';
+    state.toolsLoadError = null;
     state.catalogRevision += 1;
     this.catalogRevision += 1;
     state.serverRevision += 1;
     state.serverRevisionToken = crypto.randomUUID();
     state.updatedAt = new Date().toISOString();
-    this._publish('server.nestedDiscovered', state.serverId, { catalogChanged: true });
+    this._publish('server.nestedDiscovered', state.serverId, {
+      catalogChanged: true,
+      toolsLoadState: 'ready'
+    });
+    return true;
+  }
+
+  setDiscoveryFailed(id, error) {
+    const state = this.states.get(String(id));
+    if (!state) return false;
+    state.isDiscovering = false;
+    state.nestedDiscoveryComplete = false;
+    state.nestedDiscoveryFailedAt = Date.now();
+    state.nestedDiscoveryFailureCount = (state.nestedDiscoveryFailureCount || 0) + 1;
+    state.toolsLoadState = 'error';
+    state.toolsLoadError = safeError(error);
+    state.updatedAt = new Date().toISOString();
+    this._publish('server.nestedDiscoveryFailed', state.serverId, {
+      toolsLoadState: 'error',
+      error: state.toolsLoadError
+    });
     return true;
   }
 
@@ -237,6 +287,9 @@ class McpServerStateCache extends EventEmitter {
     if (!state) return false;
     const prevPolling = state.isPolling;
     state.isPolling = Boolean(isPolling);
+    if (state.isPolling && state.toolsLoadState === 'not_loaded') {
+      state.toolsLoadState = 'loading';
+    }
     if (attemptedAt) state.lastAttemptAt = attemptedAt;
     state.updatedAt = new Date().toISOString();
     if (state.health !== 'waiting' && prevPolling !== state.isPolling) {
@@ -263,6 +316,29 @@ class McpServerStateCache extends EventEmitter {
     state.health = 'online';
     state.pending = false;
     state.isPolling = false;
+    const hasMetaPattern = Boolean(toolPolicy.detectMetaPattern(tools));
+    const needsNestedDiscovery = hasMetaPattern && (
+      !state.nestedDiscoveryComplete ||
+      !state.discoveredNested ||
+      state.discoveredNested.schemaVersion !== 4 ||
+      catalogChanged
+    );
+    if (needsNestedDiscovery) {
+      const inErrorBackoff =
+        state.toolsLoadState === 'error' &&
+        !catalogChanged &&
+        state.nestedDiscoveryFailedAt > 0 &&
+        (Date.now() - state.nestedDiscoveryFailedAt) <
+          Math.min(30000, 5000 * Math.pow(2, Math.max(0, (state.nestedDiscoveryFailureCount || 1) - 1)));
+      if (!inErrorBackoff) {
+        state.isDiscovering = true;
+        state.toolsLoadState = 'loading';
+        state.toolsLoadError = null;
+      }
+    } else if (!state.isDiscovering) {
+      state.toolsLoadState = 'ready';
+      state.toolsLoadError = null;
+    }
     state.lastCompletedAt = result.completedAt || new Date().toISOString();
     state.lastSuccessAt = state.lastCompletedAt;
     state.responseTimeMs = Number.isFinite(result.responseTimeMs) ? result.responseTimeMs : null;
@@ -279,6 +355,7 @@ class McpServerStateCache extends EventEmitter {
       catalogChanged,
       protocolChanged,
       toolsCount: state.tools.length,
+      toolsLoadState: state.toolsLoadState,
       completedAt: state.lastCompletedAt,
       responseTimeMs: state.responseTimeMs
     });
@@ -326,6 +403,11 @@ class McpServerStateCache extends EventEmitter {
     state.pending = false;
     state.health = !state.enabled ? 'disabled' : 'offline';
     state.isPolling = false;
+    state.isDiscovering = false;
+    if (state.toolsLoadState === 'loading') {
+      state.toolsLoadState = 'error';
+      state.toolsLoadError = safeError(error);
+    }
     state.lastCompletedAt = result.completedAt || new Date().toISOString();
     state.responseTimeMs = Number.isFinite(result.responseTimeMs) ? result.responseTimeMs : null;
     state.stale = state.tools.length > 0;
@@ -448,6 +530,8 @@ class McpServerStateCache extends EventEmitter {
       health: pub.health,
       rawHealth: state.health,
       isDiscovering: Boolean(state.isDiscovering),
+      toolsLoadState: state.toolsLoadState || 'not_loaded',
+      toolsLoadError: state.toolsLoadError || null,
       allToolsDisabled: pub.allToolsDisabled,
       disabledTools: [...state.disabledTools],
       rawToolsCount: effectiveTools.length,
@@ -455,10 +539,28 @@ class McpServerStateCache extends EventEmitter {
     };
   }
 
+  canSelfManageTools() {
+    const ctrl = this.states.get(toolPolicy.HOTPLUG_CONTROL_SERVER_ID);
+    if (!ctrl || ctrl.temporary || !ctrl.enabled || ctrl.health === 'disabled') return false;
+    const disabledSet = toolPolicy.createDisabledSet(ctrl.disabledTools);
+    if (disabledSet.has('*')) return false;
+    if (toolPolicy.isPathDisabled(toolPolicy.encodeSegment(toolPolicy.HOTPLUG_CONTROL_MANAGE_TOOL), disabledSet)) {
+      return false;
+    }
+    return true;
+  }
+
   buildCatalog() {
-    const candidates = [...this.states.values()].filter(state =>
-      !state.temporary && state.enabled && state.health !== 'disabled' && state.tools.length > 0
-    );
+    const candidates = [...this.states.values()].filter(state => {
+      if (state.temporary || !state.enabled || state.health === 'disabled') return false;
+      if (state.isDiscovering || state.toolsLoadState === 'loading') return false;
+      if (state.tools.length === 0) return false;
+      const hasMetaPattern = Boolean(toolPolicy.detectMetaPattern(state.tools));
+      if (hasMetaPattern && !state.nestedDiscoveryComplete && (!state.discoveredNested || state.discoveredNested.schemaVersion !== 4)) {
+        return false;
+      }
+      return true;
+    });
 
     const activeEntries = [];
     const nameCounts = new Map();
@@ -521,11 +623,13 @@ class McpServerStateCache extends EventEmitter {
       ])
       .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
     const revision = fingerprint(revisionPayload);
+    const canSelfManage = this.canSelfManageTools();
     return {
       status: 'ready',
       cache_revision: String(this.cacheRevision),
       catalog_revision: revision,
-      disabled_tools_note: toolPolicy.DISABLED_TOOLS_NOTE,
+      can_self_manage: canSelfManage,
+      disabled_tools_note: toolPolicy.getDisabledToolsNote(canSelfManage),
       servers: this.getAllServers(),
       tools
     };
@@ -539,8 +643,26 @@ class McpServerStateCache extends EventEmitter {
       ? tree.enabledLeafCount
       : (tree.allDisabled ? 0 : effectiveTools.length);
     const allToolsDisabled = Boolean(state.enabled && tree.allDisabled && totalToolsCount > 0);
-    const effectiveHealth = allToolsDisabled ? 'offline' : state.health;
-    const disabledHierarchy = state.enabled ? toolPolicy.buildCompactDisabledHierarchy(tree) : [];
+    const isMetaIncomplete = Boolean(
+      tree.hasMetaPattern &&
+      !state.nestedDiscoveryComplete &&
+      (!state.discoveredNested || state.discoveredNested.schemaVersion !== 4)
+    );
+    const isLoadingTools = Boolean(
+      state.enabled &&
+      (state.isDiscovering || (state.health === 'online' && state.toolsLoadState === 'loading'))
+    );
+    const isLoadError = Boolean(
+      state.enabled &&
+      state.health === 'online' &&
+      state.toolsLoadState === 'error' &&
+      isMetaIncomplete
+    );
+    const effectiveHealth = isLoadingTools
+      ? 'loading'
+      : (isLoadError ? 'loading_error' : (allToolsDisabled ? 'offline' : state.health));
+    const hideCounts = isLoadingTools || isLoadError;
+    const disabledHierarchy = state.enabled && !hideCounts ? toolPolicy.buildCompactDisabledHierarchy(tree) : [];
 
     return {
       serverId: state.serverId,
@@ -551,8 +673,11 @@ class McpServerStateCache extends EventEmitter {
       transport: state.transport,
       health: effectiveHealth,
       rawHealth: state.health,
-      allToolsDisabled,
+      allToolsDisabled: hideCounts ? false : allToolsDisabled,
       isPolling: state.isPolling,
+      isDiscovering: Boolean(state.isDiscovering),
+      toolsLoadState: state.toolsLoadState || 'not_loaded',
+      toolsLoadError: state.toolsLoadError || null,
       pollIntervalMs: state.pollIntervalMs,
       configRevision: state.configRevision,
       serverRevision: state.serverRevision,
@@ -564,11 +689,11 @@ class McpServerStateCache extends EventEmitter {
       consecutiveFailures: state.consecutiveFailures,
       stale: state.stale,
       lastError: state.lastError,
-      toolsCount: enabledToolsCount,
-      enabledToolsCount,
-      totalToolsCount,
+      toolsCount: hideCounts ? 0 : enabledToolsCount,
+      enabledToolsCount: hideCounts ? 0 : enabledToolsCount,
+      totalToolsCount: hideCounts ? 0 : totalToolsCount,
       disabledTools: disabledHierarchy,
-      toolsPreview: state.tools.slice(0, 6).map(tool => tool.name),
+      toolsPreview: hideCounts ? [] : state.tools.slice(0, 6).map(tool => tool.name),
       updatedAt: state.updatedAt
     };
   }

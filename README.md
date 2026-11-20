@@ -34,16 +34,15 @@
 
 ## Why MCP Hotplug?
 
-- **One stable gateway instead of juggling configs.** Connect local STDIO (`npx`, `uvx`, `python`) and remote HTTP servers once through `http://127.0.0.1:8004/mcp` (or the built-in STDIO bridge). To any AI client, it looks like a single steady MCP.
-- **Cut token burn and skip tool caps.** At startup, your AI sees only 2 tools (`all_tools` and `call_tool`) instead of a hundred schemas. Tool descriptions load on demand and only from servers currently switched on, so you never hit the 40/80 tool cap in Cursor or Windsurf.
-- **Toggle servers and presets mid-chat.** Turn MCP servers or task presets on and off in one click on the fly. Keep typing in the exact same conversation without editing JSON files, restarting your client, or refreshing browser tabs.
-- **Auto-standby for Unreal Engine 5.8 (`:8000`), Blender, Unity, and IDEs.** Close your 3D editor or crash during a compile, and the AI session stays intact. The server drops into `WAITING`, reconnects on its own when the app comes back, and lets you launch programs in any order (built-in `Unreal MCP` profile included).
-- **One static HTTPS URL for browser AI (ChatGPT, Gemini, Grok, claude.ai).** Built-in `Tailscale Funnel` (isolated with `accept-dns=false` so it will not touch your Windows DNS) turns your local servers into one permanent HTTPS link that never changes between launches.
-- **Zero leftover `node.exe` or `uvx.exe` zombies in Task Manager.** Flipping a server off terminates the entire child process tree via a `Windows Job Object`, so nothing stays stuck eating RAM.
-- **Batteries-included `.exe` with clean disk isolation.** Standard Windows installer with bundled `Node.js`, `uvx`, and `Filesystem MCP` (folder permissions are checkboxes in the UI, no terminal needed). Any `npm` packages download strictly into the app folder and wipe cleanly if you remove a server later.
+- **One stable gateway instead of juggling configs.** Connect local STDIO (`npx`, `uvx`, `python`) and remote HTTP servers once through `http://127.0.0.1:8004/mcp` (or the built-in STDIO bridge). To any AI client, it looks like a single steady MCP.<br><br>
+- **Cut token burn and skip tool caps.** At startup, your AI sees only 2 tools (`all_tools` and `call_tool`) instead of a hundred schemas. Tool descriptions load on demand and only from servers currently switched on. You can disable specific tools or nested toolsets in the UI (with `Ctrl+Z`/`Ctrl+Y`)—the AI only sees compact names of disabled tools without wasting tokens on heavy JSON schemas.<br><br>
+- **Toggle servers and presets mid-chat.** Turn MCP servers or task presets on and off in one click on the fly. Keep typing in the exact same conversation without editing JSON files, restarting your client, or refreshing browser tabs.<br><br>
+- **Let your AI agent manage its own tools.** With the optional `Hotplug Control MCP`, the agent can independently enable or disable the servers, categories, and individual tools it needs for each task.<br><br>
+- **Auto-standby for Unreal Engine 5.8 (`:8000`), Blender, Unity, and IDEs.** Close your 3D editor or crash during a compile, and the AI session stays intact. The server drops into `WAITING`, reconnects on its own when the app comes back, and lets you launch programs in any order (built-in `Unreal MCP` profile included).<br><br>
+- **One static HTTPS URL for browser AI (ChatGPT, Gemini, Grok, claude.ai).** Built-in `Tailscale Funnel` (isolated with `accept-dns=false` so it will not touch your Windows DNS) turns your local servers into one permanent HTTPS link that never changes between launches.<br><br>
+- **Zero leftover `node.exe` or `uvx.exe` zombies in Task Manager.** Flipping a server off terminates the entire child process tree via a `Windows Job Object`, so nothing stays stuck eating RAM.<br><br>
+- **Batteries-included `.exe` with clean disk isolation.** Standard Windows installer with bundled `Node.js`, `uvx`, `Filesystem MCP`, and `Binary MCP`. Any `npm`, `uv`, and `pip` packages, caches, and isolated environments are downloaded strictly into the app folder and wipe cleanly if you remove a server later.
 
-> **Coming soon:** toggling individual tools inside a single server (for example, keeping 7 needed tools out of 14 in Filesystem or trimming heavy sets like Unreal `All Toolsets`) to cut token waste even further and keep models focused.
->
 > *No tunnel is needed for local desktop clients (Claude Desktop, Cursor, Windsurf, etc.). Point them straight to `http://127.0.0.1:8004/mcp`.*
 
 ## Quick start
@@ -122,7 +121,11 @@ Hotplug brings local command-line MCP servers—started with tools such as `npx`
 
 ### Limit access to folders
 
-For the built-in Filesystem MCP server, choose which folders are available. Grant access only to the directories needed for your task.
+For the built-in Filesystem MCP and Binary MCP servers, choose which folders are available. Grant access only to the directories needed for your task.
+
+### Let AI manage its own tools
+
+Enable the optional `Hotplug Control MCP` server to let the AI batch-toggle servers, categories, and tools dynamically for complex tasks. It is disabled by default and protected from disabling itself.
 
 ## How it works
 
@@ -139,13 +142,14 @@ For the built-in Filesystem MCP server, choose which folders are available. Gran
 
 Hotplug exposes two meta-tools — `all_tools` and `call_tool` — for discovering and calling tools from connected servers. This avoids sending every server's tool description to the client at once; the actual effect depends on the client and model.
 
-- **`all_tools`** — returns the latest cached tool catalog snapshot from enabled MCP servers, including `tool_id`, `inputSchema`, per-server status, and `catalog_revision`.
+- **`all_tools`** — returns the latest cached tool catalog snapshot from enabled MCP servers, including `tool_id`, `inputSchema`, per-server status, `catalog_revision`, and a compact name-only `disabled_tools` list.
 - **`call_tool`** — validates arguments against the cached `inputSchema` and routes the call to the target server using `tool_id`, `catalog_revision`, and `arguments`.
 
 ## Security and limitations
 
 - **Third-party MCP servers** run on your computer as your Windows user. Only add commands and servers you trust.
-- **Filesystem MCP** can read, modify, and delete files in allowed folders. Avoid granting access to the entire drive unless needed.
+- **Filesystem and Binary MCP** can read, modify, and delete files in allowed folders. Avoid granting access to the entire drive unless needed.
+- **Hotplug Control MCP** is disabled by default. Enable it only if you want to grant the AI permission to manage your server/tool configurations.
 - **Tailscale Funnel** exposes a public URL. Do not share it publicly, and disable Funnel when you do not need remote access.
 - **Server secrets** — environment variables and authorization headers — are stored locally. According to the project's current documentation, they are stored in plain text; keep this in mind when handling keys and tokens.
 
@@ -163,6 +167,7 @@ See [SECURITY.md](SECURITY.md) for details.
 - **UI languages:** Russian and English.
 - **MCP transports:** STDIO and HTTP.
 - **Local endpoint:** `http://127.0.0.1:8004/mcp`.
+- **Built-in servers:** Filesystem MCP, Binary MCP, Unreal MCP, Hotplug Control MCP.
 - **Meta-tools:** `all_tools` and `call_tool`.
 - **Optional remote access:** Tailscale Funnel.
 - **Child-process management:** Windows Job Objects.

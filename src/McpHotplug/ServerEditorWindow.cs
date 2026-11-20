@@ -1020,9 +1020,11 @@ public sealed class FilesystemRenameDialog : Window
     private readonly TextBox _nameBox;
     public string ServerName => _nameBox.Text.Trim();
 
-    public FilesystemRenameDialog(string currentName)
+    public FilesystemRenameDialog(string currentName, string? dialogTitle = null, string? promptLabel = null)
     {
-        Title = I18n.Tr("Переименовать сервер файловой системы", "Rename Filesystem Server");
+        Title = string.IsNullOrWhiteSpace(dialogTitle)
+            ? I18n.Tr("Переименовать сервер файловой системы", "Rename Filesystem Server")
+            : dialogTitle!;
         Width = 420;
         Height = 200;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -1033,7 +1035,9 @@ public sealed class FilesystemRenameDialog : Window
         var stack = new StackPanel { Margin = new Thickness(20, 18, 20, 18) };
         stack.Children.Add(new TextBlock
         {
-            Text = I18n.Tr("Отображаемое имя для Filesystem MCP:", "Display name for Filesystem MCP:"),
+            Text = string.IsNullOrWhiteSpace(promptLabel)
+                ? I18n.Tr("Отображаемое имя для Filesystem MCP:", "Display name for Filesystem MCP:")
+                : promptLabel!,
             FontSize = 12.5,
             FontWeight = FontWeights.SemiBold
         });

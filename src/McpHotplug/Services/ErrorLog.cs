@@ -53,6 +53,22 @@ public static class ErrorLog
         catch { }
     }
 
+    public static void ClearAll()
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.LogsDirectory);
+            var targets = new[] { ConnectionsFilePath, AppFilePath, FilePath, VerificationFilePath, Path.Combine(AppPaths.LogsDirectory, "update-error.log") };
+            lock (Sync)
+            {
+                foreach (var target in targets)
+                    try { if (File.Exists(target)) File.WriteAllText(target, string.Empty, Utf8NoBom); } catch { }
+            }
+            LogUpdated?.Invoke(null, EventArgs.Empty);
+        }
+        catch { }
+    }
+
     public static string ReadCategory(string category)
     {
         try

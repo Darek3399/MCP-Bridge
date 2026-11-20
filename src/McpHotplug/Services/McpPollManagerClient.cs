@@ -23,6 +23,7 @@ internal sealed class McpPollManagerClient
     private const string ServerToolsUrl = BaseUrl + "/__manager/server/tools";
     private const string DiscoverServerToolsUrl = BaseUrl + "/__manager/server/tools/discover";
     private const string ServerToolsPolicyUrl = BaseUrl + "/__manager/server/tools/policy";
+    private const string ControlCompleteUrl = BaseUrl + "/__manager/control/complete";
     private readonly string _managerApiKey;
     public McpPollManagerClient(string managerApiKey)
     {
@@ -53,7 +54,10 @@ internal sealed class McpPollManagerClient
             ?? throw new InvalidOperationException("Poll Manager returned an invalid state response.");
     }
 
-    public async Task SubscribeToStateChangesAsync(Func<Task> onChanged, CancellationToken cancellationToken)
+    public async Task SubscribeToStateChangesAsync(
+        Func<Task> onChanged,
+        CancellationToken cancellationToken,
+        Func<HotplugControlCommand, Task>? onControlCommand = null)
     {
         var failureLogged = false;
         while (!cancellationToken.IsCancellationRequested)
@@ -114,6 +118,7 @@ internal sealed class McpPollManagerClient
 
                 try
                 {
+                    var currentEventName = string.Empty;
                     while (!cancellationToken.IsCancellationRequested)
                     {
                         var line = await reader.ReadLineAsync().ConfigureAwait(false);
@@ -121,8 +126,46 @@ internal sealed class McpPollManagerClient
                         {
                             break;
                         }
-                        if (line.StartsWith("event:", StringComparison.Ordinal)) continue;
+                        if (line.Length == 0)
+                        {
+                            currentEventName = string.Empty;
+                            continue;
+                        }
+                        if (line.StartsWith("event:", StringComparison.Ordinal))
+                        {
+                            currentEventName = line.Substring(6).Trim();
+                            continue;
+                        }
                         if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+
+                        if (string.Equals(currentEventName, "control.command", StringComparison.Ordinal))
+                        {
+                            if (onControlCommand != null)
+                            {
+                                var json = line.Substring(5).Trim();
+                                try
+                                {
+                                    using var memory = new MemoryStream(Encoding.UTF8.GetBytes(json));
+                                    var cmdSerializer = new DataContractJsonSerializer(
+                                        typeof(HotplugControlCommand),
+                                        new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
+                                    if (cmdSerializer.ReadObject(memory) is HotplugControlCommand cmd &&
+                                        !string.IsNullOrWhiteSpace(cmd.CommandId))
+                                    {
+                                        _ = Task.Run(async () =>
+                                        {
+                                            try { await onControlCommand(cmd).ConfigureAwait(false); }
+                                            catch (Exception cmdEx) { ErrorLog.Write("McpPollManagerClient.ControlCommand", cmdEx); }
+                                        }, CancellationToken.None);
+                                    }
+                                }
+                                catch (Exception parseEx)
+                                {
+                                    ErrorLog.Write("McpPollManagerClient.ParseControlCommand", parseEx);
+                                }
+                            }
+                            continue;
+                        }
 
                         try { refreshSignal.Release(); }
                         catch (SemaphoreFullException) { }
@@ -495,6 +538,43 @@ internal sealed class McpPollManagerClient
         return (int)response.StatusCode >= 200 && (int)response.StatusCode < 300;
     }
 
+    public async Task CompleteControlCommandAsync(
+        string commandId,
+        bool ok,
+        string? error = null,
+        IEnumerable<string>? warnings = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = CreateManagerRequest(ControlCompleteUrl);
+        request.Method = "POST";
+        request.ContentType = "application/json";
+        request.Proxy = null;
+        request.Timeout = 8000;
+        request.ReadWriteTimeout = 8000;
+
+        var payload = new HotplugControlCompletionRequest
+        {
+            CommandId = commandId,
+            Ok = ok,
+            Error = error,
+            Warnings = warnings != null ? new List<string>(warnings) : null
+        };
+        var serializer = new DataContractJsonSerializer(typeof(HotplugControlCompletionRequest));
+        byte[] body;
+        using (var memory = new MemoryStream())
+        {
+            serializer.WriteObject(memory, payload);
+            body = memory.ToArray();
+        }
+        request.ContentLength = body.Length;
+
+        using var registration = cancellationToken.Register(() => { try { request.Abort(); } catch { } });
+        using (var reqStream = await request.GetRequestStreamAsync().ConfigureAwait(false))
+            await reqStream.WriteAsync(body, 0, body.Length, cancellationToken).ConfigureAwait(false);
+
+        using var response = (HttpWebResponse)await request.GetResponseAsync().ConfigureAwait(false);
+    }
+
     private async Task RemoveTemporaryVerificationCacheAsync(string serverId)
     {
         var url = VerificationCacheUrl + "?id=" + Uri.EscapeDataString(serverId);
@@ -540,6 +620,15 @@ internal sealed class PollManagerServerState
 
     [DataMember(Name = "isPolling")]
     public bool IsPolling { get; set; }
+
+    [DataMember(Name = "isDiscovering")]
+    public bool IsDiscovering { get; set; }
+
+    [DataMember(Name = "toolsLoadState")]
+    public string? ToolsLoadState { get; set; }
+
+    [DataMember(Name = "toolsLoadError")]
+    public string? ToolsLoadError { get; set; }
 
     [DataMember(Name = "pollIntervalMs")]
     public int PollIntervalMs { get; set; }
@@ -750,6 +839,12 @@ public sealed class McpServerToolTree
     [DataMember(Name = "isDiscovering")]
     public bool IsDiscovering { get; set; }
 
+    [DataMember(Name = "toolsLoadState")]
+    public string? ToolsLoadState { get; set; }
+
+    [DataMember(Name = "toolsLoadError")]
+    public string? ToolsLoadError { get; set; }
+
     [DataMember(Name = "allToolsDisabled")]
     public bool AllToolsDisabled { get; set; }
 
@@ -810,4 +905,40 @@ public sealed class McpToolTreeNode
 
     [DataMember(Name = "children")]
     public List<McpToolTreeNode> Children { get; set; } = new();
+}
+
+[DataContract]
+public sealed class HotplugControlCommand
+{
+    [DataMember(Name = "commandId")]
+    public string CommandId { get; set; } = string.Empty;
+
+    [DataMember(Name = "serverChanges", EmitDefaultValue = false)]
+    public Dictionary<string, bool>? ServerChanges { get; set; }
+
+    [DataMember(Name = "toolPolicyChanges", EmitDefaultValue = false)]
+    public Dictionary<string, List<string>>? ToolPolicyChanges { get; set; }
+}
+
+public sealed class HotplugControlCommandResult
+{
+    public bool Ok { get; set; } = true;
+    public string? Error { get; set; }
+    public List<string> Warnings { get; set; } = new();
+}
+
+[DataContract]
+internal sealed class HotplugControlCompletionRequest
+{
+    [DataMember(Name = "commandId")]
+    public string CommandId { get; set; } = string.Empty;
+
+    [DataMember(Name = "ok")]
+    public bool Ok { get; set; } = true;
+
+    [DataMember(Name = "error", EmitDefaultValue = false)]
+    public string? Error { get; set; }
+
+    [DataMember(Name = "warnings", EmitDefaultValue = false)]
+    public List<string>? Warnings { get; set; }
 }

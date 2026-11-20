@@ -5,6 +5,7 @@ const readline = require('node:readline');
 const { HotplugRouterClient } = require('./hotplug-router-client');
 const { ToolCatalogManager } = require('./hotplug-catalog-manager');
 const { HotplugToolDispatcher } = require('./hotplug-tool-dispatcher');
+const toolPolicy = require('./mcp-tool-policy');
 
 const SUPPORTED_VERSIONS = new Set(['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05']);
 const DEFAULT_PROTOCOL_VERSION = '2025-06-18';
@@ -14,11 +15,7 @@ const TOOLS = [
   {
     name: 'all_tools',
     title: 'Get the live Hotplug tool catalog',
-    description:
-      'Returns the latest per-server tool catalog snapshot published by the independent MCP Poll Manager. ' +
-      'This operation reads the cache only: it does not probe, initialize, or wait for any upstream server. ' +
-      'The catalog includes stable tool_id values, complete inputSchema JSON Schemas, source server information, ' +
-      'per-server status, staleness, catalog_revision, and compact name-only disabled_tools lists (tools disabled by the user to save tokens; ask the user to enable one if needed).',
+    description: toolPolicy.GATEWAY_ALL_TOOLS_DESCRIPTION,
     inputSchema: {
       type: 'object',
       properties: {},

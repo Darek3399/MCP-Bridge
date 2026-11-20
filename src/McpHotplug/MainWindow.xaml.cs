@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<McpServerStatusSnapshot> _serverItems = new();
     private bool _mcpSyncRunning;
     private bool _mcpSyncPending;
+    private Task? _mcpSyncTask;
     private bool _pendingForceRetryQuarantined;
     private readonly HashSet<string> _pendingForceRetryServerIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly AppSettings _settings;
@@ -44,6 +45,9 @@ public partial class MainWindow : Window
     private readonly Dictionary<FrameworkElement, double> _baseFontSizes = new();
 
     private string? _currentMcpUrl; private string? _currentLocalMcpUrl; private string _activeLogCategory = "connections";
+    private FileSystemWatcher? _logsWatcher;
+    private DispatcherTimer? _logsRefreshTimer;
+    private bool _logsRefreshPending;
     private bool _cleanupStarted;
     private bool _cleanupCompleted;
     private bool _exitRequested;
@@ -58,6 +62,10 @@ public partial class MainWindow : Window
     private int _onlineServersCount;
     private int _enabledServersCount;
     private int _totalToolsCount;
+    private readonly Stack<ControlStateSnapshot> _controlUndoStack = new();
+    private readonly Stack<ControlStateSnapshot> _controlRedoStack = new();
+    private bool _controlUndoRedoRunning;
+    private ServerToolsWindow? _activeToolsWindow;
 
     public MainWindow()
     {
@@ -94,7 +102,10 @@ public partial class MainWindow : Window
         PresetsItemsControl.ItemsSource = _settings.Presets;
 
         _mcpInfrastructure.StatusChanged += McpInfrastructure_StatusChanged;
+        _mcpInfrastructure.ControlCommandHandler = HandleHotplugControlCommandAsync;
         _tailscaleManager.StatusChanged += TailscaleConnectionManager_StatusChanged;
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
+        SizeChanged += (_, _) => UpdateResponsiveLayout();
         AutoStartCheckBox.IsChecked = AutoStartService.IsEnabled();
         _settings.RunAtWindowsStartup = AutoStartCheckBox.IsChecked == true;
         CheckUpdatesOnStartupCheckBox.IsChecked = _settings.CheckUpdatesOnStartup != false;
@@ -113,7 +124,9 @@ public partial class MainWindow : Window
             ApplyFontScale(FontScaleSlider.Value);
             if (LoggingEnabledCheckBox != null)
                 LoggingEnabledCheckBox.IsChecked = _settings.LoggingEnabled;
-            ErrorLog.LogApp(I18n.Tr("MCP Hotplug запущен.", "MCP Hotplug started.")); ErrorLog.LogUpdated += (_, _) => Dispatcher.BeginInvoke(new Action(() => { if (MainPages.SelectedIndex == 2) RefreshLogs(); }), DispatcherPriority.Background);
+            InitializeAutoLogRefresh();
+            UpdateResponsiveLayout();
+            ErrorLog.LogApp(I18n.Tr("MCP Hotplug запущен.", "MCP Hotplug started."));
             FooterStatusText.Text = I18n.Tr("Оркестратор запущен.", "Orchestrator started.");
             UpdateTailscaleUi();
             // Update discovery is independent from the MCP startup/handshake path.
@@ -357,6 +370,7 @@ public partial class MainWindow : Window
         FontScaleValueText.Text = Math.Round(e.NewValue * 100).ToString("0") + "%";
         if (_baseFontSizes.Count > 0)
             ApplyFontScale(e.NewValue);
+        UpdateResponsiveLayout();
         _fontScaleCommitPending = true;
     }
 
@@ -467,8 +481,7 @@ public partial class MainWindow : Window
             LoggingEnabledCheckBox.Content = I18n.Tr("Запись логов включена", "Log recording enabled");
         if (LoggingEnabledHintText != null)
             LoggingEnabledHintText.Text = I18n.Tr("По умолчанию выключено. Включение/выключение действует сразу.", "Off by default. Toggle takes effect immediately.");
-        ClearLogsBtn.Content = I18n.Tr("Очистить", "Clear");
-        RefreshLogsBtn.Content = I18n.Tr("Обновить", "Refresh");
+        ClearLogsBtn.Content = I18n.Tr("Очистить все", "Clear All");
         OpenLogsFolderBtn.Content = I18n.Tr("Открыть папку Logs", "Open Logs Folder");
 
         SettingsNavigationTitleText.Text = I18n.Tr("РАЗДЕЛЫ НАСТРОЕК", "SETTINGS SECTIONS");
@@ -586,10 +599,15 @@ public partial class MainWindow : Window
         _mcpSyncPending = true;
         if (_mcpSyncRunning)
         {
+            var inFlight = _mcpSyncTask;
+            if (inFlight != null)
+                await inFlight;
             return;
         }
 
         _mcpSyncRunning = true;
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _mcpSyncTask = completion.Task;
         try
         {
             while (_mcpSyncPending && !_cleanupStarted && !_cleanupCompleted)
@@ -626,6 +644,8 @@ public partial class MainWindow : Window
         finally
         {
             _mcpSyncRunning = false;
+            _mcpSyncTask = null;
+            completion.TrySetResult(true);
         }
     }
 
@@ -644,6 +664,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        var beforeSnapshot = ControlStateSnapshot.Capture(_settings);
         var isEnabled = checkBox.IsChecked == true;
         if (string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
         {
@@ -656,6 +677,10 @@ public partial class MainWindow : Window
         else if (string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase))
         {
             _settings.BinaryMcpEnabled = isEnabled;
+        }
+        else if (string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.HotplugControlMcpEnabled = isEnabled;
         }
         else
         {
@@ -670,6 +695,7 @@ public partial class MainWindow : Window
         _settings.ActivePresetId = null;
         var saved = SaveSettings();
         if (!saved) return;
+        PushControlUndoSnapshot(beforeSnapshot);
 
         ErrorLog.LogApp(I18n.Tr(
             (isEnabled ? "Включён" : "Отключён") + " сервер «" + serverId + "».",
@@ -678,6 +704,262 @@ public partial class MainWindow : Window
 
         await SyncMcpInfrastructureAsync(forceRetryServerId: isEnabled ? serverId : null);
         FooterStatusText.Text = I18n.Tr("Роутер (:8001) обновлён без разрыва внешней сессии.", "Router (:8001) updated without dropping active sessions.");
+    }
+
+    private void PushControlUndoSnapshot(ControlStateSnapshot previous)
+    {
+        var current = ControlStateSnapshot.Capture(_settings);
+        if (previous.EqualsSnapshot(current)) return;
+        _controlUndoStack.Push(previous);
+        _controlRedoStack.Clear();
+    }
+
+    private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if ((System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != System.Windows.Input.ModifierKeys.Control)
+            return;
+
+        if (System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase ||
+            System.Windows.Input.Keyboard.FocusedElement is PasswordBox)
+            return;
+
+        if (e.Key == System.Windows.Input.Key.Z)
+        {
+            var isRedo = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) == System.Windows.Input.ModifierKeys.Shift;
+            if ((isRedo && _controlRedoStack.Count > 0) || (!isRedo && _controlUndoStack.Count > 0))
+            {
+                e.Handled = true;
+                _ = PerformControlUndoRedoAsync(isRedo);
+            }
+        }
+        else if (e.Key == System.Windows.Input.Key.Y)
+        {
+            if (_controlRedoStack.Count > 0)
+            {
+                e.Handled = true;
+                _ = PerformControlUndoRedoAsync(isRedo: true);
+            }
+        }
+    }
+
+    private async Task PerformControlUndoRedoAsync(bool isRedo)
+    {
+        if (_controlUndoRedoRunning || _cleanupStarted || _cleanupCompleted) return;
+        var sourceStack = isRedo ? _controlRedoStack : _controlUndoStack;
+        var targetStack = isRedo ? _controlUndoStack : _controlRedoStack;
+        if (sourceStack.Count == 0) return;
+
+        _controlUndoRedoRunning = true;
+        try
+        {
+            var current = ControlStateSnapshot.Capture(_settings);
+            var target = sourceStack.Pop();
+            targetStack.Push(current);
+
+            var changedServers = target.ApplyToSettings(_settings);
+            var changedPolicies = ControlStateSnapshot.DiffDisabledTools(current, target);
+
+            if (!SaveSettings())
+            {
+                current.ApplyToSettings(_settings);
+                return;
+            }
+
+            foreach (var kv in changedServers)
+                _mcpInfrastructure.SetServerEnabledImmediate(kv.Key, kv.Value);
+
+            foreach (var kv in changedPolicies)
+            {
+                await _mcpInfrastructure.ApplyServerToolsPolicyAsync(kv.Key, kv.Value);
+                if (_activeToolsWindow != null &&
+                    string.Equals(_activeToolsWindow.ServerId, kv.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    _activeToolsWindow.ApplyExternalDisabledToolsUpdate(kv.Value);
+                }
+            }
+
+            if (changedServers.Count > 0)
+            {
+                var enabledIds = changedServers.Where(kv => kv.Value).Select(kv => kv.Key).ToList();
+                await SyncMcpInfrastructureAsync(
+                    forceRetryQuarantined: enabledIds.Count > 1,
+                    forceRetryServerId: enabledIds.Count == 1 ? enabledIds[0] : null);
+            }
+
+            FooterStatusText.Text = isRedo
+                ? I18n.Tr("Повторено изменение серверов/инструментов (Ctrl+Y).", "Redid server/tool change (Ctrl+Y).")
+                : I18n.Tr("Отменено изменение серверов/инструментов (Ctrl+Z).", "Undid server/tool change (Ctrl+Z).");
+            ErrorLog.LogApp(FooterStatusText.Text);
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("MainWindow.PerformControlUndoRedoAsync", ex);
+        }
+        finally
+        {
+            _controlUndoRedoRunning = false;
+        }
+    }
+
+    private Task<HotplugControlCommandResult> HandleHotplugControlCommandAsync(HotplugControlCommand command)
+    {
+        if (_cleanupStarted || _cleanupCompleted || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+        {
+            return Task.FromResult(new HotplugControlCommandResult
+            {
+                Ok = false,
+                Error = "MCP Hotplug is shutting down."
+            });
+        }
+
+        return Dispatcher.InvokeAsync(() => ApplyHotplugControlCommandOnUiAsync(command)).Task.Unwrap();
+    }
+
+    private async Task<HotplugControlCommandResult> ApplyHotplugControlCommandOnUiAsync(HotplugControlCommand command)
+    {
+        var result = new HotplugControlCommandResult { Ok = true };
+        if (_cleanupStarted || _cleanupCompleted)
+        {
+            result.Ok = false;
+            result.Error = "MCP Hotplug is shutting down.";
+            return result;
+        }
+
+        var beforeSnapshot = ControlStateSnapshot.Capture(_settings);
+        var changedServerEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        var changedToolPolicies = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        if (command.ServerChanges != null)
+        {
+            foreach (var kv in command.ServerChanges)
+            {
+                var serverId = (kv.Key ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(serverId)) continue;
+
+                if (string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!kv.Value)
+                        result.Warnings.Add("hotplug_control cannot disable itself; toggle it in the MCP Hotplug UI.");
+                    continue;
+                }
+
+                var isEnabled = kv.Value;
+                var updated = false;
+                if (string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) && !_settings.UnrealMcpDeleted)
+                {
+                    if ((_settings.UnrealMcpEnabled == true) != isEnabled)
+                    {
+                        _settings.UnrealMcpEnabled = isEnabled;
+                        updated = true;
+                    }
+                }
+                else if (string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) && !_settings.FilesystemMcpDeleted)
+                {
+                    if ((_settings.FilesystemMcpEnabled != false) != isEnabled)
+                    {
+                        _settings.FilesystemMcpEnabled = isEnabled;
+                        updated = true;
+                    }
+                }
+                else if (string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase))
+                {
+                    if ((_settings.BinaryMcpEnabled != false) != isEnabled)
+                    {
+                        _settings.BinaryMcpEnabled = isEnabled;
+                        updated = true;
+                    }
+                }
+                else
+                {
+                    var custom = _settings.CustomServers.FirstOrDefault(s => string.Equals(s.Id, serverId, StringComparison.OrdinalIgnoreCase));
+                    if (custom != null && custom.Enabled != isEnabled)
+                    {
+                        custom.Enabled = isEnabled;
+                        updated = true;
+                    }
+                }
+
+                if (updated)
+                {
+                    if (!isEnabled) _pendingForceRetryServerIds.Remove(serverId);
+                    _mcpInfrastructure.SetServerEnabledImmediate(serverId, isEnabled);
+                    changedServerEnabled[serverId] = isEnabled;
+                }
+            }
+        }
+
+        if (command.ToolPolicyChanges != null)
+        {
+            _settings.DisabledToolsByServer ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in command.ToolPolicyChanges)
+            {
+                var serverId = (kv.Key ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(serverId)) continue;
+                if (string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Warnings.Add("hotplug_control tools cannot be modified by manage_tools.");
+                    continue;
+                }
+
+                var normalized = (kv.Value ?? new List<string>())
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim())
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(s => s, StringComparer.Ordinal)
+                    .ToList();
+
+                _settings.DisabledToolsByServer.TryGetValue(serverId, out var existingList);
+                existingList ??= new List<string>();
+                if (existingList.Count != normalized.Count || existingList.Zip(normalized, (a, b) => a != b).Any(x => x))
+                {
+                    if (normalized.Count > 0) _settings.DisabledToolsByServer[serverId] = normalized;
+                    else _settings.DisabledToolsByServer.Remove(serverId);
+                    changedToolPolicies[serverId] = normalized;
+                }
+            }
+        }
+
+        if (changedServerEnabled.Count == 0 && changedToolPolicies.Count == 0)
+            return result;
+
+        if (changedServerEnabled.Count > 0)
+            _settings.ActivePresetId = null;
+
+        if (!SaveSettings())
+        {
+            beforeSnapshot.ApplyToSettings(_settings);
+            result.Ok = false;
+            result.Error = "Failed to persist settings.json.";
+            return result;
+        }
+
+        PushControlUndoSnapshot(beforeSnapshot);
+
+        foreach (var kv in changedToolPolicies)
+        {
+            await _mcpInfrastructure.ApplyServerToolsPolicyAsync(kv.Key, kv.Value);
+            if (_activeToolsWindow != null &&
+                string.Equals(_activeToolsWindow.ServerId, kv.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                _activeToolsWindow.ApplyExternalDisabledToolsUpdate(kv.Value);
+            }
+        }
+
+        if (changedServerEnabled.Count > 0)
+        {
+            var enabledIds = changedServerEnabled.Where(kv => kv.Value).Select(kv => kv.Key).ToList();
+            await SyncMcpInfrastructureAsync(
+                forceRetryQuarantined: enabledIds.Count > 1,
+                forceRetryServerId: enabledIds.Count == 1 ? enabledIds[0] : null);
+        }
+
+        FooterStatusText.Text = I18n.Tr(
+            "Hotplug Control MCP обновил конфигурацию (доступно Ctrl+Z).",
+            "Hotplug Control MCP updated configuration (Ctrl+Z available).");
+        ErrorLog.LogApp(I18n.Tr(
+            "Hotplug Control MCP применил изменения (серверов: " + changedServerEnabled.Count + ", политик инструментов: " + changedToolPolicies.Count + ").",
+            "Hotplug Control MCP applied changes (servers: " + changedServerEnabled.Count + ", tool policies: " + changedToolPolicies.Count + ")."));
+        return result;
     }
 
     private async void AddCustomServer_Click(object sender, RoutedEventArgs e)
@@ -699,6 +981,8 @@ public partial class MainWindow : Window
 
             var isBuiltInDup = string.Equals(baseId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) ||
                                string.Equals(baseId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+                               string.Equals(baseId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
+                               string.Equals(baseId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase) ||
                                (candidate.Args != null && candidate.Args.Any(a => a != null && a.IndexOf("server-filesystem", StringComparison.OrdinalIgnoreCase) >= 0));
             var existingDup = _settings.CustomServers.FirstOrDefault(s =>
                 string.Equals(s.Id, baseId, StringComparison.OrdinalIgnoreCase) ||
@@ -741,14 +1025,26 @@ public partial class MainWindow : Window
         _settings.DisabledToolsByServer.TryGetValue(serverId, out var savedDisabled);
 
         var dialog = new ServerToolsWindow(_mcpInfrastructure, serverId, serverName, savedDisabled) { Owner = this };
-        if (dialog.ShowDialog() != true) return;
+        _activeToolsWindow = dialog;
+        bool? dialogResult;
+        try
+        {
+            dialogResult = dialog.ShowDialog();
+        }
+        finally
+        {
+            if (ReferenceEquals(_activeToolsWindow, dialog)) _activeToolsWindow = null;
+        }
+        if (dialogResult != true) return;
 
+        var beforeSnapshot = ControlStateSnapshot.Capture(_settings);
         if (dialog.ResultDisabledTools.Count > 0)
             _settings.DisabledToolsByServer[serverId] = dialog.ResultDisabledTools;
         else
             _settings.DisabledToolsByServer.Remove(serverId);
 
         if (!SaveSettings()) return;
+        PushControlUndoSnapshot(beforeSnapshot);
         await _mcpInfrastructure.ApplyServerToolsPolicyAsync(serverId, dialog.ResultDisabledTools);
         ErrorLog.LogApp(I18n.Tr(
             "Обновлены инструменты «" + serverName + "» (отключено узлов: " + dialog.ResultDisabledTools.Count + ").",
@@ -798,10 +1094,29 @@ public partial class MainWindow : Window
         if (string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase))
         {
             var currentBinName = _settings.BinaryMcpCustom?.Name ?? "Binary MCP";
-            var renameDlg = new FilesystemRenameDialog(currentBinName) { Owner = this };
+            var renameDlg = new FilesystemRenameDialog(
+                currentBinName,
+                I18n.Tr("Переименовать Binary MCP", "Rename Binary MCP"),
+                I18n.Tr("Отображаемое имя для Binary MCP:", "Display name for Binary MCP:"))
+            { Owner = this };
             if (renameDlg.ShowDialog() != true || string.IsNullOrWhiteSpace(renameDlg.ServerName)) return;
             _settings.BinaryMcpCustom ??= new CustomMcpServerEntry { Id = SettingsStore.BuiltInBinaryId, Transport = "http" };
             _settings.BinaryMcpCustom.Name = renameDlg.ServerName;
+            if (!SaveSettings()) return;
+            await SyncMcpInfrastructureAsync();
+            return;
+        }
+        if (string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase))
+        {
+            var currentCtrlName = _settings.HotplugControlMcpCustom?.Name ?? "Hotplug Control MCP";
+            var renameDlg = new FilesystemRenameDialog(
+                currentCtrlName,
+                I18n.Tr("Переименовать Hotplug Control MCP", "Rename Hotplug Control MCP"),
+                I18n.Tr("Отображаемое имя для Hotplug Control MCP:", "Display name for Hotplug Control MCP:"))
+            { Owner = this };
+            if (renameDlg.ShowDialog() != true || string.IsNullOrWhiteSpace(renameDlg.ServerName)) return;
+            _settings.HotplugControlMcpCustom ??= new CustomMcpServerEntry { Id = SettingsStore.BuiltInHotplugControlId, Transport = "http" };
+            _settings.HotplugControlMcpCustom.Name = renameDlg.ServerName;
             if (!SaveSettings()) return;
             await SyncMcpInfrastructureAsync();
             return;
@@ -1026,7 +1341,9 @@ public partial class MainWindow : Window
         if (_cleanupStarted || _cleanupCompleted) return;
         if (sender is not FrameworkElement element || element.Tag is not string serverId) return;
 
-        if (string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase))
             return;
 
         if (string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
@@ -1073,6 +1390,7 @@ public partial class MainWindow : Window
         var preset = _settings.Presets.FirstOrDefault(p => string.Equals(p.Id, presetId, StringComparison.OrdinalIgnoreCase));
         if (preset == null) return;
 
+        var beforeSnapshot = ControlStateSnapshot.Capture(_settings);
         var enableAll = preset.EnabledServerIds.Contains("*");
         var enabledSet = new HashSet<string>(preset.EnabledServerIds, StringComparer.OrdinalIgnoreCase);
 
@@ -1081,12 +1399,14 @@ public partial class MainWindow : Window
         if (!_settings.FilesystemMcpDeleted)
             _settings.FilesystemMcpEnabled = enableAll || enabledSet.Contains(SettingsStore.BuiltInFilesystemId);
         _settings.BinaryMcpEnabled = enableAll || enabledSet.Contains(SettingsStore.BuiltInBinaryId);
+        _settings.HotplugControlMcpEnabled = enableAll || enabledSet.Contains(SettingsStore.BuiltInHotplugControlId);
 
         foreach (var srv in _settings.CustomServers)
             srv.Enabled = enableAll || enabledSet.Contains(srv.Id);
 
         _settings.ActivePresetId = preset.Id;
         if (!SaveSettings()) return;
+        PushControlUndoSnapshot(beforeSnapshot);
 
         ErrorLog.LogApp(I18n.Tr("Активирован пресет «" + preset.DisplayName + "».", "Activated preset '" + preset.DisplayName + "'."));
         FooterStatusText.Text = I18n.Tr("Применяю пресет «" + preset.DisplayName + "»…", "Applying preset '" + preset.DisplayName + "'…");
@@ -1140,6 +1460,11 @@ public partial class MainWindow : Window
         {
             enabledIds.Add(SettingsStore.BuiltInBinaryId);
             enabledNames.Add(_settings.BinaryMcpCustom?.Name ?? "Binary MCP");
+        }
+        if (_settings.HotplugControlMcpEnabled == true)
+        {
+            enabledIds.Add(SettingsStore.BuiltInHotplugControlId);
+            enabledNames.Add(_settings.HotplugControlMcpCustom?.Name ?? "Hotplug Control MCP");
         }
         foreach (var srv in _settings.CustomServers.Where(s => s.Enabled))
         {
@@ -1703,6 +2028,7 @@ public partial class MainWindow : Window
                 return;
             }
 
+            ErrorLog.LogApp(I18n.Tr("Обнаружено обновление v" + update.VersionLabel + ".", "Update v" + update.VersionLabel + " detected."));
             SidebarUpdateButton.Visibility = Visibility.Visible;
             SidebarUpdateButton.IsEnabled = true;
             SidebarUpdateButtonText.Text = I18n.Tr("Скачивание обновления", "Downloading update");
@@ -1780,6 +2106,7 @@ public partial class MainWindow : Window
                 return;
 
             update.LocalInstallerPath = installerPath;
+            ErrorLog.LogApp(I18n.Tr("Обновление v" + update.VersionLabel + " загружено и проверено (SHA-256).", "Update v" + update.VersionLabel + " downloaded & verified (SHA-256)."));
             UpdateDownloadProgressBar.IsIndeterminate = false;
             SidebarUpdateProgressBar.IsIndeterminate = false;
             UpdateDownloadProgressBar.Value = 100;
@@ -1890,6 +2217,7 @@ public partial class MainWindow : Window
             if (updater == null)
                 throw new InvalidOperationException(I18n.Tr("Не удалось запустить фоновый компонент обновления.", "Could not start the background updater helper."));
 
+            ErrorLog.LogApp(I18n.Tr("Запущен установщик обновления v" + update.VersionLabel + ".", "Updater launched for v" + update.VersionLabel + "."));
             _exitRequested = true;
             Close();
         }
@@ -2031,6 +2359,9 @@ public partial class MainWindow : Window
         finally
         {
             _cleanupCompleted = true;
+            try { _logsRefreshTimer?.Stop(); } catch { }
+            try { _logsWatcher?.Dispose(); } catch { }
+            _logsWatcher = null;
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
             _trayMenu.Dispose();
@@ -2043,7 +2374,7 @@ public partial class MainWindow : Window
     private void NavLogs_Click(object sender, RoutedEventArgs e)
     {
         NavigateToPage(2);
-        RefreshLogs();
+        RefreshLogs(forceScrollToEnd: true);
     }
     private void NavSettings_Click(object sender, RoutedEventArgs e)
     {
@@ -2109,6 +2440,7 @@ public partial class MainWindow : Window
             ApplyFontScale(1.0);
             CaptureBaseFontSizes(this);
             ApplyFontScale(_settings.FontScale <= 0 ? 1.0 : _settings.FontScale);
+            UpdateResponsiveLayout();
         }), DispatcherPriority.Loaded);
 
         var buttons = new[] { NavDashboardButton, NavServicesButton, NavLogsButton, NavSettingsButton };
@@ -2147,16 +2479,56 @@ public partial class MainWindow : Window
             "verification" => I18n.Tr("Журнал верификации MCP (Logs\\verification.log)", "MCP Verification Log (Logs\\verification.log)"),
             _ => I18n.Tr("Журнал ошибок и сбоев (Logs\\errors.log)", "Errors & Failures Log (Logs\\errors.log)")
         };
-        RefreshLogs();
+        RefreshLogs(forceScrollToEnd: true);
+    }
+
+    private void InitializeAutoLogRefresh()
+    {
+        _logsRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        _logsRefreshTimer.Tick += (_, _) =>
+        {
+            _logsRefreshTimer.Stop();
+            if (!_logsRefreshPending || _cleanupStarted || _cleanupCompleted) return;
+            _logsRefreshPending = false;
+            if (MainPages.SelectedIndex == 2) RefreshLogs(forceScrollToEnd: false);
+        };
+        ErrorLog.LogUpdated += (_, _) => ScheduleLogsRefresh();
+        try
+        {
+            Directory.CreateDirectory(AppPaths.LogsDirectory);
+            _logsWatcher = new FileSystemWatcher(AppPaths.LogsDirectory, "*.log")
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
+                EnableRaisingEvents = true
+            };
+            _logsWatcher.Changed += (_, _) => ScheduleLogsRefresh();
+            _logsWatcher.Created += (_, _) => ScheduleLogsRefresh();
+            _logsWatcher.Deleted += (_, _) => ScheduleLogsRefresh();
+            _logsWatcher.Renamed += (_, _) => ScheduleLogsRefresh();
+        }
+        catch { }
+    }
+
+    private void ScheduleLogsRefresh()
+    {
+        if (_cleanupStarted || _cleanupCompleted || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
+        try
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_cleanupStarted || _cleanupCompleted || MainPages.SelectedIndex != 2) return;
+                _logsRefreshPending = true;
+                if (_logsRefreshTimer != null && !_logsRefreshTimer.IsEnabled) _logsRefreshTimer.Start();
+            }), DispatcherPriority.Background);
+        }
+        catch { }
     }
 
     private void ClearLogs_Click(object sender, RoutedEventArgs e)
     {
-        ErrorLog.ClearCategory(_activeLogCategory);
-        RefreshLogs();
+        ErrorLog.ClearAll();
+        RefreshLogs(forceScrollToEnd: true);
     }
-
-    private void RefreshLogs_Click(object sender, RoutedEventArgs e) => RefreshLogs();
 
     private void LoggingEnabled_Click(object sender, RoutedEventArgs e)
     {
@@ -2164,17 +2536,104 @@ public partial class MainWindow : Window
         _settings.LoggingEnabled = enabled;
         ErrorLog.Enabled = enabled;
         SaveSettings();
-        if (enabled)
-            ErrorLog.LogApp(I18n.Tr("Запись логов включена.", "Log recording enabled."));
-        else
-            FooterStatusText.Text = I18n.Tr("Запись логов выключена.", "Log recording disabled.");
-        RefreshLogs();
+        if (enabled) ErrorLog.LogApp(I18n.Tr("Запись логов включена.", "Log recording enabled."));
+        else FooterStatusText.Text = I18n.Tr("Запись логов выключена.", "Log recording disabled.");
+        RefreshLogs(forceScrollToEnd: true);
     }
 
-    private void RefreshLogs()
+    private void RefreshLogs(bool forceScrollToEnd = false)
     {
-        LogsTextBox.Text = ErrorLog.ReadCategory(_activeLogCategory);
-        LogsTextBox.ScrollToEnd();
+        if (LogsTextBox == null) return;
+        var nextText = ErrorLog.ReadCategory(_activeLogCategory);
+        if (string.Equals(LogsTextBox.Text, nextText, StringComparison.Ordinal)) return;
+        var wasAtBottom = forceScrollToEnd || LogsTextBox.ExtentHeight <= LogsTextBox.ViewportHeight + 1.0 ||
+            (LogsTextBox.VerticalOffset + LogsTextBox.ViewportHeight >= LogsTextBox.ExtentHeight - 24.0);
+        var prevOffset = LogsTextBox.VerticalOffset;
+        LogsTextBox.Text = nextText;
+        if (wasAtBottom) LogsTextBox.ScrollToEnd();
+        else LogsTextBox.ScrollToVerticalOffset(prevOffset);
+    }
+
+    private void UpdateResponsiveLayout()
+    {
+        if (!IsLoaded || MainSidebarColumn == null || TopBarSidebarColumn == null) return;
+        var width = ActualWidth;
+        var scale = FontScaleSlider != null && FontScaleSlider.Value > 0 ? FontScaleSlider.Value : 1.0;
+        var effectiveWidth = width / Math.Max(1.0, scale);
+
+        var compact = effectiveWidth < 1020;
+        var sidebarWidth = compact ? 196.0 : 228.0;
+        MainSidebarColumn.Width = new GridLength(sidebarWidth);
+        TopBarSidebarColumn.Width = new GridLength(sidebarWidth);
+        if (WorkspaceContainerGrid != null)
+            WorkspaceContainerGrid.Margin = compact ? new Thickness(16, 14, 16, 14) : new Thickness(24, 20, 24, 20);
+
+        var effWs = Math.Max(320.0, width - sidebarWidth - (compact ? 32.0 : 48.0)) / Math.Max(1.0, scale);
+
+        if (DashboardKpiGrid != null && Kpi1CardBorder != null && Kpi2CardBorder != null && Kpi3CardBorder != null)
+        {
+            var stackKpi = effWs < 640;
+            DashboardKpiGrid.Columns = stackKpi ? 1 : 3;
+            Kpi1CardBorder.Margin = stackKpi ? new Thickness(0, 0, 0, 10) : new Thickness(0, 0, 12, 0);
+            Kpi2CardBorder.Margin = stackKpi ? new Thickness(0, 0, 0, 10) : new Thickness(0, 0, 12, 0);
+            Kpi3CardBorder.Margin = new Thickness(0);
+        }
+
+        if (PresetsButtonsPanel != null)
+        {
+            var stackPresets = effWs < 740;
+            Grid.SetRow(PresetsButtonsPanel, stackPresets ? 1 : 0);
+            Grid.SetColumn(PresetsButtonsPanel, stackPresets ? 0 : 1);
+            Grid.SetColumnSpan(PresetsButtonsPanel, stackPresets ? 2 : 1);
+            PresetsButtonsPanel.HorizontalAlignment = stackPresets ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+            PresetsButtonsPanel.Margin = stackPresets ? new Thickness(0, 10, 0, 0) : new Thickness(0);
+        }
+
+        if (LogsActionsPanel != null)
+        {
+            var stackLogs = effWs < 760;
+            Grid.SetRow(LogsActionsPanel, stackLogs ? 1 : 0);
+            Grid.SetColumn(LogsActionsPanel, stackLogs ? 1 : 2);
+            Grid.SetColumnSpan(LogsActionsPanel, stackLogs ? 2 : 1);
+            LogsActionsPanel.HorizontalAlignment = stackLogs ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+            LogsActionsPanel.Margin = stackLogs ? new Thickness(0, 6, 0, 0) : new Thickness(0);
+        }
+
+        if (SettingsNavColumn != null && SettingsSpacerColumn != null &&
+            SettingsNavContainer != null && SettingsNavButtonsPanel != null && SettingsContentHost != null)
+        {
+            var horizNav = effWs < 820;
+            SettingsNavColumn.Width = new GridLength(horizNav ? 0 : 204);
+            SettingsSpacerColumn.Width = new GridLength(horizNav ? 0 : 16);
+            Grid.SetRow(SettingsNavContainer, 0);
+            Grid.SetColumn(SettingsNavContainer, 0);
+            Grid.SetColumnSpan(SettingsNavContainer, horizNav ? 3 : 1);
+            Grid.SetRowSpan(SettingsNavContainer, horizNav ? 1 : 2);
+            SettingsNavContainer.Margin = horizNav ? new Thickness(0, 0, 0, 12) : new Thickness(0);
+            SettingsNavButtonsPanel.Orientation = horizNav ? Orientation.Horizontal : Orientation.Vertical;
+
+            Grid.SetRow(SettingsContentHost, horizNav ? 1 : 0);
+            Grid.SetColumn(SettingsContentHost, horizNav ? 0 : 2);
+            Grid.SetColumnSpan(SettingsContentHost, horizNav ? 3 : 1);
+            Grid.SetRowSpan(SettingsContentHost, horizNav ? 1 : 2);
+
+            foreach (var btn in new[] { TechnicalSettingsNavButton, InterfaceSettingsNavButton, ComponentsSettingsNavButton })
+            {
+                btn.Width = horizNav ? double.NaN : 204;
+                btn.Margin = horizNav ? new Thickness(0, 0, 6, 6) : new Thickness(0);
+                btn.Padding = horizNav ? new Thickness(12, 8, 14, 9) : new Thickness(18, 13, 18, 15);
+            }
+        }
+
+        if (CheckUpdatesButton != null)
+        {
+            var stackUpd = effWs < 560;
+            Grid.SetRow(CheckUpdatesButton, stackUpd ? 1 : 0);
+            Grid.SetColumn(CheckUpdatesButton, stackUpd ? 0 : 1);
+            Grid.SetColumnSpan(CheckUpdatesButton, stackUpd ? 2 : 1);
+            CheckUpdatesButton.HorizontalAlignment = stackUpd ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+            CheckUpdatesButton.Margin = stackUpd ? new Thickness(0, 8, 0, 0) : new Thickness(0);
+        }
     }
 
     private void OpenLogsFolder_Click(object sender, RoutedEventArgs e)
@@ -2376,6 +2835,135 @@ public partial class MainWindow : Window
             dpi);
 
         return formattedText.Width > textBlock.ActualWidth + 1.0;
+    }
+
+    private sealed class ControlStateSnapshot
+    {
+        public bool UnrealEnabled { get; set; }
+        public bool FilesystemEnabled { get; set; }
+        public bool BinaryEnabled { get; set; }
+        public bool HotplugControlEnabled { get; set; }
+        public string? ActivePresetId { get; set; }
+        public Dictionary<string, bool> CustomEnabledById { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, List<string>> DisabledToolsByServer { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public static ControlStateSnapshot Capture(AppSettings settings)
+        {
+            var customMap = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            foreach (var srv in settings.CustomServers ?? new List<CustomMcpServerEntry>())
+                if (srv != null && !string.IsNullOrWhiteSpace(srv.Id))
+                    customMap[srv.Id] = srv.Enabled;
+
+            var disabledMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            if (settings.DisabledToolsByServer != null)
+            {
+                foreach (var kv in settings.DisabledToolsByServer)
+                {
+                    if (string.IsNullOrWhiteSpace(kv.Key) || kv.Value == null) continue;
+                    var normalized = kv.Value
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Select(s => s.Trim())
+                        .Distinct(StringComparer.Ordinal)
+                        .OrderBy(s => s, StringComparer.Ordinal)
+                        .ToList();
+                    if (normalized.Count > 0) disabledMap[kv.Key] = normalized;
+                }
+            }
+
+            return new ControlStateSnapshot
+            {
+                UnrealEnabled = settings.UnrealMcpEnabled == true,
+                FilesystemEnabled = settings.FilesystemMcpEnabled != false,
+                BinaryEnabled = settings.BinaryMcpEnabled != false,
+                HotplugControlEnabled = settings.HotplugControlMcpEnabled == true,
+                ActivePresetId = settings.ActivePresetId,
+                CustomEnabledById = customMap,
+                DisabledToolsByServer = disabledMap
+            };
+        }
+
+        public bool EqualsSnapshot(ControlStateSnapshot other)
+        {
+            if (UnrealEnabled != other.UnrealEnabled ||
+                FilesystemEnabled != other.FilesystemEnabled ||
+                BinaryEnabled != other.BinaryEnabled ||
+                HotplugControlEnabled != other.HotplugControlEnabled ||
+                !string.Equals(ActivePresetId, other.ActivePresetId, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (CustomEnabledById.Count != other.CustomEnabledById.Count) return false;
+            foreach (var kv in CustomEnabledById)
+                if (!other.CustomEnabledById.TryGetValue(kv.Key, out var val) || val != kv.Value)
+                    return false;
+
+            if (DisabledToolsByServer.Count != other.DisabledToolsByServer.Count) return false;
+            foreach (var kv in DisabledToolsByServer)
+            {
+                if (!other.DisabledToolsByServer.TryGetValue(kv.Key, out var list) ||
+                    list.Count != kv.Value.Count ||
+                    list.Zip(kv.Value, (a, b) => a != b).Any(x => x))
+                    return false;
+            }
+            return true;
+        }
+
+        public Dictionary<string, bool> ApplyToSettings(AppSettings settings)
+        {
+            var changedServers = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            if (!settings.UnrealMcpDeleted && (settings.UnrealMcpEnabled == true) != UnrealEnabled)
+            {
+                settings.UnrealMcpEnabled = UnrealEnabled;
+                changedServers[SettingsStore.BuiltInUnrealId] = UnrealEnabled;
+            }
+            if (!settings.FilesystemMcpDeleted && (settings.FilesystemMcpEnabled != false) != FilesystemEnabled)
+            {
+                settings.FilesystemMcpEnabled = FilesystemEnabled;
+                changedServers[SettingsStore.BuiltInFilesystemId] = FilesystemEnabled;
+            }
+            if ((settings.BinaryMcpEnabled != false) != BinaryEnabled)
+            {
+                settings.BinaryMcpEnabled = BinaryEnabled;
+                changedServers[SettingsStore.BuiltInBinaryId] = BinaryEnabled;
+            }
+            if ((settings.HotplugControlMcpEnabled == true) != HotplugControlEnabled)
+            {
+                settings.HotplugControlMcpEnabled = HotplugControlEnabled;
+                changedServers[SettingsStore.BuiltInHotplugControlId] = HotplugControlEnabled;
+            }
+            foreach (var srv in settings.CustomServers ?? new List<CustomMcpServerEntry>())
+            {
+                if (srv != null && CustomEnabledById.TryGetValue(srv.Id, out var enabled) && srv.Enabled != enabled)
+                {
+                    srv.Enabled = enabled;
+                    changedServers[srv.Id] = enabled;
+                }
+            }
+            settings.ActivePresetId = ActivePresetId;
+
+            settings.DisabledToolsByServer = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in DisabledToolsByServer)
+                if (kv.Value.Count > 0)
+                    settings.DisabledToolsByServer[kv.Key] = new List<string>(kv.Value);
+
+            return changedServers;
+        }
+
+        public static Dictionary<string, List<string>> DiffDisabledTools(ControlStateSnapshot before, ControlStateSnapshot after)
+        {
+            var diff = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var allKeys = new HashSet<string>(before.DisabledToolsByServer.Keys, StringComparer.OrdinalIgnoreCase);
+            allKeys.UnionWith(after.DisabledToolsByServer.Keys);
+            foreach (var key in allKeys)
+            {
+                before.DisabledToolsByServer.TryGetValue(key, out var prev);
+                after.DisabledToolsByServer.TryGetValue(key, out var next);
+                prev ??= new List<string>();
+                next ??= new List<string>();
+                if (prev.Count != next.Count || prev.Zip(next, (a, b) => a != b).Any(x => x))
+                    diff[key] = new List<string>(next);
+            }
+            return diff;
+        }
     }
 }
 

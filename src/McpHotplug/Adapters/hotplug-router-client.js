@@ -15,13 +15,13 @@ class HotplugRouterClient {
   }
 
   async getCachedCatalog() {
-    return this.getJson('/__manager/catalog');
+    return this.getJson('/__manager/catalog', 25000);
   }
 
   async getServerCache(serverId) {
     const url = new URL('/__manager/server', this.endpoint.origin);
     url.searchParams.set('id', String(serverId));
-    return this.getJson(url.pathname + url.search);
+    return this.getJson(url.pathname + url.search, 25000);
   }
 
   async callServerTool(serverId, toolName, serverRevision, args) {

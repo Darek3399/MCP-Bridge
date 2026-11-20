@@ -863,17 +863,23 @@ public sealed class TailscaleConnectionManager : IDisposable
         if (_disposed || _shutdownStarted) return;
 
         var changed = false;
+        var phaseChanged = false;
+        TailscaleConnectionPhase previousPhase;
         lock (_sync)
         {
             if (_disposed || _shutdownStarted) return;
+            previousPhase = _phase;
             if (_phase != phase || !string.Equals(_statusText, message, StringComparison.Ordinal))
             {
+                phaseChanged = _phase != phase;
                 _phase = phase;
                 _statusText = message;
                 changed = true;
             }
         }
 
+        if (phaseChanged)
+            ErrorLog.LogConnection("[Tailscale] " + previousPhase + " -> " + phase + " · " + message);
         if (changed)
             RaiseStatusChanged();
     }

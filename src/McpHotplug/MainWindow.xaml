@@ -6,7 +6,7 @@
         xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:services="clr-namespace:McpHotplug.Services"
-        Title="MCP Hotplug" Height="860" Width="1360" MinHeight="640" MinWidth="980" WindowStyle="None" ResizeMode="CanResize"
+        Title="MCP Hotplug" Height="860" Width="1360" MinHeight="560" MinWidth="800" WindowStyle="None" ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen" Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource TextPrimaryBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="Auto" Closing="Window_Closing">
@@ -108,6 +108,7 @@
 
         <Style x:Key="SidebarTitleTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="#F2F5F8"/>
             <Style.Triggers>
@@ -120,6 +121,7 @@
 
         <Style x:Key="SidebarSubtitleTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             <Setter Property="Foreground" Value="#2CE5D0"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
             <Style.Triggers>
@@ -162,6 +164,32 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="ActionIconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="24"/><Setter Property="Height" Value="24"/><Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#AAB4BE"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+                <Border x:Name="IconHost" Background="{TemplateBinding Background}" CornerRadius="4"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="IconHost" Property="Background" Value="#282D34"/><Setter Property="Foreground" Value="#2CE5D0"/></Trigger>
+                    <Trigger Property="IsPressed" Value="True"><Setter TargetName="IconHost" Property="Background" Value="#1E2329"/><Setter TargetName="IconHost" Property="Opacity" Value="0.78"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="IconHost" Property="Opacity" Value="0.35"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+
+        <Style x:Key="ActionDeleteIconButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionIconButtonStyle}">
+            <Setter Property="Foreground" Value="#7F8790"/>
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+                <Border x:Name="IconHost" Background="{TemplateBinding Background}" CornerRadius="4"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="IconHost" Property="Background" Value="#3A2026"/><Setter Property="Foreground" Value="#FF6B78"/></Trigger>
+                    <Trigger Property="IsPressed" Value="True"><Setter TargetName="IconHost" Property="Background" Value="#2C171C"/><Setter TargetName="IconHost" Property="Opacity" Value="0.78"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="IconHost" Property="Opacity" Value="0.35"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="MainWindowBorder" Background="{StaticResource WindowBackgroundBrush}" BorderBrush="#111315" BorderThickness="1">
@@ -175,7 +203,7 @@
             <Border Grid.Row="0" Background="{StaticResource TopBarBrush}" BorderBrush="#141619" BorderThickness="0,0,0,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="228"/>
+                        <ColumnDefinition x:Name="TopBarSidebarColumn" Width="228"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -224,7 +252,7 @@
 
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="228"/>
+                    <ColumnDefinition x:Name="MainSidebarColumn" Width="228"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
@@ -411,7 +439,7 @@
                 </Border>
 
                 <!-- РАБОЧАЯ ОБЛАСТЬ -->
-                <Grid Grid.Column="1" Margin="24,20,24,20">
+                <Grid x:Name="WorkspaceContainerGrid" Grid.Column="1" Margin="24,20,24,20">
                     <TabControl x:Name="MainPages" BorderThickness="0" Background="Transparent" SelectedIndex="0">
                         <TabControl.Template>
                             <ControlTemplate TargetType="TabControl">
@@ -423,7 +451,7 @@
                         <TabItem>
                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel>
-                                    <primitives:UniformGrid Columns="3" Margin="0,0,0,16">
+                                    <primitives:UniformGrid x:Name="DashboardKpiGrid" Columns="3" Margin="0,0,0,16">
                                         <Border x:Name="Kpi1CardBorder" Style="{StaticResource KpiCardBorderStyle}" Margin="0,0,12,0">
                                             <Grid>
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -472,11 +500,11 @@
                                         <StackPanel>
                                             <Grid Margin="0,0,0,14">
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock x:Name="DashServicesTitleText" Text="Состояние MCP-сервисов" Style="{StaticResource SectionTitleStyle}"/>
+                                                <WrapPanel VerticalAlignment="Center">
+                                                    <TextBlock x:Name="DashServicesTitleText" Text="Состояние MCP-сервисов" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
                                                     <TextBlock Text="  |  " FontSize="14" Foreground="#444B54" VerticalAlignment="Center"/>
                                                     <TextBlock x:Name="DashServicesSubText" Text="Текущий статус подключений" FontSize="12.5" Foreground="#7A828C" VerticalAlignment="Center"/>
-                                                </StackPanel>
+                                                </WrapPanel>
                                                 <Button x:Name="DashManageBtn" Grid.Column="1" Content="Управление серверами →" Click="NavServices_Click" Padding="12,5" FontSize="11" Visibility="Collapsed"/>
                                             </Grid>
 
@@ -498,12 +526,16 @@
                                                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" Foreground="#F2F5F8"/>
                                                                     <TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedTextStyle}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
                                                                 </StackPanel>
-                                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                    <Border Background="{Binding BadgeBackground}" BorderBrush="{Binding BadgeBorder}" BorderThickness="1" CornerRadius="2" UseLayoutRounding="False" Padding="8,3" Margin="0,0,12,0" VerticalAlignment="Center">
+                                                                <Grid Grid.Column="1" VerticalAlignment="Center">
+                                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                                    <Border Grid.Column="0" Background="{Binding BadgeBackground}" BorderBrush="{Binding BadgeBorder}" BorderThickness="1" CornerRadius="2" UseLayoutRounding="False" Padding="8,3" Margin="0,0,10,0" VerticalAlignment="Center">
                                                                         <TextBlock Text="{Binding BadgeText}" FontSize="10" FontWeight="SemiBold" Padding="0,0,0,1" Foreground="{Binding BadgeForeground}"/>
                                                                     </Border>
-                                                                    <TextBlock Text="{Binding DisplayStatusText}" Foreground="{Binding BadgeForeground}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                </StackPanel>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayStatusText}" Foreground="{Binding BadgeForeground}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                               ToolTipService.InitialShowDelay="350" ToolTipOpening="TrimmedTextBlock_ToolTipOpening" Tag="{Binding DisplayStatusText}">
+                                                                        <TextBlock.ToolTip><ToolTip Style="{StaticResource McpTableCellToolTipStyle}" Content="{Binding DisplayStatusText}"/></TextBlock.ToolTip>
+                                                                    </TextBlock>
+                                                                </Grid>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
@@ -549,12 +581,14 @@
                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel>
                                     <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
-                                        <Grid>
+                                        <Grid x:Name="PresetsHeaderGrid">
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock x:Name="PresetsTitleText" Text="Пресеты наборов серверов" FontSize="14" FontWeight="SemiBold"/>
-                                                <TextBlock x:Name="PresetsSubText" Text="Быстрое переключение профилей в 1 клик. Крестик справа от пресета удаляет его." Style="{StaticResource MutedTextStyle}" Margin="0,3,0,0"/>
-
+                                            <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                <TextBlock x:Name="PresetsTitleText" Text="Пресеты наборов серверов" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                <TextBlock x:Name="PresetsSubText" Text="Быстрое переключение профилей в 1 клик. Крестик справа от пресета удаляет его." Style="{StaticResource MutedTextStyle}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
                                                 <ItemsControl x:Name="PresetsItemsControl" Margin="0,10,0,0">
                                                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
@@ -570,10 +604,10 @@
                                                 </ItemsControl>
                                             </StackPanel>
 
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
-                                                <Button x:Name="SavePresetBtn" Content="＋ Сохранить пресет" Click="SavePreset_Click" Margin="0,0,8,0" Padding="12,8"/>
-                                                <Button x:Name="AddServerBtn" Content="＋ Добавить сервер" Click="AddCustomServer_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="14,8"/>
-                                            </StackPanel>
+                                            <WrapPanel x:Name="PresetsButtonsPanel" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                <Button x:Name="SavePresetBtn" Content="＋ Сохранить пресет" Click="SavePreset_Click" Margin="0,0,8,4" Padding="12,7"/>
+                                                <Button x:Name="AddServerBtn" Content="＋ Добавить сервер" Click="AddCustomServer_Click" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,0,4" Padding="14,7"/>
+                                            </WrapPanel>
                                         </Grid>
                                     </Border>
 
@@ -581,42 +615,42 @@
                                         <StackPanel Grid.IsSharedSizeScope="True">
                                             <Grid Margin="0,0,0,14">
                                                 <StackPanel VerticalAlignment="Center">
-                                                    <TextBlock x:Name="SrvTableTitleText" Text="Управление MCP-серверами и техническая сводка" Style="{StaticResource SectionTitleStyle}"/>
-                                                    <TextBlock x:Name="SrvTableSubText" Text="Включайте, редактируйте или удаляйте серверы. Выключенные STDIO-процессы полностью останавливаются." Style="{StaticResource MutedTextStyle}" Margin="0,2,0,0"/>
+                                                    <TextBlock x:Name="SrvTableTitleText" Text="Управление MCP-серверами и техническая сводка" Style="{StaticResource SectionTitleStyle}" TextWrapping="Wrap"/>
+                                                    <TextBlock x:Name="SrvTableSubText" Text="Включайте, редактируйте или удаляйте серверы. Выключенные STDIO-процессы полностью останавливаются." Style="{StaticResource MutedTextStyle}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                                 </StackPanel>
                                             </Grid>
 
-                                            <Border Background="#1A1D21" BorderBrush="#2A2E35" BorderThickness="1" Padding="14,9" Margin="0,0,0,4">
+                                            <Border Background="#1A1D21" BorderBrush="#2A2E35" BorderThickness="1" Padding="12,9" Margin="0,0,0,4">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="42"/>
-                                                        <ColumnDefinition Width="2.6*"/>
-                                                        <ColumnDefinition Width="150"/>
-                                                        <ColumnDefinition Width="2*"/>
-                                                        <ColumnDefinition Width="105"/>
-                                                        <ColumnDefinition Width="112"/>
+                                                        <ColumnDefinition Width="38"/>
+                                                        <ColumnDefinition Width="2.5*" MinWidth="165"/>
+                                                        <ColumnDefinition Width="1.15*" MinWidth="92" MaxWidth="175"/>
+                                                        <ColumnDefinition Width="1.95*" MinWidth="110"/>
+                                                        <ColumnDefinition Width="0.9*" MinWidth="78" MaxWidth="120"/>
+                                                        <ColumnDefinition Width="84"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock x:Name="SrvColOnText" Text="ВКЛ" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                                    <TextBlock x:Name="SrvColNameText" Grid.Column="1" Text="СЕРВИС И НАЗНАЧЕНИЕ" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" Margin="10,0,14,0"/>
-                                                    <TextBlock x:Name="SrvColPortText" Grid.Column="2" Text="ПОРТ / ПУТЬ" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                                                    <TextBlock x:Name="SrvColStatusText" Grid.Column="3" Text="СТАТУС" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                                                    <TextBlock x:Name="SrvColToolsText" Grid.Column="4" Text="ИНСТРУМЕНТЫ" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                                                    <TextBlock x:Name="SrvColActionsText" Grid.Column="5" Text="ДЕЙСТВИЯ" Style="{StaticResource EyebrowStyle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBlock x:Name="SrvColNameText" Grid.Column="1" Text="СЕРВИС И НАЗНАЧЕНИЕ" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="8,0,12,0"/>
+                                                    <TextBlock x:Name="SrvColPortText" Grid.Column="2" Text="ПОРТ / ПУТЬ" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                                                    <TextBlock x:Name="SrvColStatusText" Grid.Column="3" Text="СТАТУС" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                                                    <TextBlock x:Name="SrvColToolsText" Grid.Column="4" Text="ИНСТРУМЕНТЫ" Style="{StaticResource EyebrowStyle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
+                                                    <TextBlock x:Name="SrvColActionsText" Grid.Column="5" Text="ДЕЙСТВИЯ" Style="{StaticResource EyebrowStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                 </Grid>
                                             </Border>
 
                                             <ItemsControl x:Name="ServersManagerListControl">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border BorderBrush="#1A1D21" BorderThickness="0,0,0,1" Padding="14,10">
+                                                        <Border BorderBrush="#1A1D21" BorderThickness="0,0,0,1" Padding="12,10">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="42"/>
-                                                                    <ColumnDefinition Width="2.6*"/>
-                                                                    <ColumnDefinition Width="150"/>
-                                                                    <ColumnDefinition Width="2*"/>
-                                                                    <ColumnDefinition Width="105"/>
-                                                                    <ColumnDefinition Width="112"/>
+                                                                    <ColumnDefinition Width="38"/>
+                                                                    <ColumnDefinition Width="2.5*" MinWidth="165"/>
+                                                                    <ColumnDefinition Width="1.15*" MinWidth="92" MaxWidth="175"/>
+                                                                    <ColumnDefinition Width="1.95*" MinWidth="110"/>
+                                                                    <ColumnDefinition Width="0.9*" MinWidth="78" MaxWidth="120"/>
+                                                                    <ColumnDefinition Width="84"/>
                                                                 </Grid.ColumnDefinitions>
 
                                                                 <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" Click="ServerToggle_Click" Tag="{Binding Id}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
@@ -674,19 +708,17 @@
                                                                     </TextBlock.ToolTip>
                                                                 </TextBlock>
 
-                                                                <StackPanel Grid.Column="4" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,0,14,0">
-                                                                    <Border Background="#16191D" BorderBrush="#2C3138" BorderThickness="1" CornerRadius="2" Padding="9,4" Visibility="{Binding ToolsBadgeVisibility}">
-                                                                        <TextBlock Text="{Binding ToolsBadgeText}" FontFamily="Consolas" FontSize="13.5" FontWeight="SemiBold" Foreground="#2CE5D0"/>
-                                                                    </Border>
-                                                                </StackPanel>
+                                                                <TextBlock Grid.Column="4" Text="{Binding ToolsBadgeText}" FontFamily="Consolas" FontSize="12.5" FontWeight="SemiBold"
+                                                                           Foreground="{Binding ToolsBadgeForeground}" Visibility="{Binding ToolsBadgeVisibility}"
+                                                                           VerticalAlignment="Center" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" Margin="0,0,10,0"/>
 
                                                                 <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                                                    <Button ToolTip="Инструменты / Tools" Click="ServerTools_Click" Tag="{Binding Id}" Width="30" Height="28" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,6,0">
-                                                                        <Path Data="M 2,4 L 14,4 M 2,8 L 14,8 M 2,12 L 14,12 M 5,2 L 5,6 M 11,6 L 11,10 M 7,10 L 7,14" Stroke="#2CE5D0" StrokeThickness="1.4" Width="13" Height="13" Stretch="Uniform" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                                                    <Button Style="{StaticResource ActionIconButtonStyle}" ToolTip="Инструменты / Tools" Click="ServerTools_Click" Tag="{Binding Id}" Margin="0,0,2,0">
+                                                                        <Path Data="M 2,4 L 14,4 M 2,8 L 14,8 M 2,12 L 14,12 M 5,2 L 5,6 M 11,6 L 11,10 M 7,10 L 7,14" Stroke="#2CE5D0" StrokeThickness="1.5" Width="13" Height="13" Stretch="Uniform" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                                                                     </Button>
-                                                                    <Button Content="✎" ToolTip="Править / Edit" Click="EditServer_Click" Tag="{Binding Id}" Width="30" Height="28" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="11" Margin="0,0,6,0"/>
-                                                                    <Button ToolTip="Удалить / Delete" Click="DeleteServer_Click" Tag="{Binding Id}" Visibility="{Binding DeleteButtonVisibility}" Width="30" Height="28" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
-                                                                        <Path Data="M 1,1 L 9,9 M 9,1 L 1,9" Stroke="#7F8790" StrokeThickness="1.5" Width="10" Height="10" Stretch="Fill" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                                                    <Button Style="{StaticResource ActionIconButtonStyle}" Content="✎" ToolTip="Править / Edit" Click="EditServer_Click" Tag="{Binding Id}" FontSize="12.5" Margin="0,0,2,0"/>
+                                                                    <Button Style="{StaticResource ActionDeleteIconButtonStyle}" ToolTip="Удалить / Delete" Click="DeleteServer_Click" Tag="{Binding Id}" Visibility="{Binding DeleteButtonVisibility}">
+                                                                        <Path Data="M 1,1 L 9,9 M 9,1 L 1,9" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" Width="10" Height="10" Stretch="Fill" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                                                                     </Button>
                                                                 </StackPanel>
                                                             </Grid>
@@ -706,27 +738,27 @@
                                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="14"/><RowDefinition Height="*"/></Grid.RowDefinitions>
 
                                 <Border Grid.Row="0" Style="{StaticResource KpiCardBorderStyle}" Padding="16,12">
-                                    <Grid>
+                                    <Grid x:Name="LogsHeaderGrid">
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <Border Style="{StaticResource KpiCircleBadgeStyle}" Margin="0,0,14,0">
+                                        <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource KpiCircleBadgeStyle}" Margin="0,0,14,0" VerticalAlignment="Top">
                                             <Path Data="M 4,4 L 20,4 L 20,20 L 4,20 Z M 8,9 L 11,12 L 8,15 M 13,15 L 16,15" Stroke="#2CE5D0" StrokeThickness="1.6" Width="16" Height="16" Stretch="Uniform"/>
                                         </Border>
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock x:Name="LogsHeaderTitleText" Text="Журнал подключений и MCP (Logs\connections.log)" FontSize="15" FontWeight="SemiBold"/>
+                                        <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock x:Name="LogsHeaderTitleText" Text="Журнал подключений и MCP (Logs\connections.log)" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                             <CheckBox x:Name="LoggingEnabledCheckBox" Content="Запись логов включена" Margin="0,8,0,0" Click="LoggingEnabled_Click"/>
                                             <TextBlock x:Name="LoggingEnabledHintText" Text="По умолчанию выключено. Включение/выключение действует сразу." Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" TextWrapping="Wrap"/>
-                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                                <Button x:Name="LogTabConnectionsButton" Content="Подключения и MCP" Click="LogCategoryConnections_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="12,5" Margin="0,0,8,0"/>
-                                                <Button x:Name="LogTabAppButton" Content="Приложение" Click="LogCategoryApp_Click" Padding="12,5" Margin="0,0,8,0"/>
-                                                <Button x:Name="LogTabErrorsButton" Content="Ошибки (errors.log)" Click="LogCategoryErrors_Click" Padding="12,5" Margin="0,0,8,0"/>
-                                                <Button x:Name="LogTabVerificationButton" Content="Верификация" Click="LogCategoryVerification_Click" Padding="10,5" Margin="0,0,8,0"/>
-                                            </StackPanel>
+                                            <WrapPanel Margin="0,8,0,0">
+                                                <Button x:Name="LogTabConnectionsButton" Content="Подключения и MCP" Click="LogCategoryConnections_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="12,5" Margin="0,0,8,6"/>
+                                                <Button x:Name="LogTabAppButton" Content="Приложение" Click="LogCategoryApp_Click" Padding="12,5" Margin="0,0,8,6"/>
+                                                <Button x:Name="LogTabErrorsButton" Content="Ошибки (errors.log)" Click="LogCategoryErrors_Click" Padding="12,5" Margin="0,0,8,6"/>
+                                                <Button x:Name="LogTabVerificationButton" Content="Верификация" Click="LogCategoryVerification_Click" Padding="10,5" Margin="0,0,0,6"/>
+                                            </WrapPanel>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button x:Name="ClearLogsBtn" Content="Очистить" Click="ClearLogs_Click" Margin="0,0,8,0"/>
-                                            <Button x:Name="RefreshLogsBtn" Content="Обновить" Click="RefreshLogs_Click" Margin="0,0,8,0"/>
-                                            <Button x:Name="OpenLogsFolderBtn" Content="Открыть папку Logs" Style="{StaticResource PrimaryButtonStyle}" Click="OpenLogsFolder_Click"/>
-                                        </StackPanel>
+                                        <WrapPanel x:Name="LogsActionsPanel" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <Button x:Name="ClearLogsBtn" Content="Очистить все" Click="ClearLogs_Click" Margin="0,0,8,4"/>
+                                            <Button x:Name="OpenLogsFolderBtn" Content="Открыть папку Logs" Style="{StaticResource PrimaryButtonStyle}" Click="OpenLogsFolder_Click" Margin="0,0,0,4"/>
+                                        </WrapPanel>
                                     </Grid>
                                 </Border>
 
@@ -741,28 +773,32 @@
                         <!-- ВКЛАДКА 3: НАСТРОЙКИ (РАЗДЕЛЕНЫ НА ТЕХНИЧЕСКИЕ И UI/UX) -->
                         <TabItem>
                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                <Grid>
+                                <Grid x:Name="SettingsRootGrid">
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="208"/>
-                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition x:Name="SettingsNavColumn" Width="204"/>
+                                        <ColumnDefinition x:Name="SettingsSpacerColumn" Width="16"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="0">
+                                    <StackPanel x:Name="SettingsNavContainer" Grid.Row="0" Grid.Column="0" Grid.RowSpan="2">
                                         <TextBlock x:Name="SettingsNavigationTitleText" Text="SETTINGS" FontSize="10" FontWeight="Bold" Foreground="#68707A" Margin="12,2,0,10"/>
-                                        <Button x:Name="TechnicalSettingsNavButton" Style="{StaticResource SidebarButtonStyle}" Click="TechnicalSettingsNav_Click" BorderBrush="#2CE5D0">
-                                            <TextBlock x:Name="TechnicalSettingsNavText" Text="Технические настройки и подключения" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#F2F5F8"/>
-                                        </Button>
-                                        <Button x:Name="InterfaceSettingsNavButton" Style="{StaticResource SidebarButtonStyle}" Click="InterfaceSettingsNav_Click">
-                                            <TextBlock x:Name="InterfaceSettingsNavText" Text="Интерфейс и приложение" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
-                                        </Button>
-                                        <Button x:Name="ComponentsSettingsNavButton" Style="{StaticResource SidebarButtonStyle}" Click="ComponentsSettingsNav_Click">
-                                            <TextBlock x:Name="ComponentsSettingsNavText" Text="Компоненты" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
-                                        </Button>
+                                        <WrapPanel x:Name="SettingsNavButtonsPanel" Orientation="Vertical">
+                                            <Button x:Name="TechnicalSettingsNavButton" Width="204" Style="{StaticResource SidebarButtonStyle}" Click="TechnicalSettingsNav_Click" BorderBrush="#2CE5D0">
+                                                <TextBlock x:Name="TechnicalSettingsNavText" Text="Технические настройки и подключения" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#F2F5F8"/>
+                                            </Button>
+                                            <Button x:Name="InterfaceSettingsNavButton" Width="204" Style="{StaticResource SidebarButtonStyle}" Click="InterfaceSettingsNav_Click">
+                                                <TextBlock x:Name="InterfaceSettingsNavText" Text="Интерфейс и приложение" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
+                                            </Button>
+                                            <Button x:Name="ComponentsSettingsNavButton" Width="204" Style="{StaticResource SidebarButtonStyle}" Click="ComponentsSettingsNav_Click">
+                                                <TextBlock x:Name="ComponentsSettingsNavText" Text="Компоненты" TextWrapping="Wrap" VerticalAlignment="Center" Padding="0,0,0,2" FontSize="12.5" FontWeight="SemiBold" Foreground="#969FA8"/>
+                                            </Button>
+                                        </WrapPanel>
                                     </StackPanel>
 
+                                    <Grid x:Name="SettingsContentHost" Grid.Row="0" Grid.Column="2" Grid.RowSpan="2">
                                     <!-- ТЕХНИЧЕСКИЕ НАСТРОЙКИ И ПОДКЛЮЧЕНИЯ -->
-                                    <StackPanel x:Name="TechnicalSettingsPanel" Grid.Column="2">
+                                    <StackPanel x:Name="TechnicalSettingsPanel">
                                         <!-- 1. Папки файловой системы (с переименованным именем ФС) -->
                                         <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
                                             <Grid>
@@ -914,17 +950,17 @@
                                     </StackPanel>
 
                                     <!-- ИНТЕРФЕЙС И ПРИЛОЖЕНИЕ -->
-                                    <StackPanel x:Name="InterfaceSettingsPanel" Grid.Column="2" Visibility="Collapsed">
+                                    <StackPanel x:Name="InterfaceSettingsPanel" Visibility="Collapsed">
 
                                         <!-- 1. Смена языка (RU / EN) -->
                                         <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
                                             <StackPanel>
                                                 <TextBlock x:Name="LangCardTitleText" Text="Язык интерфейса / Language" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4"/>
                                                 <TextBlock x:Name="LangCardSubText" Text="Переключение языка интерфейса в реальном времени без перезапуска приложения." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Button x:Name="LangRuButton" Content="Русский (RU)" Click="LangRu_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="16,8" Margin="0,0,10,0"/>
-                                                    <Button x:Name="LangEnButton" Content="English (EN)" Click="LangEn_Click" Padding="16,8"/>
-                                                </StackPanel>
+                                                <WrapPanel>
+                                                    <Button x:Name="LangRuButton" Content="Русский (RU)" Click="LangRu_Click" Style="{StaticResource PrimaryButtonStyle}" Padding="16,8" Margin="0,0,10,6"/>
+                                                    <Button x:Name="LangEnButton" Content="English (EN)" Click="LangEn_Click" Padding="16,8" Margin="0,0,0,6"/>
+                                                </WrapPanel>
                                             </StackPanel>
                                         </Border>
 
@@ -956,42 +992,22 @@
                                             <StackPanel>
                                                 <TextBlock x:Name="UpdatesCardTitleText" Text="Обновления" Style="{StaticResource SectionTitleStyle}"/>
                                                 <Grid Margin="0,12,0,10">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <CheckBox x:Name="CheckUpdatesOnStartupCheckBox"
-                                                              Grid.Column="0"
-                                                              Content="Проверять обновления при запуске"
-                                                              VerticalAlignment="Center"
-                                                              Margin="0,0,8,0"
-                                                              Click="CheckUpdatesOnStartup_Click"/>
-                                                    <Button x:Name="CheckUpdatesButton"
-                                                            Grid.Column="1"
-                                                            Content="Проверить обновления"
-                                                            Padding="10,7"
-                                                            Click="CheckUpdatesButton_Click"/>
+                                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                    <CheckBox x:Name="CheckUpdatesOnStartupCheckBox" Grid.Row="0" Grid.Column="0" Content="Проверять обновления при запуске" VerticalAlignment="Center" Margin="0,0,8,0" Click="CheckUpdatesOnStartup_Click"/>
+                                                    <Button x:Name="CheckUpdatesButton" Grid.Row="0" Grid.Column="1" Content="Проверить обновления" Padding="10,7" Click="CheckUpdatesButton_Click"/>
                                                 </Grid>
-                                                <ProgressBar x:Name="UpdateDownloadProgressBar"
-                                                             Height="5"
-                                                             Minimum="0"
-                                                             Maximum="100"
-                                                             Value="0"
-                                                             Visibility="Collapsed"
-                                                             Margin="0,0,0,8"/>
-                                                <TextBlock x:Name="UpdateStatusText"
-                                                           Text=""
-                                                           Style="{StaticResource MutedTextStyle}"
-                                                           TextWrapping="Wrap"
-                                                           Visibility="Collapsed"/>
+                                                <ProgressBar x:Name="UpdateDownloadProgressBar" Height="5" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" Margin="0,0,0,8"/>
+                                                <TextBlock x:Name="UpdateStatusText" Text="" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Visibility="Collapsed"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
 
                                     <!-- КОМПОНЕНТЫ: ПОДРАЗДЕЛ НАСТРОЕК -->
-                                    <StackPanel x:Name="DependencySettingsPanel" Grid.Column="2" Visibility="Collapsed" MinHeight="650">
-                                        <ContentControl x:Name="DependencyStatusHost" MinHeight="620"/>
-                                    </StackPanel>
+                                    <Grid x:Name="DependencySettingsPanel" Visibility="Collapsed" MinHeight="420">
+                                        <ContentControl x:Name="DependencyStatusHost" MinHeight="400"/>
+                                    </Grid>
+                                    </Grid>
                                 </Grid>
                             </ScrollViewer>
                         </TabItem>

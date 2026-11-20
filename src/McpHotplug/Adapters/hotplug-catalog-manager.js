@@ -34,6 +34,7 @@ class ToolCatalogManager {
     this.toolIndex = new Map();
     this.disabledToolIndex = new Map();
     this.allDisabledServers = new Map();
+    this.canSelfManage = false;
     this.lastSnapshot = null;
   }
 
@@ -76,6 +77,8 @@ class ToolCatalogManager {
           transport: String(item.transport || 'http'),
           status: String(item.health || item.status || 'Unknown'),
           is_polling: Boolean(item.isPolling),
+          is_discovering: Boolean(item.isDiscovering),
+          tools_load_state: String(item.toolsLoadState || 'not_loaded'),
           poll_interval_ms: Number(item.pollIntervalMs) || 0,
           tools_count: Number.isInteger(item.toolsCount)
             ? item.toolsCount
@@ -164,22 +167,25 @@ class ToolCatalogManager {
         this.fingerprint = nextFingerprint;
       }
 
+      const canSelfManage = result.can_self_manage === true;
       const snapshot = {
         catalog_revision: String(result.catalog_revision || this.revision),
         cache_revision: String(result.cache_revision || ''),
         status: 'ready',
         generated_at: new Date().toISOString(),
-        disabled_tools_note: String(result.disabled_tools_note || toolPolicy.DISABLED_TOOLS_NOTE),
+        disabled_tools_note: String(result.disabled_tools_note || toolPolicy.getDisabledToolsNote(canSelfManage)),
         servers: serverList,
         tools
       };
       this.toolIndex = toolIndex;
       this.disabledToolIndex = disabledToolIndex;
       this.allDisabledServers = allDisabledServers;
+      this.canSelfManage = canSelfManage;
       this.lastSnapshot = snapshot;
       return { snapshot, toolIndex };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const fallbackNote = toolPolicy.getDisabledToolsNote(this.canSelfManage);
       const snapshot = this.lastSnapshot
         ? JSON.parse(JSON.stringify(this.lastSnapshot))
         : {
@@ -187,13 +193,13 @@ class ToolCatalogManager {
           cache_revision: '',
           status: 'stale',
           generated_at: new Date().toISOString(),
-          disabled_tools_note: toolPolicy.DISABLED_TOOLS_NOTE,
+          disabled_tools_note: fallbackNote,
           servers: [],
           tools: []
         };
       snapshot.status = 'stale';
       snapshot.generated_at = new Date().toISOString();
-      snapshot.disabled_tools_note = toolPolicy.DISABLED_TOOLS_NOTE;
+      snapshot.disabled_tools_note = fallbackNote;
       snapshot.refresh_error = message;
       return { snapshot, toolIndex: this.toolIndex };
     }

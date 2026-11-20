@@ -63,6 +63,7 @@ public sealed class McpInfrastructureService : IDisposable
     private static readonly string BinaryEndpoint = LoopbackPrefix + "8005/mcp";
     private static readonly string BinaryHealthEndpoint = LoopbackPrefix + "8005/__manager/health";
     private static readonly string BinaryRootsEndpoint = LoopbackPrefix + "8005/__manager/roots";
+    private static readonly string HotplugControlEndpoint = LoopbackPrefix + "8001/__control/mcp";
     private static readonly string FilteredEndpoint = LoopbackPrefix + "8001/mcp";
     private static readonly string HotplugEndpoint = LoopbackPrefix + "8004/mcp";
     private static readonly string RouterHealthEndpoint = LoopbackPrefix + "8001/__manager/health";
@@ -117,6 +118,8 @@ public sealed class McpInfrastructureService : IDisposable
     private bool _filesystemEnabled = true;
     private bool _binaryEnabled = true;
     private CustomMcpServerEntry? _binaryCustom;
+    private bool _hotplugControlEnabled = false;
+    private CustomMcpServerEntry? _hotplugControlCustom;
     private Dictionary<string, List<string>> _disabledToolsByServer = new(StringComparer.OrdinalIgnoreCase);
     private List<CustomMcpServerEntry> _customServers = new();
 
@@ -126,6 +129,7 @@ public sealed class McpInfrastructureService : IDisposable
     }
 
     public event EventHandler<McpInfrastructureStatusEventArgs>? StatusChanged;
+    public Func<HotplugControlCommand, Task<HotplugControlCommandResult>>? ControlCommandHandler { get; set; }
 
     private bool IsRouterReady => _routerReady && _rootsFilter != null && !IsExited(_rootsFilter.Process);
     private bool IsHotplugGatewayReady => _hotplugGateway != null && !IsExited(_hotplugGateway.Process);
@@ -158,6 +162,8 @@ public sealed class McpInfrastructureService : IDisposable
                 _filesystemEnabled = isEnabled;
             else if (string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase))
                 _binaryEnabled = isEnabled;
+            else if (string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase))
+                _hotplugControlEnabled = isEnabled;
             else
             {
                 var custom = _customServers.FirstOrDefault(s => string.Equals(s.Id, serverId, StringComparison.OrdinalIgnoreCase));
@@ -209,7 +215,9 @@ public sealed class McpInfrastructureService : IDisposable
         _unrealEnabled = !_unrealDeleted && (settings.UnrealMcpEnabled ?? false);
         _filesystemEnabled = !_filesystemDeleted && (settings.FilesystemMcpEnabled ?? true);
         _binaryCustom = settings.BinaryMcpCustom?.Clone();
-        _binaryEnabled = settings.BinaryMcpEnabled ?? true;
+        _binaryEnabled = settings.BinaryMcpEnabled ?? false;
+        _hotplugControlCustom = settings.HotplugControlMcpCustom?.Clone();
+        _hotplugControlEnabled = settings.HotplugControlMcpEnabled ?? false;
         _disabledToolsByServer = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         if (settings.DisabledToolsByServer != null)
         {
@@ -223,6 +231,7 @@ public sealed class McpInfrastructureService : IDisposable
         _desiredEnabledById[SettingsStore.BuiltInUnrealId] = _unrealEnabled;
         _desiredEnabledById[SettingsStore.BuiltInFilesystemId] = _filesystemEnabled;
         _desiredEnabledById[SettingsStore.BuiltInBinaryId] = _binaryEnabled;
+        _desiredEnabledById[SettingsStore.BuiltInHotplugControlId] = _hotplugControlEnabled;
         foreach (var s in _customServers)
             _desiredEnabledById[s.Id] = s.Enabled;
 
@@ -305,6 +314,33 @@ public sealed class McpInfrastructureService : IDisposable
             ApplyDesiredEnabledToStatus(binStatus, _binaryEnabled);
         }
 
+        var ctrlName = (_hotplugControlCustom != null && !string.IsNullOrWhiteSpace(_hotplugControlCustom.Name))
+            ? _hotplugControlCustom.Name!
+            : "Hotplug Control MCP";
+        if (!_statusById.TryGetValue(SettingsStore.BuiltInHotplugControlId, out var ctrlStatus))
+        {
+            _statusById[SettingsStore.BuiltInHotplugControlId] = new ServerRuntimeStatus
+            {
+                Id = SettingsStore.BuiltInHotplugControlId,
+                Name = ctrlName,
+                Subtitle = I18n.Tr("Управление серверами, категориями и инструментами", "Manage servers, categories & tools"),
+                EndpointDisplay = "8001",
+                PathDisplay = "/__control/mcp",
+                TransportBadge = "BUILT-IN",
+                UpstreamUrl = HotplugControlEndpoint,
+                IsBuiltIn = true,
+                IsEnabled = _hotplugControlEnabled,
+                HealthState = _hotplugControlEnabled ? McpServerHealthState.Waiting : McpServerHealthState.Disabled,
+                StatusText = _hotplugControlEnabled ? I18n.Tr("Установка связи MCP…", "Establishing MCP connection…") : I18n.Tr("Выключен", "Disabled")
+            };
+        }
+        else
+        {
+            ctrlStatus.Name = ctrlName;
+            ctrlStatus.Subtitle = I18n.Tr("Управление серверами, категориями и инструментами", "Manage servers, categories & tools");
+            ApplyDesiredEnabledToStatus(ctrlStatus, _hotplugControlEnabled);
+        }
+
         foreach (var server in _customServers)
         {
             if (_statusById.TryGetValue(server.Id, out var existingStatus))
@@ -367,6 +403,7 @@ public sealed class McpInfrastructureService : IDisposable
         if (string.IsNullOrWhiteSpace(serverId) ||
             string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
             return true;
         try
@@ -394,6 +431,7 @@ public sealed class McpInfrastructureService : IDisposable
         if (string.IsNullOrWhiteSpace(serverId) ||
             string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
             return;
         try
@@ -412,6 +450,7 @@ public sealed class McpInfrastructureService : IDisposable
         if (string.IsNullOrWhiteSpace(serverId) ||
             string.Equals(serverId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(serverId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(serverId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
             return;
 
@@ -567,6 +606,7 @@ public sealed class McpInfrastructureService : IDisposable
             {
                 SettingsStore.BuiltInFilesystemId,
                 SettingsStore.BuiltInBinaryId,
+                SettingsStore.BuiltInHotplugControlId,
                 SettingsStore.BuiltInUnrealId,
                 "_shared"
             };
@@ -1087,6 +1127,7 @@ public sealed class McpInfrastructureService : IDisposable
 
             await ReconcileFilesystemServerAsync(dependencies, roots, true).ConfigureAwait(false);
             await ReconcileBinaryServerAsync(dependencies, roots, false).ConfigureAwait(false);
+            ErrorLog.LogConnection(I18n.Tr("Обновлены разрешённые папки MCP: активных " + roots.Length + ".", "Updated MCP allowed folders: " + roots.Length + " active."));
 
             if (routerNeedsStart && !dependencies.HasNode)
             {
@@ -1371,8 +1412,8 @@ public sealed class McpInfrastructureService : IDisposable
         string effectiveCommand;
         List<string> effectiveArguments;
         Dictionary<string, string> enrichedEnvironment;
-        int port;
-        string endpoint;
+        int port = 0;
+        string endpoint = string.Empty;
         string configPath;
         string workingDirectory;
 
@@ -1435,8 +1476,6 @@ public sealed class McpInfrastructureService : IDisposable
                 verificationArguments,
                 out effectiveArguments);
             enrichedEnvironment = BuildEnrichedEnvironment(dependenciesForStdio, candidate.Env, !string.IsNullOrWhiteSpace(candidate.Id) ? candidate.Id : verificationId);
-            port = promoteAsOnSuccess != null ? AllocateFreePort(CustomPortRangeStart, CustomPortRangeEnd) : AllocateFreePort(VerifyPortRangeStart, VerifyPortRangeEnd);
-            endpoint = LoopbackPrefix + port + "/" + verificationId + "/mcp";
             configPath = Path.Combine(AppPaths.CustomGatewaysDirectory, "verify-" + verificationId + ".json");
             workingDirectory = !string.IsNullOrWhiteSpace(candidate.WorkingDirectory) &&
                 Directory.Exists(candidate.WorkingDirectory)
@@ -1489,6 +1528,8 @@ public sealed class McpInfrastructureService : IDisposable
 
         try
         {
+            port = promoteAsOnSuccess != null ? AllocateFreePort(CustomPortRangeStart, CustomPortRangeEnd) : AllocateFreePort(VerifyPortRangeStart, VerifyPortRangeEnd);
+            endpoint = LoopbackPrefix + port + "/" + verificationId + "/mcp";
             Directory.CreateDirectory(AppPaths.CustomGatewaysDirectory);
             WriteJsonTextFile(
                 configPath,
@@ -1611,10 +1652,14 @@ public sealed class McpInfrastructureService : IDisposable
                         if (!promotion.Promoted)
                             throw new InvalidOperationException(promotion.Error ?? "Poll Manager did not promote the verified worker.");
 
-                        if (!_statusById.TryGetValue(promoteAsOnSuccess.Id, out var promotedStatus))
+                        ServerRuntimeStatus promotedStatus;
+                        lock (_stateLock)
                         {
-                            promotedStatus = new ServerRuntimeStatus { Id = promoteAsOnSuccess.Id, IsBuiltIn = false, TransportBadge = "STDIO -> HTTP" };
-                            _statusById[promoteAsOnSuccess.Id] = promotedStatus;
+                            if (!_statusById.TryGetValue(promoteAsOnSuccess.Id, out promotedStatus!))
+                            {
+                                promotedStatus = new ServerRuntimeStatus { Id = promoteAsOnSuccess.Id, IsBuiltIn = false, TransportBadge = "STDIO -> HTTP" };
+                                _statusById[promoteAsOnSuccess.Id] = promotedStatus;
+                            }
                         }
 
                         promotedStatus.Name = promoteAsOnSuccess.Name;
@@ -1634,19 +1679,24 @@ public sealed class McpInfrastructureService : IDisposable
 
                         if (temporaryGateway != null)
                         {
-                            if (_customStdioRuntimes.ContainsKey(promoteAsOnSuccess.Id))
+                            ManagedCustomStdioRuntime? existingRuntimeToStop = null;
+                            lock (_stateLock)
                             {
-                                var existing = _customStdioRuntimes[promoteAsOnSuccess.Id];
-                                _customStdioRuntimes.Remove(promoteAsOnSuccess.Id);
-                                await StopChildAsync(existing.Child).ConfigureAwait(false);
+                                if (_customStdioRuntimes.TryGetValue(promoteAsOnSuccess.Id, out existingRuntimeToStop))
+                                    _customStdioRuntimes.Remove(promoteAsOnSuccess.Id);
                             }
+                            if (existingRuntimeToStop != null)
+                                await StopChildAsync(existingRuntimeToStop.Child).ConfigureAwait(false);
 
-                            _customStdioRuntimes[promoteAsOnSuccess.Id] = new ManagedCustomStdioRuntime(
-                                promoteAsOnSuccess.Id,
-                                port,
-                                endpoint,
-                                promotedStatus.LastFingerprint,
-                                temporaryGateway);
+                            lock (_stateLock)
+                            {
+                                _customStdioRuntimes[promoteAsOnSuccess.Id] = new ManagedCustomStdioRuntime(
+                                    promoteAsOnSuccess.Id,
+                                    port,
+                                    endpoint,
+                                    promotedStatus.LastFingerprint,
+                                    temporaryGateway);
+                            }
                             temporaryGateway = null;
                         }
                     }
@@ -1677,7 +1727,7 @@ public sealed class McpInfrastructureService : IDisposable
         }
         finally
         {
-            lock (PortAllocationLock) { ReservedPortsInFlight.Remove(port); }
+            if (port > 0) lock (PortAllocationLock) { ReservedPortsInFlight.Remove(port); }
             if (temporaryGateway != null)
             {
                 await StopChildAsync(temporaryGateway).ConfigureAwait(false);
@@ -1931,7 +1981,9 @@ public sealed class McpInfrastructureService : IDisposable
         string? forceRetryServerId)
     {
         var desiredIds = new HashSet<string>(_customServers.Select(server => server.Id), StringComparer.OrdinalIgnoreCase);
-        foreach (var existingId in _customStdioRuntimes.Keys.ToArray())
+        string[] existingRuntimeIds;
+        lock (_stateLock) { existingRuntimeIds = _customStdioRuntimes.Keys.ToArray(); }
+        foreach (var existingId in existingRuntimeIds)
         {
             if (!desiredIds.Contains(existingId))
             {
@@ -1947,6 +1999,7 @@ public sealed class McpInfrastructureService : IDisposable
                 if (!string.Equals(existingStatusId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(existingStatusId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(existingStatusId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(existingStatusId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase) &&
                     !desiredIds.Contains(existingStatusId))
                 {
                     _statusById.Remove(existingStatusId);
@@ -1967,9 +2020,13 @@ public sealed class McpInfrastructureService : IDisposable
             }
             else
             {
-                var forceThis = (forceRetryQuarantined &&
-                    _statusById.TryGetValue(server.Id, out var serverStatus) &&
-                    serverStatus.HealthState == McpServerHealthState.Quarantine) ||
+                bool isQuarantined;
+                lock (_stateLock)
+                {
+                    isQuarantined = _statusById.TryGetValue(server.Id, out var serverStatus) &&
+                        serverStatus.HealthState == McpServerHealthState.Quarantine;
+                }
+                var forceThis = (forceRetryQuarantined && isQuarantined) ||
                     string.Equals(forceRetryServerId, server.Id, StringComparison.OrdinalIgnoreCase);
                 await ReconcileCustomStdioServerAsync(dependencies, server, forceThis).ConfigureAwait(false);
             }
@@ -1981,10 +2038,14 @@ public sealed class McpInfrastructureService : IDisposable
 
     private Task<bool> ReconcileCustomHttpServerAsync(CustomMcpServerEntry server)
     {
-        if (!_statusById.TryGetValue(server.Id, out var status))
+        ServerRuntimeStatus status;
+        lock (_stateLock)
         {
-            status = new ServerRuntimeStatus { Id = server.Id, IsBuiltIn = false };
-            _statusById[server.Id] = status;
+            if (!_statusById.TryGetValue(server.Id, out status!))
+            {
+                status = new ServerRuntimeStatus { Id = server.Id, IsBuiltIn = false };
+                _statusById[server.Id] = status;
+            }
         }
 
         var previousName = status.Name;
@@ -2057,10 +2118,14 @@ public sealed class McpInfrastructureService : IDisposable
 
     private async Task ReconcileCustomStdioServerAsync(McpDependencySet dependencies, CustomMcpServerEntry server, bool forceRetry)
     {
-        if (!_statusById.TryGetValue(server.Id, out var status))
+        ServerRuntimeStatus status;
+        lock (_stateLock)
         {
-            status = new ServerRuntimeStatus { Id = server.Id, IsBuiltIn = false };
-            _statusById[server.Id] = status;
+            if (!_statusById.TryGetValue(server.Id, out status!))
+            {
+                status = new ServerRuntimeStatus { Id = server.Id, IsBuiltIn = false };
+                _statusById[server.Id] = status;
+            }
         }
         var fingerprint = BuildStdioFingerprint(server);
         if (forceRetry || !string.Equals(status.LastFingerprint, fingerprint, StringComparison.Ordinal))
@@ -2098,7 +2163,9 @@ public sealed class McpInfrastructureService : IDisposable
             }
         }
 
-        if (_customStdioRuntimes.TryGetValue(server.Id, out var existingRuntime))
+        ManagedCustomStdioRuntime? existingRuntime;
+        lock (_stateLock) { _customStdioRuntimes.TryGetValue(server.Id, out existingRuntime); }
+        if (existingRuntime != null)
         {
             if (!IsExited(existingRuntime.Child.Process) &&
                 string.Equals(existingRuntime.Fingerprint, fingerprint, StringComparison.Ordinal))
@@ -2155,14 +2222,13 @@ public sealed class McpInfrastructureService : IDisposable
         status.PathDisplay = "/" + server.Id + "/mcp";
         status.UpstreamUrl = endpoint;
 
-        var effectiveCmd = PrepareStdioCommandAndArgs(dependencies, resolvedCmd, server.Args ?? new List<string>(), out var effectiveArgs);
-        var enrichedEnv = BuildEnrichedEnvironment(dependencies, server.Env, server.Id);
-        WriteJsonTextFile(configPath, BuildCustomStdioGatewayConfigJson(port, server.Id, effectiveCmd, effectiveArgs, enrichedEnv, server.AdditionalJson));
-        var workDir = !string.IsNullOrWhiteSpace(server.WorkingDirectory) && Directory.Exists(server.WorkingDirectory) ? server.WorkingDirectory! : AppPaths.InstallDirectory;
-
         ManagedChild? child = null;
         try
         {
+            var effectiveCmd = PrepareStdioCommandAndArgs(dependencies, resolvedCmd, server.Args ?? new List<string>(), out var effectiveArgs);
+            var enrichedEnv = BuildEnrichedEnvironment(dependencies, server.Env, server.Id);
+            WriteJsonTextFile(configPath, BuildCustomStdioGatewayConfigJson(port, server.Id, effectiveCmd, effectiveArgs, enrichedEnv, server.AdditionalJson));
+            var workDir = !string.IsNullOrWhiteSpace(server.WorkingDirectory) && Directory.Exists(server.WorkingDirectory) ? server.WorkingDirectory! : AppPaths.InstallDirectory;
             child = StartChild(dependencies.SupergatewayExecutable, "--config " + QuoteArgument(configPath), workDir, "MCP-" + server.Id, enrichedEnv);
             var listener = await WaitForTcpListenerAsync(port, child, 15000).ConfigureAwait(false);
             if (!listener.Success)
@@ -2456,6 +2522,20 @@ public sealed class McpInfrastructureService : IDisposable
             AddUpstream(SettingsStore.BuiltInBinaryId, binaryName, string.Empty, null, "http", "binary-mcp-v1", true, true, "local");
         }
 
+        var controlName = _hotplugControlCustom != null && !string.IsNullOrWhiteSpace(_hotplugControlCustom.Name)
+            ? _hotplugControlCustom.Name!
+            : "Hotplug Control MCP";
+        AddUpstream(
+            SettingsStore.BuiltInHotplugControlId,
+            controlName,
+            HotplugControlEndpoint,
+            null,
+            "http",
+            "hotplug-control-mcp-v1",
+            _hotplugControlEnabled,
+            false,
+            "local");
+
         foreach (var configured in _customServers)
         {
             var isHttp = string.Equals(configured.Transport, "http", StringComparison.OrdinalIgnoreCase);
@@ -2743,8 +2823,59 @@ public sealed class McpInfrastructureService : IDisposable
             }
             await _pollManagerClient.SubscribeToStateChangesAsync(
                 () => RefreshPollCacheSnapshotAsync(cancellation.Token),
-                cancellation.Token).ConfigureAwait(false);
+                cancellation.Token,
+                cmd => HandleControlCommandAsync(cmd, cancellation.Token)).ConfigureAwait(false);
         });
+    }
+
+    private async Task HandleControlCommandAsync(HotplugControlCommand command, CancellationToken cancellationToken)
+    {
+        if (_disposed || _stopping || command == null || string.IsNullOrWhiteSpace(command.CommandId))
+            return;
+
+        ErrorLog.LogConnection("Hotplug Control [" + command.CommandId + "]: servers=" + (command.ServerChanges?.Count ?? 0) + ", policies=" + (command.ToolPolicyChanges?.Count ?? 0));
+        HotplugControlCommandResult result;
+        var handler = ControlCommandHandler;
+        if (handler == null)
+        {
+            result = new HotplugControlCommandResult
+            {
+                Ok = false,
+                Error = "Hotplug Control handler is not registered."
+            };
+        }
+        else
+        {
+            try
+            {
+                result = await handler(command).ConfigureAwait(false)
+                    ?? new HotplugControlCommandResult { Ok = true };
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Write("McpInfrastructureService.HandleControlCommandAsync", ex);
+                result = new HotplugControlCommandResult
+                {
+                    Ok = false,
+                    Error = ex.Message
+                };
+            }
+        }
+
+        ErrorLog.LogConnection("Hotplug Control [" + command.CommandId + "] -> " + (result.Ok ? "OK" : ("ERROR: " + result.Error)));
+        try
+        {
+            await _pollManagerClient.CompleteControlCommandAsync(
+                command.CommandId,
+                result.Ok,
+                result.Error,
+                result.Warnings,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            ErrorLog.Write("McpInfrastructureService.CompleteControlCommandAsync", ex);
+        }
     }
 
     private async Task RefreshPollCacheSnapshotAsync(CancellationToken cancellationToken = default)
@@ -2767,15 +2898,21 @@ public sealed class McpInfrastructureService : IDisposable
             foreach (var state in envelope.Servers ?? new List<PollManagerServerState>())
             {
                 if (string.IsNullOrWhiteSpace(state.ServerId)) continue;
-                if (!_statusById.TryGetValue(state.ServerId, out var status))
+                ServerRuntimeStatus status;
+                lock (_stateLock)
                 {
-                    status = new ServerRuntimeStatus
+                    if (!_statusById.TryGetValue(state.ServerId, out status!))
                     {
-                        Id = state.ServerId,
-                        IsBuiltIn = string.Equals(state.ServerId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(state.ServerId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase)
-                    };
-                    _statusById[state.ServerId] = status;
+                        status = new ServerRuntimeStatus
+                        {
+                            Id = state.ServerId,
+                            IsBuiltIn = string.Equals(state.ServerId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(state.ServerId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(state.ServerId, SettingsStore.BuiltInBinaryId, StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(state.ServerId, SettingsStore.BuiltInHotplugControlId, StringComparison.OrdinalIgnoreCase)
+                        };
+                        _statusById[state.ServerId] = status;
+                    }
                 }
 
                 var previousHealthState = status.HealthState;
@@ -2801,6 +2938,7 @@ public sealed class McpInfrastructureService : IDisposable
                 status.HealthState = state.Health switch
                 {
                     "online" => McpServerHealthState.Online,
+                    "loading" => McpServerHealthState.LoadingTools,
                     "downloading" => McpServerHealthState.Downloading,
                     "offline" => McpServerHealthState.Offline,
                     "disabled" => McpServerHealthState.Disabled,
@@ -2819,10 +2957,16 @@ public sealed class McpInfrastructureService : IDisposable
                         if (string.Equals(state.Transport, "stdio", StringComparison.OrdinalIgnoreCase))
                             MarkServerPackageReady(state.ServerId);
                         status.StatusText = I18n.Tr(
-                            "Подключён и активен · инструментов: " + status.ToolsCount,
-                            "Connected & active · tools: " + status.ToolsCount);
+                            "Подключён и активен",
+                            "Connected & active");
                         if (state.ResponseTimeMs.HasValue)
                             status.StatusText += " · " + state.ResponseTimeMs.Value + " ms";
+                        break;
+
+                    case McpServerHealthState.LoadingTools:
+                        status.StatusText = I18n.Tr(
+                            "Загрузка инструментов… (пока недоступны)",
+                            "Loading tools… (unavailable yet)");
                         break;
 
                     case McpServerHealthState.Downloading:
@@ -2860,7 +3004,13 @@ public sealed class McpInfrastructureService : IDisposable
                         break;
 
                     default:
-                        if (status.DependentLocalPort > 0 && TcpPortInspector.GetListeningProcessIds(status.DependentLocalPort).Count == 0)
+                        if (string.Equals(state.Health, "loading_error", StringComparison.OrdinalIgnoreCase))
+                        {
+                            status.StatusText = I18n.Tr(
+                                "Ошибка загрузки инструментов · повтор…",
+                                "Tool loading error · retrying…");
+                        }
+                        else if (status.DependentLocalPort > 0 && TcpPortInspector.GetListeningProcessIds(status.DependentLocalPort).Count == 0)
                         {
                             status.HealthState = McpServerHealthState.Offline;
                             status.ToolsCount = 0;
@@ -2904,6 +3054,12 @@ public sealed class McpInfrastructureService : IDisposable
                         break;
                 }
 
+                if (previousHealthState != status.HealthState)
+                {
+                    var detail = string.IsNullOrWhiteSpace(state.LastError) ? status.StatusText : (status.StatusText + " | " + state.LastError);
+                    ErrorLog.LogConnection("[" + status.Name + "] " + previousHealthState + " -> " + status.HealthState + " (tools: " + status.ToolsCount + ") · " + detail);
+                }
+
                 if (string.Equals(state.ServerId, SettingsStore.BuiltInUnrealId, StringComparison.OrdinalIgnoreCase))
                     _unrealStatus = status.StatusText;
                 else if (string.Equals(state.ServerId, SettingsStore.BuiltInFilesystemId, StringComparison.OrdinalIgnoreCase))
@@ -2941,6 +3097,7 @@ public sealed class McpInfrastructureService : IDisposable
             _routerReady = false;
             _activeRoots = Array.Empty<string>();
             _stopCompleted = true;
+            ErrorLog.LogConnection(I18n.Tr("Инфраструктура MCP Hotplug остановлена.", "MCP Hotplug infrastructure stopped."));
             PublishCurrentSnapshot();
         }
         finally { _operationGate.Release(); }
@@ -2972,6 +3129,7 @@ public sealed class McpInfrastructureService : IDisposable
             await _pollManagerClient.UpdateServerToolsPolicyAsync(serverId, normalized).ConfigureAwait(false);
             await RefreshPollCacheSnapshotAsync().ConfigureAwait(false);
         }
+        ErrorLog.LogConnection(I18n.Tr("Политика инструментов [" + serverId + "] обновлена (отключено: " + normalized.Count + ").", "Tool policy [" + serverId + "] updated (disabled: " + normalized.Count + ")."));
         PublishCurrentSnapshot();
     }
 
@@ -3821,7 +3979,10 @@ public sealed class McpInfrastructureService : IDisposable
             child.AddOutput(safeData);
             if (safeData.StartsWith("[MCPHOTPLUG-UPSTREAM-FAILURE]", StringComparison.Ordinal) ||
                 safeData.StartsWith("[MCPHOTPLUG-GATEWAY-FAILURE]", StringComparison.Ordinal) ||
-                safeData.StartsWith("[MCPHOTPLUG-POLL-MANAGER-FAILURE]", StringComparison.Ordinal))
+                safeData.StartsWith("[MCPHOTPLUG-POLL-MANAGER-FAILURE]", StringComparison.Ordinal) ||
+                safeData.StartsWith("[MCPHOTPLUG-ROUTER-SERVER-ERROR]", StringComparison.Ordinal) ||
+                safeData.StartsWith("Hotplug MCP Gateway server error:", StringComparison.Ordinal) ||
+                safeData.StartsWith("Binary MCP server error:", StringComparison.Ordinal))
                 ErrorLog.WriteMessage("McpInfrastructureService.McpPipelineFailure", safeData);
         }
 
@@ -3868,6 +4029,7 @@ public sealed class McpInfrastructureService : IDisposable
             if (_statusById.TryGetValue(SettingsStore.BuiltInUnrealId, out var unreal)) list.Add(unreal);
             if (_statusById.TryGetValue(SettingsStore.BuiltInFilesystemId, out var fs)) list.Add(fs);
             if (_statusById.TryGetValue(SettingsStore.BuiltInBinaryId, out var bin)) list.Add(bin);
+            if (_statusById.TryGetValue(SettingsStore.BuiltInHotplugControlId, out var ctrl)) list.Add(ctrl);
             foreach (var custom in _customServers)
                 if (_statusById.TryGetValue(custom.Id, out var s)) list.Add(s);
             return list;

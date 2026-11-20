@@ -136,13 +136,12 @@ public sealed class DependencyStatusView : UserControl
         _grid.CellStyle = CreateCellStyle();
         _cellToolTipStyle = CreateCellToolTipStyle();
 
-        _componentColumn = Column("Name", 155, 120);
-        _minimumColumn = Column("MinimumVersion", 105, 82);
-        _detectedColumn = Column("InstalledVersion", 110, 88);
-        _featureColumn = Column("Feature", 210, 155);
-        _statusColumn = Column("State", 145, 125);
-        _detailsColumn = Column("Details", 290, 200);
-        _detailsColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+        _componentColumn = Column("Name", 1.15, 95);
+        _minimumColumn = Column("MinimumVersion", 0.75, 68);
+        _detectedColumn = Column("InstalledVersion", 0.85, 76);
+        _featureColumn = Column("Feature", 1.55, 115);
+        _statusColumn = Column("State", 1.15, 95);
+        _detailsColumn = Column("Details", 2.1, 140);
 
         _grid.Columns.Add(_componentColumn);
         _grid.Columns.Add(_minimumColumn);
@@ -302,7 +301,7 @@ public sealed class DependencyStatusView : UserControl
         {
             Header = binding,
             Binding = new Binding(binding),
-            Width = new DataGridLength(width),
+            Width = new DataGridLength(width, DataGridLengthUnitType.Star),
             MinWidth = minimumWidth,
             ElementStyle = textStyle
         };

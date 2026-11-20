@@ -77,9 +77,9 @@ public sealed class AppSettings
     [DataMember(Order = 21, EmitDefaultValue = false)]
     public bool? CheckUpdatesOnStartup { get; set; } = true;
 
-    /// <summary>Whether built-in Binary MCP is enabled.</summary>
+    /// <summary>Whether built-in Binary MCP is enabled. Disabled by default.</summary>
     [DataMember(Order = 22, EmitDefaultValue = false)]
-    public bool? BinaryMcpEnabled { get; set; } = true;
+    public bool? BinaryMcpEnabled { get; set; } = false;
 
     [DataMember(Order = 23, EmitDefaultValue = false)]
     public CustomMcpServerEntry? BinaryMcpCustom { get; set; }
@@ -87,6 +87,13 @@ public sealed class AppSettings
     /// <summary>Per-server disabled tool paths (arbitrary nesting depth, independent of presets).</summary>
     [DataMember(Order = 24, EmitDefaultValue = false)]
     public Dictionary<string, List<string>> DisabledToolsByServer { get; set; } = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Whether built-in Hotplug Control MCP is enabled. Disabled by default.</summary>
+    [DataMember(Order = 25, EmitDefaultValue = false)]
+    public bool? HotplugControlMcpEnabled { get; set; } = false;
+
+    [DataMember(Order = 26, EmitDefaultValue = false)]
+    public CustomMcpServerEntry? HotplugControlMcpCustom { get; set; }
 }
 
 [DataContract]
@@ -229,7 +236,8 @@ public enum McpServerHealthState
     Online = 2,
     Quarantine = 3,
     Offline = 4,
-    Downloading = 5
+    Downloading = 5,
+    LoadingTools = 6
 }
 
 public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
@@ -288,6 +296,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
     {
         McpServerHealthState.Online => McpHotplug.Services.I18n.IsEnglish ? "ACTIVE" : "АКТИВЕН",
         McpServerHealthState.Downloading => McpHotplug.Services.I18n.IsEnglish ? "DOWNLOADING" : "ЗАГРУЗКА",
+        McpServerHealthState.LoadingTools => McpHotplug.Services.I18n.IsEnglish ? "LOADING" : "ЗАГРУЗКА",
         McpServerHealthState.Waiting => McpHotplug.Services.I18n.IsEnglish ? "WAITING" : "ОЖИДАНИЕ",
         McpServerHealthState.Offline => McpHotplug.Services.I18n.IsEnglish ? "OFFLINE" : "ОФЛАЙН",
         McpServerHealthState.Quarantine => McpHotplug.Services.I18n.IsEnglish ? "QUARANTINE" : "КАРАНТИН",
@@ -298,6 +307,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
     {
         McpServerHealthState.Online => "#15322F",
         McpServerHealthState.Downloading => "#162938",
+        McpServerHealthState.LoadingTools => "#162938",
         McpServerHealthState.Waiting => "#332915",
         McpServerHealthState.Offline => "#1E242B",
         McpServerHealthState.Quarantine => "#381B20",
@@ -308,6 +318,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
     {
         McpServerHealthState.Online => "#2CE5D0",
         McpServerHealthState.Downloading => "#38AEFF",
+        McpServerHealthState.LoadingTools => "#38AEFF",
         McpServerHealthState.Waiting => "#F5A623",
         McpServerHealthState.Offline => "#435060",
         McpServerHealthState.Quarantine => "#FF5A67",
@@ -318,6 +329,7 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
     {
         McpServerHealthState.Online => "#2CE5D0",
         McpServerHealthState.Downloading => "#52B8FF",
+        McpServerHealthState.LoadingTools => "#52B8FF",
         McpServerHealthState.Waiting => "#F5A623",
         McpServerHealthState.Offline => "#94A3B8",
         McpServerHealthState.Quarantine => "#FF6B78",
@@ -328,14 +340,23 @@ public sealed class McpServerStatusSnapshot : INotifyPropertyChanged
 
     public System.Windows.Visibility DeleteButtonVisibility =>
         string.Equals(Id, "filesystem", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(Id, "binary", StringComparison.OrdinalIgnoreCase)
+        string.Equals(Id, "binary", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Id, "hotplug_control", StringComparison.OrdinalIgnoreCase)
             ? System.Windows.Visibility.Hidden
             : System.Windows.Visibility.Visible;
 
     public System.Windows.Visibility ToolsBadgeVisibility => System.Windows.Visibility.Visible;
 
     public string ToolsBadgeText =>
-        TotalToolsCount > 0 && ToolsCount != TotalToolsCount
-            ? ToolsCount + " / " + TotalToolsCount
-            : (TotalToolsCount > 0 ? TotalToolsCount.ToString() : (ToolsCount > 0 ? ToolsCount.ToString() : "—"));
+        HealthState == McpServerHealthState.LoadingTools
+            ? (McpHotplug.Services.I18n.IsEnglish ? "Loading…" : "Загрузка…")
+            : (TotalToolsCount > 0 && ToolsCount != TotalToolsCount
+                ? ToolsCount + " / " + TotalToolsCount
+                : (TotalToolsCount > 0 ? TotalToolsCount.ToString() : (ToolsCount > 0 ? ToolsCount.ToString() : "—")));
+
+    public string ToolsBadgeForeground =>
+        HealthState == McpServerHealthState.LoadingTools ? "#52B8FF" : "#2CE5D0";
+
+    public string ToolsBadgeBorder =>
+        HealthState == McpServerHealthState.LoadingTools ? "#38AEFF" : "#2C3138";
 }
